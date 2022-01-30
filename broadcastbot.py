@@ -1,4 +1,9 @@
 #!/usr/bin/env python
+#
+# This code is heavily based on
+# https://github.com/lwesterhof/semaphore/blob/19b949d336a2dafbddd26325db21fba2ed74d292/examples/broadcastbot.py
+# See there for authorship
+#
 """
 Signal Bot example, broadcast to all subscribers.
 """

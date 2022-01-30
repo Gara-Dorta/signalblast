@@ -1,3 +1,7 @@
+#!/usr/bin/env python
+"""
+Signal Bot example, broadcast to all subscribers.
+"""
 import os
 from time import time
 from typing import Dict
@@ -57,3 +61,4 @@ async def main():
 if __name__ == '__main__':
     import anyio
     anyio.run(main)
+

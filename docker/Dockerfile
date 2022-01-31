@@ -2,6 +2,8 @@ FROM signald/signald
 
 ARG COMMIT_ID
 
+WORKDIR /root
+
 RUN apt update && apt upgrade -y
 
 RUN apt install -y python3-pip netcat-openbsd

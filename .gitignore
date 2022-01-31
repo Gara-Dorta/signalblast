@@ -127,3 +127,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Visual studio code settings
+.vscode
+
+# Pickle data files
+*.pickle
+

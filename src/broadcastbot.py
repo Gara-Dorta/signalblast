@@ -10,18 +10,42 @@ Signal Bot example, broadcast to all subscribers.
 import os
 from time import time
 from typing import Dict
+from enum import Enum
+import re
 
 from semaphore import Bot, ChatContext
 
-subscribers: Dict[str, float] = {}
+SUBSCRIBERS: Dict[str, float] = {}
+
+
+class CommandStrings(Enum):
+    subscribe = "!subscribe"
+    unsubscribe = "!unsubscribe"
+    broadcast = "!broadcast"
+
+
+def begings_with(in_str):
+    return "^(" + in_str.value + ")"
+
+
+class CommandRegex(Enum):
+    subscribe = re.compile(begings_with(CommandStrings.subscribe))
+    unsubscribe = re.compile(begings_with(CommandStrings.unsubscribe))
+    broadcast = re.compile(begings_with(CommandStrings.broadcast))
+
+
+HELP_MESSAGE = f"I'm sorry, I didn't understand you but I understand the following commands:\n\n"
+for command_str in CommandStrings:
+    HELP_MESSAGE += "\t" + command_str.value + "\n"
+HELP_MESSAGE += "\nPlease try again"
 
 
 async def subscribe(ctx: ChatContext) -> None:
     try:
-        if ctx.message.source.uuid in subscribers:
+        if ctx.message.source.uuid in SUBSCRIBERS:
             await ctx.message.reply("Already subscribed!")
         else:
-            subscribers[ctx.message.source.uuid] = time()
+            SUBSCRIBERS[ctx.message.source.uuid] = time()
             await ctx.message.reply("Subscription successful!")
     except Exception:
         await ctx.message.reply("Could not subscribe!")
@@ -29,8 +53,8 @@ async def subscribe(ctx: ChatContext) -> None:
 
 async def unsubscribe(ctx: ChatContext) -> None:
     try:
-        if ctx.message.source.uuid in subscribers:
-            del subscribers[ctx.message.source.uuid]
+        if ctx.message.source.uuid in SUBSCRIBERS:
+            del SUBSCRIBERS[ctx.message.source.uuid]
             await ctx.message.reply("Successfully unsubscribed!")
         else:
             await ctx.message.reply("Not subscribed!")
@@ -43,21 +67,31 @@ async def broadcast(ctx: ChatContext) -> None:
     message = ctx.message.get_body()[len("!broadcast"):].strip()
 
     # Broadcast message to all subscribers.
-    for subscriber in subscribers:
+    for subscriber in SUBSCRIBERS:
         if await ctx.bot.send_message(subscriber, message):
             print(f"Message successfully sent to {subscriber}")
         else:
             print(f"Could not send message to {subscriber}")
-            del subscribers[subscriber]
+            del SUBSCRIBERS[subscriber]
+
+
+async def display_help(ctx: ChatContext) -> None:
+    message = ctx.message.get_body()
+    for regex in CommandRegex:
+        if regex.value.search(message) is not None:
+            return
+
+    await ctx.bot.send_message(ctx.message.source.uuid, HELP_MESSAGE)
 
 
 async def main():
     """Start the bot."""
     # Connect the bot to number.
     async with Bot(os.environ["SIGNAL_PHONE_NUMBER"]) as bot:
-        bot.register_handler("!subscribe", subscribe)
-        bot.register_handler("!unsubscribe", unsubscribe)
-        bot.register_handler("!broadcast", broadcast)
+        bot.register_handler(CommandRegex.subscribe.value, subscribe)
+        bot.register_handler(CommandRegex.unsubscribe.value, unsubscribe)
+        bot.register_handler(CommandRegex.broadcast.value, broadcast)
+        bot.register_handler(".*", display_help)
 
         # Run the bot until you press Ctrl-C.
         await bot.start()
@@ -66,4 +100,3 @@ async def main():
 if __name__ == '__main__':
     import anyio
     anyio.run(main)
-

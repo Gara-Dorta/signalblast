@@ -1,2 +1,2 @@
 #!/bin/bash
-docker build --tag signalblast .
+docker build --build-arg COMMIT_ID=$1 --tag signalblast .

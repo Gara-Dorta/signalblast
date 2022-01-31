@@ -1,12 +1,14 @@
 FROM signald/signald
 
+ARG COMMIT_ID
+
 RUN apt update && apt upgrade -y
 
 RUN apt install -y python3-pip netcat-openbsd
 
 RUN pip install semaphore-bot
 
-RUN git clone https://github.com/Garoe/signalblast
+RUN git clone https://github.com/Garoe/signalblast && git checkout $COMMIT_ID
 
 RUN mkdir /var/run/signald
 

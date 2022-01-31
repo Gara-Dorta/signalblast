@@ -2,13 +2,12 @@
 
 signald
 
-nc -U /var/run/signald/signald.sock
-
-
 Get captcha helper from here https://gitlab.com/signald/captcha-helper
 
-{"type": "register", "version": "v1", "account": "+xxxxxxxxxxx", "captcha" : "yyyyyyyyyyyyyyy"}
+signaldctl account register +xxxxxxxxx --captcha nnnnn
 
-{"type": "verify", "version": "v1", "account": "+xxxxxxxxxxx", "code": "zzzzzz"}
+signaldctl account verify  +xxxxxxxxx nnnnn
 
-{"type": "send", "version": "v1", "username": "+xxxxxxxxxxx", "recipientAddress": {"number": "+yyyyyyyyyyy"}, "messageBody": "Hello world"}
+signaldctl message send +yyyyyyyyy "message" --account +xxxxxxxxx
+
+export SIGNAL_PHONE_NUMBER=+xxxxxxxxx

@@ -52,7 +52,6 @@ class BotAnswers():
             for subscriber in self.subscribers:
                 if await ctx.bot.send_message(subscriber, message):
                     num_broadcasts += 1
-                    raise ValueError("Bla")
                 else:
                     print(f"Could not send message to {subscriber}")
                     await self.subscribers.remove(ctx.message.source.uuid)

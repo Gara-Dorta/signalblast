@@ -1,4 +1,5 @@
-from semaphore import ChatContext
+from typing import List, Optional
+from semaphore import ChatContext, Attachment
 
 from subscribers import Subscribers
 from bot_commands import CommandStrings, CommandRegex
@@ -38,6 +39,27 @@ class BotAnswers():
             await ctx.message.reply("Could not unsubscribe!")
             print(e)
 
+    def prepare_attachments(self, attachments: Optional[List[Attachment]]) -> List:
+        if attachments == []:
+            return None
+
+        attachments_to_send = []
+        for attachment in attachments:
+            attachment_to_send = {"filename": attachment.stored_filename,
+                                  "width": attachment.width,
+                                  "height": attachment.height,
+                                  "contentType": attachment.content_type,
+                                  }
+            attachments_to_send.append(attachment_to_send)
+
+        return attachments_to_send
+
+    def prepare_message(self, message: str) -> str:
+        if message == '':
+            return None
+        else:
+            return message[len("!broadcast"):].strip()
+
     async def broadcast(self, ctx: ChatContext) -> None:
         num_broadcasts = 0
         num_subscribers = -1
@@ -46,11 +68,12 @@ class BotAnswers():
             num_subscribers = len(self.subscribers)
 
             await ctx.message.mark_read()
-            message = ctx.message.get_body()[len("!broadcast"):].strip()
+            message = self.prepare_message(ctx.message.get_body())
+            attachments = self.prepare_attachments(ctx.message.data_message.attachments)
 
             # Broadcast message to all subscribers.
             for subscriber in self.subscribers:
-                if await ctx.bot.send_message(subscriber, message):
+                if await ctx.bot.send_message(subscriber, message, attachments=attachments):
                     num_broadcasts += 1
                 else:
                     print(f"Could not send message to {subscriber}")
@@ -67,4 +90,11 @@ class BotAnswers():
             if regex.value.search(message) is not None:
                 return
 
-        await ctx.bot.send_message(ctx.message.source.uuid, self.help_message)
+        if message == '':
+            if ctx.message.data_message.attachments == []:
+                return  # This is a message emoticon reaction or a sticker, the bot can ignore these.
+
+            # Only attachment, assume the user wants to forward that
+            await self.broadcast(ctx)
+        else:
+            await ctx.bot.send_message(ctx.message.source.uuid, self.help_message)

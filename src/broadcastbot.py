@@ -4,6 +4,7 @@
 # https://github.com/lwesterhof/semaphore/blob/19b949d336a2dafbddd26325db21fba2ed74d292/examples/broadcastbot.py
 # See there for authorship
 #
+import logging
 import os
 from semaphore import Bot
 
@@ -15,7 +16,7 @@ async def main():
     """Start the bot."""
 
     # Connect the bot to number.
-    async with Bot(os.environ["SIGNAL_PHONE_NUMBER"]) as bot:
+    async with Bot(os.environ["SIGNAL_PHONE_NUMBER"], logging_level=logging.ERROR) as bot:
         bot_answers = BotAnswers()
 
         bot.register_handler(CommandRegex.subscribe.value, bot_answers.subscribe)

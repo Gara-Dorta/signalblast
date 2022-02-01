@@ -1,3 +1,4 @@
+import logging
 from typing import List, Optional
 from semaphore import ChatContext, Attachment
 
@@ -33,8 +34,11 @@ class BotAnswers():
                 await self.subscribers.add(ctx.message.source.uuid)
                 await ctx.message.reply("Subscription successful!")
         except Exception as e:
-            await ctx.message.reply("Could not subscribe!")
-            print(e)
+            logging.error(e, exc_info=True)
+            try:
+                await ctx.message.reply("Could not subscribe!")
+            except Exception as e:
+                logging.error(e, exc_info=True)
 
     async def unsubscribe(self, ctx: ChatContext) -> None:
         try:
@@ -44,8 +48,11 @@ class BotAnswers():
             else:
                 await ctx.message.reply("Not subscribed!")
         except Exception as e:
-            await ctx.message.reply("Could not unsubscribe!")
-            print(e)
+            logging.error(e, exc_info=True)
+            try:
+                await ctx.message.reply("Could not unsubscribe!")
+            except Exception as e:
+                logging.error(e, exc_info=True)
 
     def prepare_attachments(self, attachments: Optional[List[Attachment]]) -> List:
         if attachments == []:
@@ -73,14 +80,14 @@ class BotAnswers():
                 return message
 
     async def broadcast(self, ctx: ChatContext) -> None:
-        if ctx.message.source.uuid not in self.subscribers:
-            await ctx.bot.send_message(ctx.message.source.uuid, self.must_subscribe_message)
-            return
-
         num_broadcasts = 0
         num_subscribers = -1
 
         try:
+            if ctx.message.source.uuid not in self.subscribers:
+                await ctx.bot.send_message(ctx.message.source.uuid, self.must_subscribe_message)
+                return
+
             num_subscribers = len(self.subscribers)
 
             await ctx.message.mark_read()
@@ -98,22 +105,28 @@ class BotAnswers():
                     print(f"Could not send message to {subscriber}")
                     await self.subscribers.remove(ctx.message.source.uuid)
         except Exception as e:
-            error_str = "Something went wrong, could only send the message to "\
-                        f"{num_broadcasts} out of {num_subscribers} subscribers"
-            await ctx.message.reply(error_str)
-            print(e)
+            logging.error(e, exc_info=True)
+            try:
+                error_str = "Something went wrong, could only send the message to "\
+                            f"{num_broadcasts} out of {num_subscribers} subscribers"
+                await ctx.message.reply(error_str)
+            except Exception as e:
+                logging.error(e, exc_info=True)
 
     async def display_help(self, ctx: ChatContext) -> None:
-        message = ctx.message.get_body()
-        for regex in CommandRegex:
-            if regex.value.search(message) is not None:
-                return
+        try:
+            message = ctx.message.get_body()
+            for regex in CommandRegex:
+                if regex.value.search(message) is not None:
+                    return
 
-        if message == '':
-            if ctx.message.data_message.attachments == []:
-                return  # This is a message emoticon reaction or a sticker, the bot can ignore these.
+            if message == '':
+                if ctx.message.data_message.attachments == []:
+                    return  # This is a message emoticon reaction or a sticker, the bot can ignore these.
 
-            # Only attachment, assume the user wants to forward that
-            await self.broadcast(ctx)
-        else:
-            await ctx.bot.send_message(ctx.message.source.uuid, self.help_message)
+                # Only attachment, assume the user wants to forward that
+                await self.broadcast(ctx)
+            else:
+                await ctx.bot.send_message(ctx.message.source.uuid, self.help_message)
+        except Exception as e:
+            logging.error(e, exc_info=True)

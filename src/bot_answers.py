@@ -26,17 +26,25 @@ class BotAnswers():
         message += "and try again after that."
         return message
 
+    async def reply_with_fail_log(self, ctx, message) -> bool:
+        if await ctx.message.reply(message):
+            return True
+        else:
+            logging.warning(f"Could not send message to {ctx.message.source.uuid}")
+            return False
+
     async def subscribe(self, ctx: ChatContext) -> None:
         try:
             if ctx.message.source.uuid in self.subscribers:
-                await ctx.message.reply("Already subscribed!")
+                await self.reply_with_fail_log(ctx, "Already subscribed!")
+                logging.info("Already subscribed!")
             else:
                 await self.subscribers.add(ctx.message.source.uuid)
-                await ctx.message.reply("Subscription successful!")
+                await self.reply_with_fail_log(ctx, "Subscription successful!")
         except Exception as e:
             logging.error(e, exc_info=True)
             try:
-                await ctx.message.reply("Could not subscribe!")
+                await self.reply_with_fail_log(ctx, "Could not subscribe!")
             except Exception as e:
                 logging.error(e, exc_info=True)
 
@@ -44,13 +52,13 @@ class BotAnswers():
         try:
             if ctx.message.source.uuid in self.subscribers:
                 await self.subscribers.remove(ctx.message.source.uuid)
-                await ctx.message.reply("Successfully unsubscribed!")
+                await self.reply_with_fail_log(ctx, "Successfully unsubscribed!")
             else:
-                await ctx.message.reply("Not subscribed!")
+                await self.reply_with_fail_log(ctx, "Not subscribed!")
         except Exception as e:
             logging.error(e, exc_info=True)
             try:
-                await ctx.message.reply("Could not unsubscribe!")
+                await self.reply_with_fail_log(ctx, "Could not unsubscribe!")
             except Exception as e:
                 logging.error(e, exc_info=True)
 
@@ -85,7 +93,7 @@ class BotAnswers():
 
         try:
             if ctx.message.source.uuid not in self.subscribers:
-                await ctx.bot.send_message(ctx.message.source.uuid, self.must_subscribe_message)
+                await self.reply_with_fail_log(ctx.message.source.uuid, self.must_subscribe_message)
                 return
 
             num_subscribers = len(self.subscribers)
@@ -102,14 +110,14 @@ class BotAnswers():
                 if await ctx.bot.send_message(subscriber, message, attachments=attachments):
                     num_broadcasts += 1
                 else:
-                    print(f"Could not send message to {subscriber}")
+                    logging.warning(f"Could not send message to {subscriber}")
                     await self.subscribers.remove(ctx.message.source.uuid)
         except Exception as e:
             logging.error(e, exc_info=True)
             try:
                 error_str = "Something went wrong, could only send the message to "\
                             f"{num_broadcasts} out of {num_subscribers} subscribers"
-                await ctx.message.reply(error_str)
+                await self.reply_with_fail_log(ctx, error_str)
             except Exception as e:
                 logging.error(e, exc_info=True)
 
@@ -127,6 +135,6 @@ class BotAnswers():
                 # Only attachment, assume the user wants to forward that
                 await self.broadcast(ctx)
             else:
-                await ctx.bot.send_message(ctx.message.source.uuid, self.help_message)
+                await self.reply_with_fail_log(ctx, self.help_message)
         except Exception as e:
             logging.error(e, exc_info=True)

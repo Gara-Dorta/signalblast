@@ -5,6 +5,7 @@
 # See there for authorship
 #
 import logging
+from logging.handlers import RotatingFileHandler
 import os
 from semaphore import Bot
 
@@ -14,6 +15,16 @@ from bot_commands import CommandRegex
 
 async def main():
     """Start the bot."""
+
+    logFile = '/var/log/signalblast.log'
+
+    logging.basicConfig()
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    handler = RotatingFileHandler(logFile, mode='a', maxBytes=5*1024*1024, backupCount=1, encoding=None, delay=0)
+    handler.setLevel(logging.DEBUG)
+    handler.setFormatter(formatter)
+    log = logging.getLogger()
+    log.addHandler(handler)
 
     # Connect the bot to number.
     async with Bot(os.environ["SIGNAL_PHONE_NUMBER"], logging_level=logging.ERROR) as bot:

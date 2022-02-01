@@ -9,13 +9,21 @@ class BotAnswers():
     def __init__(self) -> None:
         self.subscribers = Subscribers.load_subscribers()
         self.help_message = self.compose_help_message()
+        self.must_subscribe_message = self.compose_must_subscribe_message()
 
     def compose_help_message(self):
-        help_message = "I'm sorry, I didn't understand you but I understand the following commands:\n\n"
+        message = "I'm sorry, I didn't understand you but I understand the following commands:\n\n"
         for command_str in CommandStrings:
-            help_message += "\t" + command_str.value + "\n"
-        help_message += "\nPlease try again"
-        return help_message
+            message += "\t" + command_str.value + "\n"
+        message += "\nPlease try again"
+        return message
+
+    def compose_must_subscribe_message(self):
+        message = "To be able to send messages you must be a subscriber too.\n"
+        message += "Please subscribe by sending:\n"
+        message += f"\t{CommandStrings.subscribe.value}\n"
+        message += "and try again after that."
+        return message
 
     async def subscribe(self, ctx: ChatContext) -> None:
         try:
@@ -58,9 +66,17 @@ class BotAnswers():
         if message == '':
             return None
         else:
-            return message[len("!broadcast"):].strip()
+            message = message[len("!broadcast"):].strip()
+            if message == '':
+                return None
+            else:
+                return message
 
     async def broadcast(self, ctx: ChatContext) -> None:
+        if ctx.message.source.uuid not in self.subscribers:
+            await ctx.bot.send_message(ctx.message.source.uuid, self.must_subscribe_message)
+            return
+
         num_broadcasts = 0
         num_subscribers = -1
 
@@ -70,6 +86,9 @@ class BotAnswers():
             await ctx.message.mark_read()
             message = self.prepare_message(ctx.message.get_body())
             attachments = self.prepare_attachments(ctx.message.data_message.attachments)
+
+            if message is None and attachments is None:
+                return
 
             # Broadcast message to all subscribers.
             for subscriber in self.subscribers:

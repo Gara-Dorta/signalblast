@@ -7,11 +7,11 @@ class Subscribers(Set[str]):
     save_path = './data/subscribers.pickle'
 
     async def add(self, element: str) -> None:
-        new_subscribers = super().add(element)
+        super().add(element)
         await self.save_subscribers()
 
     async def remove(self, element: str) -> None:
-        new_subscribers = super().remove(element)
+        super().remove(element)
         await self.save_subscribers()
 
     async def save_subscribers(self):

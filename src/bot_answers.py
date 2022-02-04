@@ -15,6 +15,7 @@ class BotAnswers():
         self.must_subscribe_message = self.message_handler.compose_must_subscribe_message()
 
         self.logger = logger
+        self.logger.debug('BotAnswers is initialised')
 
     async def reply_with_fail_log(self, ctx, message) -> bool:
         if await ctx.message.reply(message):
@@ -25,12 +26,14 @@ class BotAnswers():
 
     async def subscribe(self, ctx: ChatContext) -> None:
         try:
-            if ctx.message.source.uuid in self.subscribers:
+            subscriber_uuid = ctx.message.source.uuid
+            if subscriber_uuid in self.subscribers:
                 await self.reply_with_fail_log(ctx, "Already subscribed!")
                 self.logger.info("Already subscribed!")
             else:
-                await self.subscribers.add(ctx.message.source.uuid)
+                await self.subscribers.add(subscriber_uuid)
                 await self.reply_with_fail_log(ctx, "Subscription successful!")
+                self.logger.info(f"{subscriber_uuid} subscribed")
         except Exception as e:
             self.logger.error(e, exc_info=True)
             try:
@@ -40,11 +43,14 @@ class BotAnswers():
 
     async def unsubscribe(self, ctx: ChatContext) -> None:
         try:
-            if ctx.message.source.uuid in self.subscribers:
-                await self.subscribers.remove(ctx.message.source.uuid)
+            subscriber_uuid = ctx.message.source.uuid
+            if subscriber_uuid in self.subscribers:
+                await self.subscribers.remove(subscriber_uuid)
                 await self.reply_with_fail_log(ctx, "Successfully unsubscribed!")
+                self.logger.info(f"{subscriber_uuid} unsubscribed")
             else:
                 await self.reply_with_fail_log(ctx, "Not subscribed!")
+                self.logger.info(f"{subscriber_uuid} tried to unsubscribe but they are not subscribed")
         except Exception as e:
             self.logger.error(e, exc_info=True)
             try:
@@ -57,8 +63,10 @@ class BotAnswers():
         num_subscribers = -1
 
         try:
-            if ctx.message.source.uuid not in self.subscribers:
-                await self.reply_with_fail_log(ctx.message.source.uuid, self.must_subscribe_message)
+            subscriber_uuid = ctx.message.source.uuid
+            if subscriber_uuid not in self.subscribers:
+                await self.reply_with_fail_log(subscriber_uuid, self.must_subscribe_message)
+                self.logger.info(f"{subscriber_uuid} tried to broadcast but they are not subscribed")
                 return
 
             num_subscribers = len(self.subscribers)
@@ -74,6 +82,7 @@ class BotAnswers():
             for subscriber in self.subscribers:
                 if await ctx.bot.send_message(subscriber, message, attachments=attachments):
                     num_broadcasts += 1
+                    self.logger.info(f"Message successfully sent to {subscriber}")
                 else:
                     self.logger.warning(f"Could not send message to {subscriber}")
                     await self.subscribers.remove(ctx.message.source.uuid)
@@ -88,6 +97,7 @@ class BotAnswers():
 
     async def display_help(self, ctx: ChatContext) -> None:
         try:
+            subscriber_uuid = ctx.message.source.uuid
             message = ctx.message.get_body()
             for regex in CommandRegex:
                 if regex.value.search(message) is not None:
@@ -95,11 +105,14 @@ class BotAnswers():
 
             if message == '':
                 if ctx.message.data_message.attachments == []:
-                    return  # This is a message emoticon reaction or a sticker, the bot can ignore these.
+                    self.logger.info(f"Received reaction, sticker or similar from {subscriber_uuid}")
+                    return
 
                 # Only attachment, assume the user wants to forward that
+                self.logger.info(f"Received a file from {subscriber_uuid}, broadcasting!")
                 await self.broadcast(ctx)
             else:
                 await self.reply_with_fail_log(ctx, self.help_message)
+                self.logger.info(f"Sent help message to {subscriber_uuid}")
         except Exception as e:
             self.logger.error(e, exc_info=True)

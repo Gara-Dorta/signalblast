@@ -8,11 +8,10 @@ class CommandStrings(Enum):
     broadcast = "!broadcast"
 
 
-def begings_with(in_str):
-    return "^(" + in_str.value + ")"
-
-
 class CommandRegex(Enum):
-    subscribe = re.compile(begings_with(CommandStrings.subscribe))
-    unsubscribe = re.compile(begings_with(CommandStrings.unsubscribe))
-    broadcast = re.compile(begings_with(CommandStrings.broadcast))
+    def _begings_with(in_str):
+        return "^(" + in_str.value + ")"
+
+    subscribe = re.compile(_begings_with(CommandStrings.subscribe))
+    unsubscribe = re.compile(_begings_with(CommandStrings.unsubscribe))
+    broadcast = re.compile(_begings_with(CommandStrings.broadcast))

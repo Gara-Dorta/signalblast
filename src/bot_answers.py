@@ -1,16 +1,18 @@
-import logging
 from typing import List, Optional
 from semaphore import ChatContext, Attachment
+from logging import Logger
 
 from subscribers import Subscribers
 from bot_commands import CommandStrings, CommandRegex
 
 
 class BotAnswers():
-    def __init__(self) -> None:
+    def __init__(self, logger: Logger) -> None:
         self.subscribers = Subscribers.load_subscribers()
         self.help_message = self.compose_help_message()
         self.must_subscribe_message = self.compose_must_subscribe_message()
+
+        self.logger = logger
 
     def compose_help_message(self):
         message = "I'm sorry, I didn't understand you but I understand the following commands:\n\n"
@@ -30,23 +32,23 @@ class BotAnswers():
         if await ctx.message.reply(message):
             return True
         else:
-            logging.warning(f"Could not send message to {ctx.message.source.uuid}")
+            self.logger.warning(f"Could not send message to {ctx.message.source.uuid}")
             return False
 
     async def subscribe(self, ctx: ChatContext) -> None:
         try:
             if ctx.message.source.uuid in self.subscribers:
                 await self.reply_with_fail_log(ctx, "Already subscribed!")
-                logging.info("Already subscribed!")
+                self.logger.info("Already subscribed!")
             else:
                 await self.subscribers.add(ctx.message.source.uuid)
                 await self.reply_with_fail_log(ctx, "Subscription successful!")
         except Exception as e:
-            logging.error(e, exc_info=True)
+            self.logger.error(e, exc_info=True)
             try:
                 await self.reply_with_fail_log(ctx, "Could not subscribe!")
             except Exception as e:
-                logging.error(e, exc_info=True)
+                self.logger.error(e, exc_info=True)
 
     async def unsubscribe(self, ctx: ChatContext) -> None:
         try:
@@ -56,11 +58,11 @@ class BotAnswers():
             else:
                 await self.reply_with_fail_log(ctx, "Not subscribed!")
         except Exception as e:
-            logging.error(e, exc_info=True)
+            self.logger.error(e, exc_info=True)
             try:
                 await self.reply_with_fail_log(ctx, "Could not unsubscribe!")
             except Exception as e:
-                logging.error(e, exc_info=True)
+                self.logger.error(e, exc_info=True)
 
     def prepare_attachments(self, attachments: Optional[List[Attachment]]) -> List:
         if attachments == []:
@@ -110,16 +112,16 @@ class BotAnswers():
                 if await ctx.bot.send_message(subscriber, message, attachments=attachments):
                     num_broadcasts += 1
                 else:
-                    logging.warning(f"Could not send message to {subscriber}")
+                    self.logger.warning(f"Could not send message to {subscriber}")
                     await self.subscribers.remove(ctx.message.source.uuid)
         except Exception as e:
-            logging.error(e, exc_info=True)
+            self.logger.error(e, exc_info=True)
             try:
                 error_str = "Something went wrong, could only send the message to "\
                             f"{num_broadcasts} out of {num_subscribers} subscribers"
                 await self.reply_with_fail_log(ctx, error_str)
             except Exception as e:
-                logging.error(e, exc_info=True)
+                self.logger.error(e, exc_info=True)
 
     async def display_help(self, ctx: ChatContext) -> None:
         try:
@@ -137,4 +139,4 @@ class BotAnswers():
             else:
                 await self.reply_with_fail_log(ctx, self.help_message)
         except Exception as e:
-            logging.error(e, exc_info=True)
+            self.logger.error(e, exc_info=True)

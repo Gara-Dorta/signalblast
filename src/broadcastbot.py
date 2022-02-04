@@ -4,31 +4,25 @@
 # https://github.com/lwesterhof/semaphore/blob/19b949d336a2dafbddd26325db21fba2ed74d292/examples/broadcastbot.py
 # See there for authorship
 #
-import logging
-from logging.handlers import RotatingFileHandler
 import os
 from semaphore import Bot
+from logging import INFO, ERROR
 
 from bot_answers import BotAnswers
 from bot_commands import CommandRegex
+from utils import get_logger, redirect_semaphore_logger
 
 
 async def main():
     """Start the bot."""
 
-    logFile = '/var/log/signalblast.log'
-
-    logging.basicConfig()
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    handler = RotatingFileHandler(logFile, mode='a', maxBytes=5*1024*1024, backupCount=1, encoding=None, delay=0)
-    handler.setLevel(logging.DEBUG)
-    handler.setFormatter(formatter)
-    log = logging.getLogger()
-    log.addHandler(handler)
+    log_file = '/var/log/signalblast.log'
+    logger = get_logger(log_file, logging_level=INFO)
+    redirect_semaphore_logger(log_file)
 
     # Connect the bot to number.
-    async with Bot(os.environ["SIGNAL_PHONE_NUMBER"], logging_level=logging.ERROR) as bot:
-        bot_answers = BotAnswers()
+    async with Bot(os.environ["SIGNAL_PHONE_NUMBER"], logging_level=INFO) as bot:
+        bot_answers = BotAnswers(logger)
 
         bot.register_handler(CommandRegex.subscribe.value, bot_answers.subscribe)
         bot.register_handler(CommandRegex.unsubscribe.value, bot_answers.unsubscribe)

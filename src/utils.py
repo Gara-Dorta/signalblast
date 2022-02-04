@@ -8,7 +8,7 @@ def _get_rotating_handler(log_file: str) -> RotatingFileHandler:
 
 def get_logger(log_file: str, logging_level) -> Logger:
     handler = _get_rotating_handler(log_file)
-    formatter = Formatter('%(asctime)s %(name)s [%(levelname)s] - %(message)s')
+    formatter = Formatter('%(asctime)s %(name)s [%(levelname)s] - %(funcName)s - %(message)s')
     handler.setLevel(logging_level)
     handler.setFormatter(formatter)
     log = getLogger('signalblast')

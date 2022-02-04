@@ -1,32 +1,20 @@
-from typing import List, Optional
-from semaphore import ChatContext, Attachment
+from semaphore import ChatContext
 from logging import Logger
 
 from subscribers import Subscribers
-from bot_commands import CommandStrings, CommandRegex
+from bot_commands import CommandRegex
+from message_handler import MessageHandler
 
 
 class BotAnswers():
     def __init__(self, logger: Logger) -> None:
         self.subscribers = Subscribers.load_subscribers()
-        self.help_message = self.compose_help_message()
-        self.must_subscribe_message = self.compose_must_subscribe_message()
+        self.message_handler = MessageHandler()
+
+        self.help_message = self.message_handler.compose_help_message()
+        self.must_subscribe_message = self.message_handler.compose_must_subscribe_message()
 
         self.logger = logger
-
-    def compose_help_message(self):
-        message = "I'm sorry, I didn't understand you but I understand the following commands:\n\n"
-        for command_str in CommandStrings:
-            message += "\t" + command_str.value + "\n"
-        message += "\nPlease try again"
-        return message
-
-    def compose_must_subscribe_message(self):
-        message = "To be able to send messages you must be a subscriber too.\n"
-        message += "Please subscribe by sending:\n"
-        message += f"\t{CommandStrings.subscribe.value}\n"
-        message += "and try again after that."
-        return message
 
     async def reply_with_fail_log(self, ctx, message) -> bool:
         if await ctx.message.reply(message):
@@ -64,31 +52,6 @@ class BotAnswers():
             except Exception as e:
                 self.logger.error(e, exc_info=True)
 
-    def prepare_attachments(self, attachments: Optional[List[Attachment]]) -> List:
-        if attachments == []:
-            return None
-
-        attachments_to_send = []
-        for attachment in attachments:
-            attachment_to_send = {"filename": attachment.stored_filename,
-                                  "width": attachment.width,
-                                  "height": attachment.height,
-                                  "contentType": attachment.content_type,
-                                  }
-            attachments_to_send.append(attachment_to_send)
-
-        return attachments_to_send
-
-    def prepare_message(self, message: str) -> str:
-        if message == '':
-            return None
-        else:
-            message = message[len("!broadcast"):].strip()
-            if message == '':
-                return None
-            else:
-                return message
-
     async def broadcast(self, ctx: ChatContext) -> None:
         num_broadcasts = 0
         num_subscribers = -1
@@ -101,8 +64,8 @@ class BotAnswers():
             num_subscribers = len(self.subscribers)
 
             await ctx.message.mark_read()
-            message = self.prepare_message(ctx.message.get_body())
-            attachments = self.prepare_attachments(ctx.message.data_message.attachments)
+            message = self.message_handler.prepare_message(ctx.message.get_body())
+            attachments = self.message_handler.prepare_attachments(ctx.message.data_message.attachments)
 
             if message is None and attachments is None:
                 return

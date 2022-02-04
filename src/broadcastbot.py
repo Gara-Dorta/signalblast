@@ -6,7 +6,7 @@
 #
 import os
 from semaphore import Bot
-from logging import INFO, ERROR
+from logging import INFO
 
 from bot_answers import BotAnswers
 from bot_commands import CommandRegex

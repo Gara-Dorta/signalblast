@@ -8,7 +8,7 @@ RUN apt update && apt upgrade -y
 
 RUN apt install -y python3-pip netcat-openbsd
 
-RUN pip install semaphore-bot
+RUN pip install semaphore-bot argparse
 
 RUN git clone https://github.com/Garoe/signalblast && cd signalblast && git checkout $COMMIT_ID
 

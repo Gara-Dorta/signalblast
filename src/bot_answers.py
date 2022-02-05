@@ -12,11 +12,13 @@ class BotAnswers():
     subscribers_data_path = './data/subscribers.pickle'
     banned_users_data_path = './data/banned_users.pickle'
 
-    def __init__(self, logger: Logger, admin_pass: Optional[str]) -> None:
+    @classmethod
+    async def create(cls, logger: Logger, admin_pass: Optional[str]) -> None:
+        self = BotAnswers()
         self.subscribers = Users.load_from_file(self.subscribers_data_path)
         self.banned_users = Users.load_from_file(self.banned_users_data_path)
 
-        self.admin = Admin.load_admin(admin_pass)
+        self.admin = await Admin.load_from_file(admin_pass)
         self.message_handler = MessageHandler()
 
         self.help_message = self.message_handler.compose_help_message()
@@ -25,6 +27,7 @@ class BotAnswers():
 
         self.logger = logger
         self.logger.debug('BotAnswers is initialised')
+        return self
 
     async def reply_with_fail_log(self, ctx, message) -> bool:
         if await ctx.message.reply(message):

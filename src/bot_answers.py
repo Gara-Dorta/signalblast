@@ -15,6 +15,7 @@ class BotAnswers():
         self.message_handler = MessageHandler()
 
         self.help_message = self.message_handler.compose_help_message()
+        self.admin_help_message = self.message_handler.compose_help_message(add_admin_commands=True)
         self.must_subscribe_message = self.message_handler.compose_must_subscribe_message()
 
         self.logger = logger
@@ -115,7 +116,11 @@ class BotAnswers():
                 self.logger.info(f"Received a file from {subscriber_uuid}, broadcasting!")
                 await self.broadcast(ctx)
             else:
-                await self.reply_with_fail_log(ctx, self.help_message)
+                if subscriber_uuid != self.admin.admin_id:
+                    help_message = self.help_message
+                else:
+                    help_message = self.admin_help_message
+                await self.reply_with_fail_log(ctx, help_message)
                 self.logger.info(f"Sent help message to {subscriber_uuid}")
         except Exception as e:
             self.logger.error(e, exc_info=True)

@@ -1,7 +1,7 @@
-from typing import Optional, List
+from typing import Optional, List, Union
 from semaphore import Attachment
 
-from bot_commands import PublicCommandStrings
+from bot_commands import AdminCommandStrings, PublicCommandStrings
 
 
 class MessageHandler():
@@ -35,10 +35,16 @@ class MessageHandler():
         return attachments_to_send
 
     @staticmethod
-    def compose_help_message() -> str:
+    def compose_help_message(add_admin_commands: bool = False) -> str:
+        def _add_commands(message, command_strings):
+            for command_str in command_strings:
+                message += "\t" + command_str.value + "\n"
+            return message
+
         message = "I'm sorry, I didn't understand you but I understand the following commands:\n\n"
-        for command_str in PublicCommandStrings:
-            message += "\t" + command_str.value + "\n"
+        message = _add_commands(message, PublicCommandStrings)
+        if add_admin_commands:
+            message = _add_commands(message, AdminCommandStrings)
         message += "\nPlease try again"
         return message
 

@@ -1,7 +1,7 @@
-from typing import Optional, List, Union
+from typing import Optional, List
 from semaphore import Attachment
 
-from bot_commands import AdminCommandStrings, PublicCommandStrings
+from bot_commands import AdminCommandStrings, PublicCommandStrings, AdminCommandArgs
 
 
 class MessageHandler():
@@ -36,15 +36,20 @@ class MessageHandler():
 
     @staticmethod
     def compose_help_message(add_admin_commands: bool = False) -> str:
-        def _add_commands(message, command_strings):
-            for command_str in command_strings:
-                message += "\t" + command_str.value + "\n"
+        def _add_commands(message):
+            for command_str in PublicCommandStrings:
+                message += "\t" + command_str + "\n"
+            return message
+
+        def _add_admin_commands(message):
+            for command_str, command_arg in zip(AdminCommandStrings, AdminCommandArgs):
+                message += "\t" + command_str + " " + command_arg + "\n"
             return message
 
         message = "I'm sorry, I didn't understand you but I understand the following commands:\n\n"
-        message = _add_commands(message, PublicCommandStrings)
+        message = _add_commands(message)
         if add_admin_commands:
-            message = _add_commands(message, AdminCommandStrings)
+            message = _add_admin_commands(message)
         message += "\nPlease try again"
         return message
 
@@ -52,7 +57,7 @@ class MessageHandler():
     def compose_must_subscribe_message() -> str:
         message = "To be able to send messages you must be a subscriber too.\n"
         message += "Please subscribe by sending:\n"
-        message += f"\t{PublicCommandStrings.subscribe.value}\n"
+        message += f"\t{PublicCommandStrings.subscribe}\n"
         message += "and try again after that."
         return message
 

@@ -30,15 +30,15 @@ async def main(admin_pass: Optional[str]):
     async with Bot(os.environ["SIGNAL_PHONE_NUMBER"], logging_level=INFO) as bot:
         bot_answers = BotAnswers(logger, admin_pass)
 
-        bot.register_handler(CommandRegex.subscribe.value, bot_answers.subscribe)
-        bot.register_handler(CommandRegex.unsubscribe.value, bot_answers.unsubscribe)
-        bot.register_handler(CommandRegex.broadcast.value, bot_answers.broadcast)
-        bot.register_handler(CommandRegex.add_admin.value, bot_answers.add_admin)
-        bot.register_handler(CommandRegex.remove_admin.value, bot_answers.remove_admin)
-        bot.register_handler(CommandRegex.msg_to_admin.value, bot_answers.msg_to_admin)
-        bot.register_handler(CommandRegex.msg_from_admin.value, bot_answers.msg_from_admin)
-        bot.register_handler(CommandRegex.ban_subscriber.value, bot_answers.ban_user)
-        bot.register_handler(CommandRegex.lift_ban_subscriber.value, bot_answers.lift_ban_user)
+        bot.register_handler(CommandRegex.subscribe, bot_answers.subscribe)
+        bot.register_handler(CommandRegex.unsubscribe, bot_answers.unsubscribe)
+        bot.register_handler(CommandRegex.broadcast, bot_answers.broadcast)
+        bot.register_handler(CommandRegex.add_admin, bot_answers.add_admin)
+        bot.register_handler(CommandRegex.remove_admin, bot_answers.remove_admin)
+        bot.register_handler(CommandRegex.msg_to_admin, bot_answers.msg_to_admin)
+        bot.register_handler(CommandRegex.msg_from_admin, bot_answers.msg_from_admin)
+        bot.register_handler(CommandRegex.ban_subscriber, bot_answers.ban_user)
+        bot.register_handler(CommandRegex.lift_ban_subscriber, bot_answers.lift_ban_user)
         bot.register_handler(".*", bot_answers.display_help)
 
         # Run the bot until you press Ctrl-C.

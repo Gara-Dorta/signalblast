@@ -119,7 +119,7 @@ class BotAnswers():
             subscriber_uuid = ctx.message.source.uuid
             message = ctx.message.get_body()
             for regex in CommandRegex:
-                if regex.value.search(message) is not None:
+                if regex.search(message) is not None:
                     return
 
             if message == '':
@@ -144,7 +144,7 @@ class BotAnswers():
         try:
             subscriber_uuid = ctx.message.source.uuid
             message = ctx.message.get_body()
-            message = message.replace(AdminCommandStrings.add_admin.value, '', 1).strip()
+            message = message.replace(AdminCommandStrings.add_admin, '', 1).strip()
 
             previous_admin = self.admin.admin_id
             if await self.admin.add(subscriber_uuid, message):
@@ -169,7 +169,7 @@ class BotAnswers():
         try:
             subscriber_uuid = ctx.message.source.uuid
             message = ctx.message.get_body()
-            message = message.replace(AdminCommandStrings.remove_admin.value, '', 1).strip()
+            message = message.replace(AdminCommandStrings.remove_admin, '', 1).strip()
 
             previous_admin = self.admin.admin_id
             if await self.admin.remove(message):
@@ -193,7 +193,7 @@ class BotAnswers():
         try:
             subscriber_uuid = ctx.message.source.uuid
             message = ctx.message.get_body()
-            message = message.replace(PublicCommandStrings.msg_to_admin.value, '', 1).strip()
+            message = message.replace(PublicCommandStrings.msg_to_admin, '', 1).strip()
 
             if self.admin.admin_id is None:
                 await self.reply_with_fail_log(ctx, "I'm sorry but there are no admins to contact!")
@@ -220,7 +220,7 @@ class BotAnswers():
         try:
             subscriber_uuid = ctx.message.source.uuid
             message = ctx.message.get_body()
-            message = message.replace(AdminCommandStrings.msg_from_admin.value, '', 1).strip()
+            message = message.replace(AdminCommandStrings.msg_from_admin, '', 1).strip()
 
             if self.admin.admin_id is None:
                 await self.reply_with_fail_log(ctx, "I'm sorry but there are no admins")
@@ -251,7 +251,7 @@ class BotAnswers():
         try:
             subscriber_uuid = ctx.message.source.uuid
             message = ctx.message.get_body()
-            user_id = message.replace(AdminCommandStrings.ban_subscriber.value, '', 1).strip()
+            user_id = message.replace(AdminCommandStrings.ban_subscriber, '', 1).strip()
 
             if self.admin.admin_id is None:
                 await self.reply_with_fail_log(ctx, "I'm sorry but there are no admins")
@@ -284,7 +284,7 @@ class BotAnswers():
         try:
             subscriber_uuid = ctx.message.source.uuid
             message = ctx.message.get_body()
-            user_id = message.replace(AdminCommandStrings.lift_ban_subscriber.value, '', 1).strip()
+            user_id = message.replace(AdminCommandStrings.lift_ban_subscriber, '', 1).strip()
 
             if self.admin.admin_id is None:
                 await self.reply_with_fail_log(ctx, "I'm sorry but there are no admins")

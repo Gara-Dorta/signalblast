@@ -12,7 +12,9 @@ class PublicCommandStrings(Enum):
 class AdminCommandStrings(Enum):
     add_admin = "!add admin"
     remove_admin = "!remove admin"
-    msg_from_admin = "!to subscriber"
+    msg_from_admin = "!reply"
+    ban_subscriber = "!ban"
+    lift_ban_subscriber = "!lift ban"
 
 
 class CommandRegex(Enum):
@@ -26,3 +28,5 @@ class CommandRegex(Enum):
     remove_admin = re.compile(_begings_with(AdminCommandStrings.remove_admin))
     msg_to_admin = re.compile(_begings_with(PublicCommandStrings.msg_to_admin))
     msg_from_admin = re.compile(_begings_with(AdminCommandStrings.msg_from_admin))
+    ban_subscriber = re.compile(_begings_with(AdminCommandStrings.ban_subscriber))
+    lift_ban_subscriber = re.compile(_begings_with(AdminCommandStrings.lift_ban_subscriber))

@@ -3,14 +3,19 @@ from semaphore import ChatContext
 from logging import Logger
 
 from admin import Admin
-from subscribers import Subscribers
+from users import Users
 from bot_commands import CommandRegex, AdminCommandStrings, PublicCommandStrings
 from message_handler import MessageHandler
 
 
 class BotAnswers():
+    subscribers_data_path = './data/subscribers.pickle'
+    banned_users_data_path = './data/banned_users.pickle'
+
     def __init__(self, logger: Logger, admin_pass: Optional[str]) -> None:
-        self.subscribers = Subscribers.load_subscribers()
+        self.subscribers = Users.load_from_file(self.subscribers_data_path)
+        self.banned_users = Users.load_from_file(self.banned_users_data_path)
+
         self.admin = Admin.load_admin(admin_pass)
         self.message_handler = MessageHandler()
 
@@ -35,6 +40,11 @@ class BotAnswers():
                 await self.reply_with_fail_log(ctx, "Already subscribed!")
                 self.logger.info("Already subscribed!")
             else:
+                if subscriber_uuid in self.banned_users:
+                    await self.reply_with_fail_log(ctx, "This number is not allowed to subscribe")
+                    self.logger.info(f"{subscriber_uuid} was not allowed to subscribe")
+                    return
+
                 await self.subscribers.add(subscriber_uuid)
                 await self.reply_with_fail_log(ctx, "Subscription successful!")
                 self.logger.info(f"{subscriber_uuid} subscribed")
@@ -68,8 +78,13 @@ class BotAnswers():
 
         try:
             subscriber_uuid = ctx.message.source.uuid
+            if subscriber_uuid in self.banned_users:
+                await ctx.bot.send_message(subscriber_uuid, "This number is not allowed to broadcast messages")
+                self.logger.info(f"{subscriber_uuid} tried to broadcast but they are banned")
+                return
+
             if subscriber_uuid not in self.subscribers:
-                await self.reply_with_fail_log(subscriber_uuid, self.must_subscribe_message)
+                await ctx.bot.send_message(subscriber_uuid, self.must_subscribe_message)
                 self.logger.info(f"{subscriber_uuid} tried to broadcast but they are not subscribed")
                 return
 
@@ -184,6 +199,11 @@ class BotAnswers():
                 await self.reply_with_fail_log(ctx, "I'm sorry but there are no admins to contact!")
                 self.logger.info(f"Tried to contact an admin but there is none! {subscriber_uuid}")
             else:
+                if subscriber_uuid in self.banned_users:
+                    await self.reply_with_fail_log(ctx, "You are not allowed to contact the admin!")
+                    self.logger.info(f"Banned user {subscriber_uuid} tried to contact admin")
+                    return
+
                 msg_to_admin = self.message_handler.compose_message_to_admin('Sent you message:\n', subscriber_uuid)
                 msg_to_admin += message
                 attachments = self.message_handler.prepare_attachments(ctx.message.data_message.attachments)
@@ -224,5 +244,75 @@ class BotAnswers():
             self.logger.error(e, exc_info=True)
             try:
                 await self.reply_with_fail_log(ctx, "Failed to send the message to the user!")
+            except Exception as e:
+                self.logger.error(e, exc_info=True)
+
+    async def ban_user(self, ctx: ChatContext) -> None:
+        try:
+            subscriber_uuid = ctx.message.source.uuid
+            message = ctx.message.get_body()
+            user_id = message.replace(AdminCommandStrings.ban_subscriber.value, '', 1).strip()
+
+            if self.admin.admin_id is None:
+                await self.reply_with_fail_log(ctx, "I'm sorry but there are no admins")
+                self.logger.info(f"Tried to ban a user but there are no admins! {subscriber_uuid}")
+                return
+
+            if self.admin.admin_id != subscriber_uuid:
+                await self.reply_with_fail_log(ctx, "I'm sorry but you are not an admin")
+                msg_to_admin = self.message_handler.compose_message_to_admin('Tried to ban a user', subscriber_uuid)
+                await ctx.bot.send_message(self.admin.admin_id, msg_to_admin)
+                self.logger.info(f"{subscriber_uuid} tried to ban a user but admin is {self.admin.admin_id}")
+                return
+
+            if user_id in self.subscribers:
+                await self.subscribers.remove(user_id)
+            await self.banned_users.add(user_id)
+
+            await ctx.bot.send_message(user_id, 'You have been banned')
+            await self.reply_with_fail_log(ctx, "Successfully banned user")
+
+            self.logger.info(f"Banned user {user_id}")
+        except Exception as e:
+            self.logger.error(e, exc_info=True)
+            try:
+                await self.reply_with_fail_log(ctx, "Failed to ban user")
+            except Exception as e:
+                self.logger.error(e, exc_info=True)
+
+    async def lift_ban_user(self, ctx: ChatContext) -> None:
+        try:
+            subscriber_uuid = ctx.message.source.uuid
+            message = ctx.message.get_body()
+            user_id = message.replace(AdminCommandStrings.lift_ban_subscriber.value, '', 1).strip()
+
+            if self.admin.admin_id is None:
+                await self.reply_with_fail_log(ctx, "I'm sorry but there are no admins")
+                self.logger.info(f"Tried to lift the ban of a user but there are no admins! {subscriber_uuid}")
+                return
+
+            if self.admin.admin_id != subscriber_uuid:
+                await self.reply_with_fail_log(ctx, "I'm sorry but you are not an admin")
+                msg_to_admin = self.message_handler.compose_message_to_admin('Tried to lift ban a user',
+                                                                             subscriber_uuid)
+                await ctx.bot.send_message(self.admin.admin_id, msg_to_admin)
+                self.logger.info(f"{subscriber_uuid} tried to lift ban a user but admin is {self.admin.admin_id}")
+                return
+
+            if user_id in self.banned_users:
+                await self.banned_users.remove(user_id)
+            else:
+                await self.reply_with_fail_log(ctx, "Could not lift the ban because the user was not banned")
+                self.logger.info(f"Could not lift the ban of {user_id} because the user was not banned")
+                return
+
+            await ctx.bot.send_message(user_id, 'You have banned have been lifted, try subscribing again')
+            await self.reply_with_fail_log(ctx, "Successfully lifted the ban on the user")
+
+            self.logger.info(f"Lifted the ban on user {user_id}")
+        except Exception as e:
+            self.logger.error(e, exc_info=True)
+            try:
+                await self.reply_with_fail_log(ctx, "Failed lift the ban on the user")
             except Exception as e:
                 self.logger.error(e, exc_info=True)

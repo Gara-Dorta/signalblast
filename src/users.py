@@ -18,7 +18,7 @@ class Users():
     async def save_to_file(self):
         with open(self.save_path, "w") as f:
             for i, subscriber in enumerate(self.data):
-                if i < len(self.data):
+                if i < len(self.data) - 1:
                     f.write(subscriber + '\n')
                 else:
                     f.write(subscriber)

@@ -18,7 +18,9 @@ class BotAnswers():
         self.admin: Admin = None
         self.message_handler: MessageHandler = None
         self.help_message: str = None
+        self.wrong_command_message: str = None
         self.admin_help_message: str = None
+        self.admin_wrong_command_message: str = None
         self.must_subscribe_message: str = None
         self.logger: Logger = None
 
@@ -31,8 +33,12 @@ class BotAnswers():
         self.admin = await Admin.load_from_file(admin_pass)
         self.message_handler = MessageHandler()
 
-        self.help_message = self.message_handler.compose_help_message()
+        self.help_message = self.message_handler.compose_help_message(is_help=True)
+        self.wrong_command_message = self.message_handler.compose_help_message(is_help=False)
         self.admin_help_message = self.message_handler.compose_help_message(add_admin_commands=True)
+        self.admin_wrong_command_message = self.message_handler.compose_help_message(add_admin_commands=True,
+                                                                                     is_help=False)
+
         self.must_subscribe_message = self.message_handler.compose_must_subscribe_message()
 
         self.logger = logger
@@ -127,10 +133,29 @@ class BotAnswers():
             except Exception as e:
                 self.logger.error(e, exc_info=True)
 
+    def _get_help_message(self, input_message, subscriber_uuid):
+        if input_message.startswith(PublicCommandStrings.help):
+            is_wrong_command = False
+        else:
+            is_wrong_command = True
+
+        if subscriber_uuid != self.admin.admin_id:
+            if is_wrong_command:
+                return self.wrong_command_message
+            else:
+                return self.help_message
+        else:
+            if is_wrong_command:
+                return self.admin_wrong_command_message
+            else:
+                return self.admin_help_message
+
     async def display_help(self, ctx: ChatContext) -> None:
         try:
             subscriber_uuid = ctx.message.source.uuid
             message = ctx.message.get_body()
+            help_message = self._get_help_message(message, subscriber_uuid)
+
             for regex in CommandRegex:
                 if regex.search(message) is not None:
                     return
@@ -144,10 +169,6 @@ class BotAnswers():
                 self.logger.info(f"Received a file from {subscriber_uuid}, broadcasting!")
                 await self.broadcast(ctx)
             else:
-                if subscriber_uuid != self.admin.admin_id:
-                    help_message = self.help_message
-                else:
-                    help_message = self.admin_help_message
                 await self.reply_with_warn_on_failure(ctx, help_message)
                 self.logger.info(f"Sent help message to {subscriber_uuid}")
         except Exception as e:

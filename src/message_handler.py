@@ -35,7 +35,7 @@ class MessageHandler():
         return attachments_to_send
 
     @staticmethod
-    def compose_help_message(add_admin_commands: bool = False) -> str:
+    def _compose_help_message(add_admin_commands: bool) -> str:
         def _add_commands(message):
             for command_str in PublicCommandStrings:
                 message += "\t" + command_str + "\n"
@@ -46,12 +46,20 @@ class MessageHandler():
                 message += "\t" + command_str + " " + command_arg + "\n"
             return message
 
-        message = "I'm sorry, I didn't understand you but I understand the following commands:\n\n"
-        message = _add_commands(message)
+        message = _add_commands('')
         if add_admin_commands:
             message = _add_admin_commands(message)
-        message += "\nPlease try again"
         return message
+
+    @staticmethod
+    def compose_help_message(add_admin_commands: bool = False, is_help: bool = True) -> str:
+        message = MessageHandler._compose_help_message(add_admin_commands)
+        if is_help:
+            return "I'm happy to help! This are the commands that you can use:\n\n" + message
+        else:
+            message = "I'm sorry, I didn't understand you but I understand the following commands:\n\n" + message
+            message += "\nPlease try again"
+            return message
 
     @staticmethod
     def compose_must_subscribe_message() -> str:

@@ -6,6 +6,10 @@ from typing import Optional
 class Admin():
     save_path = './data/admin.txt'
 
+    def __init__(self) -> None:
+        self.admin_id: str = None
+        self._hashed_password: str = None
+
     @classmethod
     async def create(cls, admin_password: Optional[str]) -> None:
         self = Admin()

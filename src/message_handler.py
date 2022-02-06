@@ -9,11 +9,11 @@ class MessageHandler():
         pass
 
     @staticmethod
-    def prepare_broadcast_message(message: str) -> str:
+    def remove_command_from_message(message: str, command: str) -> str:
         if message == '':
             return None
         else:
-            message = message[len("!broadcast"):].strip()
+            message = message.replace(command, '', 1).strip()
             if message == '':
                 return None
             else:

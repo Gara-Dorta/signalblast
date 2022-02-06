@@ -110,7 +110,8 @@ class BotAnswers():
             num_subscribers = len(self.subscribers)
 
             await ctx.message.mark_read()
-            message = self.message_handler.prepare_broadcast_message(ctx.message.get_body())
+            message = self.message_handler.remove_command_from_message(ctx.message.get_body(),
+                                                                       PublicCommandStrings.broadcast)
             attachments = self.message_handler.prepare_attachments(ctx.message.data_message.attachments)
 
             if message is None and attachments is None:
@@ -177,8 +178,8 @@ class BotAnswers():
     async def add_admin(self, ctx: ChatContext) -> None:
         try:
             subscriber_uuid = ctx.message.source.uuid
-            message = ctx.message.get_body()
-            message = message.replace(AdminCommandStrings.add_admin, '', 1).strip()
+            message = self.message_handler.remove_command_from_message(ctx.message.get_body(),
+                                                                       AdminCommandStrings.add_admin)
 
             previous_admin = self.admin.admin_id
             if await self.admin.add(subscriber_uuid, message):
@@ -202,8 +203,8 @@ class BotAnswers():
     async def remove_admin(self, ctx: ChatContext) -> None:
         try:
             subscriber_uuid = ctx.message.source.uuid
-            message = ctx.message.get_body()
-            message = message.replace(AdminCommandStrings.remove_admin, '', 1).strip()
+            message = self.message_handler.remove_command_from_message(ctx.message.get_body(),
+                                                                       AdminCommandStrings.remove_admin)
 
             previous_admin = self.admin.admin_id
             if await self.admin.remove(message):
@@ -226,8 +227,8 @@ class BotAnswers():
     async def msg_to_admin(self, ctx: ChatContext) -> None:
         try:
             subscriber_uuid = ctx.message.source.uuid
-            message = ctx.message.get_body()
-            message = message.replace(PublicCommandStrings.msg_to_admin, '', 1).strip()
+            message = self.message_handler.remove_command_from_message(ctx.message.get_body(),
+                                                                       PublicCommandStrings.msg_to_admin)
 
             if self.admin.admin_id is None:
                 await self.reply_with_warn_on_failure(ctx, "I'm sorry but there are no admins to contact!")
@@ -253,8 +254,8 @@ class BotAnswers():
     async def msg_from_admin(self, ctx: ChatContext) -> None:
         try:
             subscriber_uuid = ctx.message.source.uuid
-            message = ctx.message.get_body()
-            message = message.replace(AdminCommandStrings.msg_from_admin, '', 1).strip()
+            message = self.message_handler.remove_command_from_message(ctx.message.get_body(),
+                                                                       AdminCommandStrings.msg_from_admin)
 
             if self.admin.admin_id is None:
                 await self.reply_with_warn_on_failure(ctx, "I'm sorry but there are no admins")
@@ -284,8 +285,8 @@ class BotAnswers():
     async def ban_user(self, ctx: ChatContext) -> None:
         try:
             subscriber_uuid = ctx.message.source.uuid
-            message = ctx.message.get_body()
-            user_id = message.replace(AdminCommandStrings.ban_subscriber, '', 1).strip()
+            user_id = self.message_handler.remove_command_from_message(ctx.message.get_body(),
+                                                                       AdminCommandStrings.ban_subscriber)
 
             if self.admin.admin_id is None:
                 await self.reply_with_warn_on_failure(ctx, "I'm sorry but there are no admins")
@@ -317,8 +318,8 @@ class BotAnswers():
     async def lift_ban_user(self, ctx: ChatContext) -> None:
         try:
             subscriber_uuid = ctx.message.source.uuid
-            message = ctx.message.get_body()
-            user_id = message.replace(AdminCommandStrings.lift_ban_subscriber, '', 1).strip()
+            user_id = self.message_handler.remove_command_from_message(ctx.message.get_body(),
+                                                                       AdminCommandStrings.add_alift_ban_subscriberdmin)
 
             if self.admin.admin_id is None:
                 await self.reply_with_warn_on_failure(ctx, "I'm sorry but there are no admins")

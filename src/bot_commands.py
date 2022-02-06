@@ -28,6 +28,7 @@ class _PublicCommandStrings(_IterableDataClass):
     unsubscribe = "!unsubscribe"
     broadcast = "!broadcast"
     msg_to_admin = "!admin"
+    help = "!help"
 
 
 PublicCommandStrings = _PublicCommandStrings()

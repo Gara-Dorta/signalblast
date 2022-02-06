@@ -1,9 +1,11 @@
 #!/bin/bash
 
-signald &
+# export SIGNAL_PHONE_NUMBER=
 
-# TODO write some code to the registration automatically here
-# In between should do the registration
-# nc -U /var/run/signald/signald.sock
-
-python ./broadcastbot.py
+if [ -z ${SIGNAL_PHONE_NUMBER+x} ];
+then
+    signald
+else
+    signald &
+    python3 /root/signalblast/src/broadcastbot.py;
+fi

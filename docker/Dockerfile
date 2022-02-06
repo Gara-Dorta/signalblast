@@ -15,3 +15,5 @@ RUN git clone https://github.com/Garoe/signalblast && cd signalblast && git chec
 RUN mkdir /var/run/signald
 
 RUN echo "socketpath: /var/run/signald/signald.sock" >> /root/.config/signaldctl.yaml
+
+CMD ["./signalblast/docker/entrypoint.sh"]

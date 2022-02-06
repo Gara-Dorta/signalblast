@@ -9,14 +9,14 @@ from message_handler import MessageHandler
 
 
 class BotAnswers():
-    subscribers_data_path = './data/subscribers.pickle'
-    banned_users_data_path = './data/banned_users.pickle'
+    subscribers_data_path = './data/subscribers.txt'
+    banned_users_data_path = './data/banned_users.txt'
 
     @classmethod
     async def create(cls, logger: Logger, admin_pass: Optional[str]) -> None:
         self = BotAnswers()
-        self.subscribers = Users.load_from_file(self.subscribers_data_path)
-        self.banned_users = Users.load_from_file(self.banned_users_data_path)
+        self.subscribers = await Users.load_from_file(self.subscribers_data_path)
+        self.banned_users = await Users.load_from_file(self.banned_users_data_path)
 
         self.admin = await Admin.load_from_file(admin_pass)
         self.message_handler = MessageHandler()

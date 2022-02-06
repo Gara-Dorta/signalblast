@@ -16,8 +16,19 @@ class Users():
         await self.save_to_file()
 
     async def save_to_file(self):
-        with open(self.save_path, 'wb') as f:
-            pickle.dump(self, f)
+        with open(self.save_path, "w") as f:
+            for i, subscriber in enumerate(self.data):
+                if i < len(self.data):
+                    f.write(subscriber + '\n')
+                else:
+                    f.write(subscriber)
+
+    @staticmethod
+    async def _load_from_file(save_path):
+        users = Users(save_path)
+        with open(save_path, "r") as f:
+            users.data.add(f.readline().rstrip())
+        return users
 
     def __iter__(self):
         for user in self.data:
@@ -30,12 +41,8 @@ class Users():
         return len(self.data)
 
     @staticmethod
-    def load_from_file(save_path):
+    async def load_from_file(save_path):
         if not os.path.exists(save_path):
             return Users(save_path)
 
-        with open(save_path, 'rb') as f:
-            subscribers = pickle.load(f)
-            assert isinstance(subscribers, Users)
-            subscribers.save_path = save_path
-            return subscribers
+        return await Users._load_from_file(save_path)

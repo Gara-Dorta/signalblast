@@ -125,6 +125,7 @@ class BotAnswers():
                 else:
                     self.logger.warning(f"Could not send message to {subscriber}")
                     await self.subscribers.remove(ctx.message.source.uuid)
+            self.message_handler.delete_attachments(attachments)
         except Exception as e:
             self.logger.error(e, exc_info=True)
             try:

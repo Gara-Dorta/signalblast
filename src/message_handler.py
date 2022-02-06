@@ -1,3 +1,4 @@
+import os
 from typing import Optional, List
 from semaphore import Attachment
 
@@ -33,6 +34,10 @@ class MessageHandler():
             attachments_to_send.append(attachment_to_send)
 
         return attachments_to_send
+
+    def delete_attachments(self, attachments: List[dict]):
+        for attachment in attachments:
+            os.remove(attachment["filename"])
 
     @staticmethod
     def _compose_help_message(add_admin_commands: bool) -> str:

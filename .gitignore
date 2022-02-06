@@ -131,6 +131,9 @@ dmypy.json
 # Visual studio code settings
 .vscode
 
+# data folder
+src/data/
+
 # Pickle data files
 *.pickle
 

@@ -35,7 +35,10 @@ class MessageHandler():
 
         return attachments_to_send
 
-    def delete_attachments(self, attachments: List[dict]):
+    def delete_attachments(self, attachments: Optional[List[dict]]):
+        if attachments is None:
+            return
+
         for attachment in attachments:
             os.remove(attachment["filename"])
 

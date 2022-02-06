@@ -1,3 +1,4 @@
+from asyncio import gather
 from typing import Optional
 from semaphore import ChatContext
 from logging import Logger
@@ -118,13 +119,21 @@ class BotAnswers():
                 return
 
             # Broadcast message to all subscribers.
-            for subscriber in self.subscribers:
-                if await ctx.bot.send_message(subscriber, message, attachments=attachments):
+            send_tasks = [None] * len(self.subscribers)
+
+            for i, subscriber in enumerate(self.subscribers):
+                send_tasks[i] = ctx.bot.send_message(subscriber, message, attachments=attachments)
+
+            send_task_results = await gather(*send_tasks)
+
+            for send_task_result in send_task_results:
+                if send_task_result:
                     num_broadcasts += 1
                     self.logger.info(f"Message successfully sent to {subscriber}")
                 else:
                     self.logger.warning(f"Could not send message to {subscriber}")
                     await self.subscribers.remove(ctx.message.source.uuid)
+
             self.message_handler.delete_attachments(attachments)
         except Exception as e:
             self.logger.error(e, exc_info=True)

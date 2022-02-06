@@ -12,6 +12,16 @@ class BotAnswers():
     subscribers_data_path = './data/subscribers.txt'
     banned_users_data_path = './data/banned_users.txt'
 
+    def __init__(self) -> None:
+        self.subscribers: Users = None
+        self.banned_users: Users = None
+        self.admin: Admin = None
+        self.message_handler: MessageHandler = None
+        self.help_message: str = None
+        self.admin_help_message: str = None
+        self.must_subscribe_message: str = None
+        self.logger: Logger = None
+
     @classmethod
     async def create(cls, logger: Logger, admin_pass: Optional[str]) -> None:
         self = BotAnswers()

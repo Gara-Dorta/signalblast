@@ -7,11 +7,12 @@ from admin import Admin
 from users import Users
 from bot_commands import CommandRegex, AdminCommandStrings, PublicCommandStrings
 from message_handler import MessageHandler
+from utils import get_code_data_path
 
 
 class BotAnswers():
-    subscribers_data_path = './data/subscribers.txt'
-    banned_users_data_path = './data/banned_users.txt'
+    subscribers_data_path = get_code_data_path() / 'subscribers.txt'
+    banned_users_data_path = get_code_data_path() / 'banned_users.txt'
 
     def __init__(self) -> None:
         self.subscribers: Users = None

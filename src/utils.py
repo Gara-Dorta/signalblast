@@ -1,5 +1,6 @@
 from logging import getLogger, Formatter, Logger
 from logging.handlers import RotatingFileHandler
+import pathlib
 
 
 def _get_rotating_handler(log_file: str) -> RotatingFileHandler:
@@ -22,3 +23,7 @@ def redirect_semaphore_logger(log_file: str) -> None:
     handler.setFormatter(formatter)
     semaphore_log = getLogger('semaphore.bot')
     semaphore_log.addHandler(handler)
+
+
+def get_code_data_path():
+    return pathlib.Path(__file__).parent.absolute() / 'data'

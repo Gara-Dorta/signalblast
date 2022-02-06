@@ -14,7 +14,7 @@ from typing import Optional
 
 from bot_answers import BotAnswers
 from bot_commands import CommandRegex
-from utils import get_logger, redirect_semaphore_logger
+from utils import get_logger, redirect_semaphore_logger, get_code_data_path
 
 
 async def main(admin_pass: Optional[str]):
@@ -24,7 +24,7 @@ async def main(admin_pass: Optional[str]):
     logger = get_logger(log_file, logging_level=INFO)
     redirect_semaphore_logger(log_file)
 
-    os.makedirs('./data', exist_ok=True)
+    os.makedirs(get_code_data_path(), exist_ok=True)
 
     # Connect the bot to number.
     async with Bot(os.environ["SIGNAL_PHONE_NUMBER"], logging_level=INFO) as bot:

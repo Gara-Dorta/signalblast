@@ -2,9 +2,11 @@ import bcrypt
 import os
 from typing import Optional
 
+from utils import get_code_data_path
+
 
 class Admin():
-    save_path = './data/admin.txt'
+    save_path = get_code_data_path() / 'admin.txt'
 
     def __init__(self) -> None:
         self.admin_id: str = None
@@ -45,7 +47,10 @@ class Admin():
 
     async def save_to_file(self) -> None:
         with open(self.save_path, "w") as f:
-            f.write(self.admin_id + '\n')
+            if self.admin_id is None:
+                f.write('\n')
+            else:
+                f.write(self.admin_id + '\n')
             f.write(self.get_hashed_password().decode())
 
     @staticmethod
@@ -54,6 +59,10 @@ class Admin():
         with open(Admin.save_path, "r") as f:
             admin.admin_id = f.readline().rstrip()
             admin._hashed_password = f.readline().encode()
+
+        if admin.admin_id == '':
+            admin.admin_id = None
+
         return admin
 
     @staticmethod

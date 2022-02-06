@@ -29,7 +29,7 @@ class BotAnswers():
         self.logger.debug('BotAnswers is initialised')
         return self
 
-    async def reply_with_fail_log(self, ctx, message) -> bool:
+    async def reply_with_warn_on_failure(self, ctx, message) -> bool:
         if await ctx.message.reply(message):
             return True
         else:
@@ -40,21 +40,21 @@ class BotAnswers():
         try:
             subscriber_uuid = ctx.message.source.uuid
             if subscriber_uuid in self.subscribers:
-                await self.reply_with_fail_log(ctx, "Already subscribed!")
+                await self.reply_with_warn_on_failure(ctx, "Already subscribed!")
                 self.logger.info("Already subscribed!")
             else:
                 if subscriber_uuid in self.banned_users:
-                    await self.reply_with_fail_log(ctx, "This number is not allowed to subscribe")
+                    await self.reply_with_warn_on_failure(ctx, "This number is not allowed to subscribe")
                     self.logger.info(f"{subscriber_uuid} was not allowed to subscribe")
                     return
 
                 await self.subscribers.add(subscriber_uuid)
-                await self.reply_with_fail_log(ctx, "Subscription successful!")
+                await self.reply_with_warn_on_failure(ctx, "Subscription successful!")
                 self.logger.info(f"{subscriber_uuid} subscribed")
         except Exception as e:
             self.logger.error(e, exc_info=True)
             try:
-                await self.reply_with_fail_log(ctx, "Could not subscribe!")
+                await self.reply_with_warn_on_failure(ctx, "Could not subscribe!")
             except Exception as e:
                 self.logger.error(e, exc_info=True)
 
@@ -63,15 +63,15 @@ class BotAnswers():
             subscriber_uuid = ctx.message.source.uuid
             if subscriber_uuid in self.subscribers:
                 await self.subscribers.remove(subscriber_uuid)
-                await self.reply_with_fail_log(ctx, "Successfully unsubscribed!")
+                await self.reply_with_warn_on_failure(ctx, "Successfully unsubscribed!")
                 self.logger.info(f"{subscriber_uuid} unsubscribed")
             else:
-                await self.reply_with_fail_log(ctx, "Not subscribed!")
+                await self.reply_with_warn_on_failure(ctx, "Not subscribed!")
                 self.logger.info(f"{subscriber_uuid} tried to unsubscribe but they are not subscribed")
         except Exception as e:
             self.logger.error(e, exc_info=True)
             try:
-                await self.reply_with_fail_log(ctx, "Could not unsubscribe!")
+                await self.reply_with_warn_on_failure(ctx, "Could not unsubscribe!")
             except Exception as e:
                 self.logger.error(e, exc_info=True)
 
@@ -113,7 +113,7 @@ class BotAnswers():
             try:
                 error_str = "Something went wrong, could only send the message to "\
                             f"{num_broadcasts} out of {num_subscribers} subscribers"
-                await self.reply_with_fail_log(ctx, error_str)
+                await self.reply_with_warn_on_failure(ctx, error_str)
             except Exception as e:
                 self.logger.error(e, exc_info=True)
 
@@ -138,7 +138,7 @@ class BotAnswers():
                     help_message = self.help_message
                 else:
                     help_message = self.admin_help_message
-                await self.reply_with_fail_log(ctx, help_message)
+                await self.reply_with_warn_on_failure(ctx, help_message)
                 self.logger.info(f"Sent help message to {subscriber_uuid}")
         except Exception as e:
             self.logger.error(e, exc_info=True)
@@ -151,7 +151,7 @@ class BotAnswers():
 
             previous_admin = self.admin.admin_id
             if await self.admin.add(subscriber_uuid, message):
-                await self.reply_with_fail_log(ctx, 'You have been added as admin!')
+                await self.reply_with_warn_on_failure(ctx, 'You have been added as admin!')
                 if previous_admin is not None and subscriber_uuid != previous_admin:
                     msg_to_admin = self.message_handler.compose_message_to_admin('You are no longer an admin!',
                                                                                  subscriber_uuid)
@@ -159,7 +159,7 @@ class BotAnswers():
                 log_message = f"Previous admin was {previous_admin}, new admin is {subscriber_uuid}"
                 self.logger.info(log_message)
             else:
-                await self.reply_with_fail_log(ctx, 'Adding failed, admin password is incorrect!')
+                await self.reply_with_warn_on_failure(ctx, 'Adding failed, admin password is incorrect!')
                 if previous_admin is not None:
                     msg_to_admin = self.message_handler.compose_message_to_admin('Tried to be added as admin',
                                                                                  subscriber_uuid)
@@ -176,14 +176,14 @@ class BotAnswers():
 
             previous_admin = self.admin.admin_id
             if await self.admin.remove(message):
-                await self.reply_with_fail_log(ctx, 'Admin has been removed!')
+                await self.reply_with_warn_on_failure(ctx, 'Admin has been removed!')
                 if previous_admin is not None and subscriber_uuid != previous_admin:
                     msg_to_admin = self.message_handler.compose_message_to_admin('You are no longer an admin!',
                                                                                  subscriber_uuid)
                     await ctx.bot.send_message(previous_admin, msg_to_admin)
                 self.logger.info(f"{previous_admin} is no longer an admin")
             else:
-                await self.reply_with_fail_log(ctx, 'Removing failed: admin password is incorrect!')
+                await self.reply_with_warn_on_failure(ctx, 'Removing failed: admin password is incorrect!')
                 if previous_admin is not None:
                     msg_to_admin = self.message_handler.compose_message_to_admin('Tried to remove you as admin',
                                                                                  subscriber_uuid)
@@ -199,11 +199,11 @@ class BotAnswers():
             message = message.replace(PublicCommandStrings.msg_to_admin, '', 1).strip()
 
             if self.admin.admin_id is None:
-                await self.reply_with_fail_log(ctx, "I'm sorry but there are no admins to contact!")
+                await self.reply_with_warn_on_failure(ctx, "I'm sorry but there are no admins to contact!")
                 self.logger.info(f"Tried to contact an admin but there is none! {subscriber_uuid}")
             else:
                 if subscriber_uuid in self.banned_users:
-                    await self.reply_with_fail_log(ctx, "You are not allowed to contact the admin!")
+                    await self.reply_with_warn_on_failure(ctx, "You are not allowed to contact the admin!")
                     self.logger.info(f"Banned user {subscriber_uuid} tried to contact admin")
                     return
 
@@ -215,7 +215,7 @@ class BotAnswers():
         except Exception as e:
             self.logger.error(e, exc_info=True)
             try:
-                await self.reply_with_fail_log(ctx, "Failed to send the message to the admin!")
+                await self.reply_with_warn_on_failure(ctx, "Failed to send the message to the admin!")
             except Exception as e:
                 self.logger.error(e, exc_info=True)
 
@@ -226,12 +226,12 @@ class BotAnswers():
             message = message.replace(AdminCommandStrings.msg_from_admin, '', 1).strip()
 
             if self.admin.admin_id is None:
-                await self.reply_with_fail_log(ctx, "I'm sorry but there are no admins")
+                await self.reply_with_warn_on_failure(ctx, "I'm sorry but there are no admins")
                 self.logger.info(f"Tried send a message as admin but there are no admins! {subscriber_uuid}")
                 return
 
             if self.admin.admin_id != subscriber_uuid:
-                await self.reply_with_fail_log(ctx, "I'm sorry but you are not an admin")
+                await self.reply_with_warn_on_failure(ctx, "I'm sorry but you are not an admin")
                 msg_to_admin = self.message_handler.compose_message_to_admin('Tried to reply as admin', subscriber_uuid)
                 await ctx.bot.send_message(self.admin.admin_id, msg_to_admin)
                 self.logger.info(f"{subscriber_uuid} tried send a message as admin but admin is {self.admin.admin_id}")
@@ -246,7 +246,7 @@ class BotAnswers():
         except Exception as e:
             self.logger.error(e, exc_info=True)
             try:
-                await self.reply_with_fail_log(ctx, "Failed to send the message to the user!")
+                await self.reply_with_warn_on_failure(ctx, "Failed to send the message to the user!")
             except Exception as e:
                 self.logger.error(e, exc_info=True)
 
@@ -257,12 +257,12 @@ class BotAnswers():
             user_id = message.replace(AdminCommandStrings.ban_subscriber, '', 1).strip()
 
             if self.admin.admin_id is None:
-                await self.reply_with_fail_log(ctx, "I'm sorry but there are no admins")
+                await self.reply_with_warn_on_failure(ctx, "I'm sorry but there are no admins")
                 self.logger.info(f"Tried to ban a user but there are no admins! {subscriber_uuid}")
                 return
 
             if self.admin.admin_id != subscriber_uuid:
-                await self.reply_with_fail_log(ctx, "I'm sorry but you are not an admin")
+                await self.reply_with_warn_on_failure(ctx, "I'm sorry but you are not an admin")
                 msg_to_admin = self.message_handler.compose_message_to_admin('Tried to ban a user', subscriber_uuid)
                 await ctx.bot.send_message(self.admin.admin_id, msg_to_admin)
                 self.logger.info(f"{subscriber_uuid} tried to ban a user but admin is {self.admin.admin_id}")
@@ -273,13 +273,13 @@ class BotAnswers():
             await self.banned_users.add(user_id)
 
             await ctx.bot.send_message(user_id, 'You have been banned')
-            await self.reply_with_fail_log(ctx, "Successfully banned user")
+            await self.reply_with_warn_on_failure(ctx, "Successfully banned user")
 
             self.logger.info(f"Banned user {user_id}")
         except Exception as e:
             self.logger.error(e, exc_info=True)
             try:
-                await self.reply_with_fail_log(ctx, "Failed to ban user")
+                await self.reply_with_warn_on_failure(ctx, "Failed to ban user")
             except Exception as e:
                 self.logger.error(e, exc_info=True)
 
@@ -290,12 +290,12 @@ class BotAnswers():
             user_id = message.replace(AdminCommandStrings.lift_ban_subscriber, '', 1).strip()
 
             if self.admin.admin_id is None:
-                await self.reply_with_fail_log(ctx, "I'm sorry but there are no admins")
+                await self.reply_with_warn_on_failure(ctx, "I'm sorry but there are no admins")
                 self.logger.info(f"Tried to lift the ban of a user but there are no admins! {subscriber_uuid}")
                 return
 
             if self.admin.admin_id != subscriber_uuid:
-                await self.reply_with_fail_log(ctx, "I'm sorry but you are not an admin")
+                await self.reply_with_warn_on_failure(ctx, "I'm sorry but you are not an admin")
                 msg_to_admin = self.message_handler.compose_message_to_admin('Tried to lift ban a user',
                                                                              subscriber_uuid)
                 await ctx.bot.send_message(self.admin.admin_id, msg_to_admin)
@@ -305,17 +305,17 @@ class BotAnswers():
             if user_id in self.banned_users:
                 await self.banned_users.remove(user_id)
             else:
-                await self.reply_with_fail_log(ctx, "Could not lift the ban because the user was not banned")
+                await self.reply_with_warn_on_failure(ctx, "Could not lift the ban because the user was not banned")
                 self.logger.info(f"Could not lift the ban of {user_id} because the user was not banned")
                 return
 
             await ctx.bot.send_message(user_id, 'You have banned have been lifted, try subscribing again')
-            await self.reply_with_fail_log(ctx, "Successfully lifted the ban on the user")
+            await self.reply_with_warn_on_failure(ctx, "Successfully lifted the ban on the user")
 
             self.logger.info(f"Lifted the ban on user {user_id}")
         except Exception as e:
             self.logger.error(e, exc_info=True)
             try:
-                await self.reply_with_fail_log(ctx, "Failed lift the ban on the user")
+                await self.reply_with_warn_on_failure(ctx, "Failed lift the ban on the user")
             except Exception as e:
                 self.logger.error(e, exc_info=True)

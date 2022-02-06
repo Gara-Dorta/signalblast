@@ -62,7 +62,7 @@ class Admin():
             return await Admin.create(admin_password)
 
         admin = await Admin._load_from_file()
-        # If no password was given assume we want to keep the one from the file
+        # Overwrite the password in the file, if no password was given assume we want to keep the one from the file
         if admin_password is not None:
             await admin.set_hashed_password(admin_password)
         return admin

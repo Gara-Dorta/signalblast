@@ -251,22 +251,28 @@ class BotAnswers():
             except Exception as e:
                 self.logger.error(e, exc_info=True)
 
+    async def is_user_admin(self, ctx: ChatContext, command: str) -> bool:
+        subscriber_uuid = ctx.message.source.uuid
+        if self.admin.admin_id is None:
+            await self.reply_with_warn_on_failure(ctx, "I'm sorry but there are no admins")
+            self.logger.info(f"Tried to {command} but there are no admins! {subscriber_uuid}")
+            return False
+
+        if self.admin.admin_id != subscriber_uuid:
+            await self.reply_with_warn_on_failure(ctx, "I'm sorry but you are not an admin")
+            msg_to_admin = self.message_handler.compose_message_to_admin(f'Tried to {command}', subscriber_uuid)
+            await ctx.bot.send_message(self.admin.admin_id, msg_to_admin)
+            self.logger.info(f"{subscriber_uuid} tried to {command} but admin is {self.admin.admin_id}")
+            return False
+
+        return True
+
     async def msg_from_admin(self, ctx: ChatContext) -> None:
         try:
-            subscriber_uuid = ctx.message.source.uuid
             message = self.message_handler.remove_command_from_message(ctx.message.get_body(),
                                                                        AdminCommandStrings.msg_from_admin)
 
-            if self.admin.admin_id is None:
-                await self.reply_with_warn_on_failure(ctx, "I'm sorry but there are no admins")
-                self.logger.info(f"Tried send a message as admin but there are no admins! {subscriber_uuid}")
-                return
-
-            if self.admin.admin_id != subscriber_uuid:
-                await self.reply_with_warn_on_failure(ctx, "I'm sorry but you are not an admin")
-                msg_to_admin = self.message_handler.compose_message_to_admin('Tried to reply as admin', subscriber_uuid)
-                await ctx.bot.send_message(self.admin.admin_id, msg_to_admin)
-                self.logger.info(f"{subscriber_uuid} tried send a message as admin but admin is {self.admin.admin_id}")
+            if not await self.is_user_admin(ctx, AdminCommandStrings.ban_subscriber):
                 return
 
             user_id, message = message.split(' ', 1)
@@ -274,7 +280,7 @@ class BotAnswers():
             attachments = self.message_handler.prepare_attachments(ctx.message.data_message.attachments)
 
             await ctx.bot.send_message(user_id, message, attachments=attachments)
-            self.logger.info(f"Sent message from admin {self.admin.admin_id} to user {subscriber_uuid}")
+            self.logger.info(f"Sent message from admin {self.admin.admin_id} to user {user_id}")
         except Exception as e:
             self.logger.error(e, exc_info=True)
             try:
@@ -284,20 +290,10 @@ class BotAnswers():
 
     async def ban_user(self, ctx: ChatContext) -> None:
         try:
-            subscriber_uuid = ctx.message.source.uuid
             user_id = self.message_handler.remove_command_from_message(ctx.message.get_body(),
                                                                        AdminCommandStrings.ban_subscriber)
 
-            if self.admin.admin_id is None:
-                await self.reply_with_warn_on_failure(ctx, "I'm sorry but there are no admins")
-                self.logger.info(f"Tried to ban a user but there are no admins! {subscriber_uuid}")
-                return
-
-            if self.admin.admin_id != subscriber_uuid:
-                await self.reply_with_warn_on_failure(ctx, "I'm sorry but you are not an admin")
-                msg_to_admin = self.message_handler.compose_message_to_admin('Tried to ban a user', subscriber_uuid)
-                await ctx.bot.send_message(self.admin.admin_id, msg_to_admin)
-                self.logger.info(f"{subscriber_uuid} tried to ban a user but admin is {self.admin.admin_id}")
+            if not await self.is_user_admin(ctx, AdminCommandStrings.ban_subscriber):
                 return
 
             if user_id in self.subscribers:
@@ -317,21 +313,10 @@ class BotAnswers():
 
     async def lift_ban_user(self, ctx: ChatContext) -> None:
         try:
-            subscriber_uuid = ctx.message.source.uuid
             user_id = self.message_handler.remove_command_from_message(ctx.message.get_body(),
                                                                        AdminCommandStrings.add_alift_ban_subscriberdmin)
 
-            if self.admin.admin_id is None:
-                await self.reply_with_warn_on_failure(ctx, "I'm sorry but there are no admins")
-                self.logger.info(f"Tried to lift the ban of a user but there are no admins! {subscriber_uuid}")
-                return
-
-            if self.admin.admin_id != subscriber_uuid:
-                await self.reply_with_warn_on_failure(ctx, "I'm sorry but you are not an admin")
-                msg_to_admin = self.message_handler.compose_message_to_admin('Tried to lift ban a user',
-                                                                             subscriber_uuid)
-                await ctx.bot.send_message(self.admin.admin_id, msg_to_admin)
-                self.logger.info(f"{subscriber_uuid} tried to lift ban a user but admin is {self.admin.admin_id}")
+            if not await self.is_user_admin(ctx, AdminCommandStrings.lift_ban_subscriber):
                 return
 
             if user_id in self.banned_users:

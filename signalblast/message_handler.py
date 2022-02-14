@@ -24,24 +24,14 @@ class MessageHandler():
         if attachments == []:
             return None
 
-        attachments_to_send = []
-        for attachment in attachments:
-            attachment_to_send = {"filename": attachment.stored_filename,
-                                  "customFilename": attachment.custom_filename,
-                                  "width": attachment.width,
-                                  "height": attachment.height,
-                                  "contentType": attachment.content_type,
-                                  }
-            attachments_to_send.append(attachment_to_send)
+        return attachments
 
-        return attachments_to_send
-
-    def delete_attachments(self, attachments: Optional[List[dict]]):
+    def delete_attachments(self, attachments: Optional[List[Attachment]]):
         if attachments is None:
             return
 
         for attachment in attachments:
-            os.remove(attachment["filename"])
+            os.remove(attachment.stored_filename)
 
     @staticmethod
     def _compose_help_message(add_admin_commands: bool) -> str:

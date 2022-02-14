@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Add this line to mount points for easier development
-# -v $(dirname ${CURRENT_DIR})/src:/root/signalblast/src \
+# -v $(dirname ${CURRENT_DIR}):/root/signalblast/ \
 
 CURRENT_DIR=$(dirname $(realpath $0))
 docker container run \

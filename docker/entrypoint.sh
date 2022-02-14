@@ -7,5 +7,5 @@ then
     signald
 else
     signald &
-    python3 /root/signalblast/src/broadcastbot.py;
+    python3 /root/signalblast/signalblast/broadcastbot.py;
 fi

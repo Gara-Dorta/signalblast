@@ -5,7 +5,7 @@
 
 CURRENT_DIR=$(dirname $(realpath $0))
 docker container run \
-  -v ${CURRENT_DIR}/run:/signald \
+  --restart=unless-stopped \
   --interactive=true \
   --tty=true \
   signalblast:latest /bin/bash

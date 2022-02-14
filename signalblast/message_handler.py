@@ -27,6 +27,7 @@ class MessageHandler():
         attachments_to_send = []
         for attachment in attachments:
             attachment_to_send = {"filename": attachment.stored_filename,
+                                  "customFilename": attachment.custom_filename,
                                   "width": attachment.width,
                                   "height": attachment.height,
                                   "contentType": attachment.content_type,

@@ -17,7 +17,7 @@ from bot_commands import CommandRegex
 from utils import get_logger, redirect_semaphore_logger, get_code_data_path
 
 
-async def main(admin_pass: Optional[str]):
+async def main(admin_pass: Optional[str], expiration_time: Optional[int]):
     """Start the bot."""
 
     log_file = '/var/log/signalblast.log'
@@ -28,7 +28,7 @@ async def main(admin_pass: Optional[str]):
 
     # Connect the bot to number.
     async with Bot(os.environ["SIGNAL_PHONE_NUMBER"], logging_level=INFO) as bot:
-        bot_answers = await BotAnswers.create(logger, admin_pass)
+        bot_answers = await BotAnswers.create(logger, admin_pass, expiration_time)
 
         bot.register_handler(CommandRegex.subscribe, bot_answers.subscribe)
         bot.register_handler(CommandRegex.unsubscribe, bot_answers.unsubscribe)
@@ -46,8 +46,12 @@ async def main(admin_pass: Optional[str]):
 
 
 if __name__ == '__main__':
+    expiration_time = 60 * 60 * 24 * 7  # Number of seconds in a week
+
     args_parser = argparse.ArgumentParser()
     args_parser.add_argument("--admin_pass", type=str, required=False, help="the password to add or remove admins")
+    args_parser.add_argument("--expiration_time", type=int, required=False, default=expiration_time,
+                             help="the expiration time for the chats")
 
     args = args_parser.parse_args()
-    anyio.run(main, args.admin_pass)
+    anyio.run(main, args.admin_pass, args.expiration_time)

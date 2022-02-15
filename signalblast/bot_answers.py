@@ -25,9 +25,10 @@ class BotAnswers():
         self.admin_wrong_command_message: str = None
         self.must_subscribe_message: str = None
         self.logger: Logger = None
+        self.expiration_time = None
 
     @classmethod
-    async def create(cls, logger: Logger, admin_pass: Optional[str]) -> None:
+    async def create(cls, logger: Logger, admin_pass: Optional[str], expiration_time: Optional[int]) -> None:
         self = BotAnswers()
         self.subscribers = await Users.load_from_file(self.subscribers_data_path)
         self.banned_users = await Users.load_from_file(self.banned_users_data_path)
@@ -42,6 +43,8 @@ class BotAnswers():
                                                                                      is_help=False)
 
         self.must_subscribe_message = self.message_handler.compose_must_subscribe_message()
+
+        self.expiration_time = expiration_time
 
         self.logger = logger
         self.logger.debug('BotAnswers is initialised')
@@ -67,6 +70,8 @@ class BotAnswers():
                     return
 
                 await self.subscribers.add(subscriber_uuid)
+                if self.expiration_time is not None:
+                    await ctx.bot.set_expiration(subscriber_uuid, self.expiration_time)
                 await self.reply_with_warn_on_failure(ctx, "Subscription successful!")
                 self.logger.info(f"{subscriber_uuid} subscribed")
         except Exception as e:

@@ -8,4 +8,4 @@ docker container run \
   --restart=unless-stopped \
   --interactive=true \
   --tty=true \
-  signalblast:latest /bin/bash
+  signalblast:latest

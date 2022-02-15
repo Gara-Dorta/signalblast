@@ -8,12 +8,14 @@ RUN apt update && apt upgrade -y
 
 RUN apt install -y python3-pip netcat-openbsd
 
-RUN pip install semaphore-bot argparse bcrypt
+RUN pip install argparse bcrypt # semaphore-bot install semaphore from git until changes are merged
 
-RUN git clone https://github.com/Garoe/signalblast && cd signalblast && git checkout $COMMIT_ID
+RUN pip install git+https://github.com/Era-Dorta/semaphore.git@expiration-and-attachments
+
+RUN git clone https://github.com/Era-Dorta/signalblast && cd signalblast && git checkout $COMMIT_ID
 
 RUN mkdir /var/run/signald
 
 RUN echo "socketpath: /var/run/signald/signald.sock" >> /root/.config/signaldctl.yaml
 
-CMD ["./signalblast/docker/entrypoint.sh"]
+CMD ["/root/signalblast/docker/entrypoint.sh"]

@@ -1,11 +1,14 @@
 #!/bin/bash
 
-# export SIGNAL_PHONE_NUMBER=
+export SIGNALD_TRUST_NEW_KEYS=true
 
-if [ -z ${SIGNAL_PHONE_NUMBER+x} ];
-then
-    signald
-else
-    signald &
-    python3 /root/signalblast/signalblast/broadcastbot.py;
-fi
+signald &> /var/log/signald.log &
+
+while [ $(signaldctl account list --output-format yaml) = "[]" ]; do
+    sleep 3
+    echo "waiting for account setup"
+done
+
+source /root/signalblast/phone_number.sh
+python3 /root/signalblast/signalblast/broadcastbot.py;
+

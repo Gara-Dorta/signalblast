@@ -18,4 +18,4 @@ RUN mkdir /var/run/signald
 
 RUN echo "socketpath: /var/run/signald/signald.sock" >> /root/.config/signaldctl.yaml
 
-CMD ["/root/signalblast/docker/entrypoint.sh"]
+ENTRYPOINT ["/root/signalblast/docker/entrypoint.sh"]

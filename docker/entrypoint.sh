@@ -31,7 +31,7 @@ if [ "$#" -eq 1 ]; then
 fi
 
 if [ "$#" -eq 2 ]; then
-  BROADCAST_BOT_CMD="$BROADCAST_BOT_CMD --expiration_time "$2""
+  BROADCAST_BOT_CMD="$BROADCAST_BOT_CMD --admin_pass "$1" --expiration_time "$2""
 fi
 
 if [ "$#" -gt 2 ]; then

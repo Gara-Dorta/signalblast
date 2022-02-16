@@ -3,6 +3,8 @@
 * Get the docker image from docker hub
 * Run a container that uses the image
   * `$ ./docker/run_container.sh`
+  * Optionally set the admin password and the expiration time, if only one argument is provided it is assumed to be the password.
+   * `$ ./docker/run_container.sh <password> <expiration time>`
 * Open a second terminal inside the container to configure the bot
   * `$ docker exec -it <container name> bash`
 * Add the bot phone number to the config file

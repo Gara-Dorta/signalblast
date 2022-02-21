@@ -330,7 +330,7 @@ class BotAnswers():
     async def lift_ban_user(self, ctx: ChatContext) -> None:
         try:
             user_id = self.message_handler.remove_command_from_message(ctx.message.get_body(),
-                                                                       AdminCommandStrings.add_alift_ban_subscriberdmin)
+                                                                       AdminCommandStrings.lift_ban_subscriber)
 
             if not await self.is_user_admin(ctx, AdminCommandStrings.lift_ban_subscriber):
                 return

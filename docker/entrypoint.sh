@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# Copy template phone number file if it does not exist in the data folder
+SIGNALBLAST_PHONE_NUMBER_FILE="/root/signalblast/signalblast/data/phone_number.sh"
+if [ ! -f ${SIGNALBLAST_PHONE_NUMBER_FILE} ]; then
+  cp "/root/signalblast/docker/phone_number.sh" ${SIGNALBLAST_PHONE_NUMBER_FILE}
+fi
+
 export SIGNALD_TRUST_NEW_KEYS=true
 
 signald &> /var/log/signald.log &
@@ -17,7 +23,7 @@ done
 
 echo "An account was registered" >> $SIGNALBLAST_LOG_FILE
 
-source /root/signalblast/docker/phone_number.sh
+source ${SIGNALBLAST_PHONE_NUMBER_FILE}
 
 # Signald needs again some time after phone linking
 echo "Waiting for signald to get ready" >> $SIGNALBLAST_LOG_FILE

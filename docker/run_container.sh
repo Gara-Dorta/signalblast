@@ -1,11 +1,15 @@
 #!/bin/bash
 
-# Add this line to mount points for easier development
+# Add these for easier development
 # -v $(dirname ${CURRENT_DIR}):/root/signalblast/ \
+#   --interactive=true \
+#   --tty=true \
+
+SIGNALBLAST_BASE="${SIGNALBLAST_BASE:-$(pwd)}"
 
 CURRENT_DIR=$(dirname $(realpath $0))
 docker container run \
   --restart=unless-stopped \
-  --interactive=true \
-  --tty=true \
+  -v "${SIGNALBLAST}/signalblast_data:/root/signalblast/signalblast/data" \
+  -v "${SIGNALBLAST}/signald_data:/root/.config/signald" \
   signalblast:latest "$@"

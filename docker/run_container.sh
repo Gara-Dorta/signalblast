@@ -10,6 +10,6 @@ SIGNALBLAST_BASE="${SIGNALBLAST_BASE:-$(pwd)}"
 CURRENT_DIR=$(dirname $(realpath $0))
 docker container run \
   --restart=unless-stopped \
-  -v "${SIGNALBLAST}/signalblast_data:/root/signalblast/signalblast/data" \
-  -v "${SIGNALBLAST}/signald_data:/root/.config/signald" \
+  -v "${SIGNALBLAST_BASE}/data/signalblast:/root/signalblast/signalblast/data" \
+  -v "${SIGNALBLAST_BASE}/data/signald:/root/.config/signald" \
   signalblast:latest "$@"

@@ -26,4 +26,4 @@ def redirect_semaphore_logger(log_file: str) -> None:
 
 
 def get_code_data_path():
-    return pathlib.Path(__file__).parent.absolute() / 'data'
+    return pathlib.Path(__file__).parent.absolute() / 'data' / 'signalblast'

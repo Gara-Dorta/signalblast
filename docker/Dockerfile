@@ -4,7 +4,7 @@ WORKDIR /root
 
 RUN apt update && apt upgrade -y
 
-RUN apt install -y python3-pip netcat-openbsd micro
+RUN apt install -y python3-pip netcat-openbsd
 
 RUN pip install argparse bcrypt # semaphore-bot install semaphore from git until changes are merged
 

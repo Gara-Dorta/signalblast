@@ -8,8 +8,8 @@
 * Open a second terminal inside the container to configure the bot
   * `$ docker exec -it <container name> bash`
 * Add the bot phone number to the config file
-  * `$ micro ./signalblast/docker/phone_number.sh`
-  * `$ source ./signalblast/docker/phone_number.sh`
+  * Replace `123456789` with your bot phone number, including the country code
+  * `$ sed -i 's/SIGNAL_PHONE_NUMBER=/SIGNAL_PHONE_NUMBER=+123456789/g' /root/signalblast/signalblast/data/phone_number.sh`
 * Link **or** register the phone number
   * Linking (recommended)
     * Run the link command and scan the QR code

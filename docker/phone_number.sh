@@ -1,4 +1,4 @@
 #!/bin/bash
 
-export SIGNAL_PHONE_NUMBER=+XXXXXXXXXXXX
+export SIGNAL_PHONE_NUMBER=
 

@@ -1,9 +1,10 @@
 #!/bin/bash
 
 # Add these for easier development
-# -v $(dirname ${CURRENT_DIR}):/root/signalblast/ \
-#   --interactive=true \
-#   --tty=true \
+#  -v $(dirname ${CURRENT_DIR}):/root/signalblast/ \
+#  --interactive=true \
+#  --tty=true \
+#  --entrypoint bash \
 
 SIGNALBLAST_BASE="${SIGNALBLAST_BASE:-$(pwd)}"
 

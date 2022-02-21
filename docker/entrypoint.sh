@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Copy template phone number file if it does not exist in the data folder
-SIGNALBLAST_PHONE_NUMBER_FILE="/root/signalblast/signalblast/data/signalblast/phone_number.sh"
+SIGNALBLAST_PHONE_NUMBER_FILE="/root/signalblast/signalblast/data/phone_number.sh"
 if [ ! -f ${SIGNALBLAST_PHONE_NUMBER_FILE} ]; then
   cp "/root/signalblast/docker/phone_number.sh" ${SIGNALBLAST_PHONE_NUMBER_FILE}
 fi

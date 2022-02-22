@@ -194,11 +194,11 @@ class BotAnswers():
     async def add_admin(self, ctx: ChatContext) -> None:
         try:
             subscriber_uuid = ctx.message.source.uuid
-            message = self.message_handler.remove_command_from_message(ctx.message.get_body(),
-                                                                       AdminCommandStrings.add_admin)
+            password = self.message_handler.remove_command_from_message(ctx.message.get_body(),
+                                                                        AdminCommandStrings.add_admin)
 
             previous_admin = self.admin.admin_id
-            if await self.admin.add(subscriber_uuid, message):
+            if await self.admin.add(subscriber_uuid, password):
                 await self.reply_with_warn_on_failure(ctx, 'You have been added as admin!')
                 if previous_admin is not None and subscriber_uuid != previous_admin:
                     msg_to_admin = self.message_handler.compose_message_to_admin('You are no longer an admin!',
@@ -219,11 +219,11 @@ class BotAnswers():
     async def remove_admin(self, ctx: ChatContext) -> None:
         try:
             subscriber_uuid = ctx.message.source.uuid
-            message = self.message_handler.remove_command_from_message(ctx.message.get_body(),
-                                                                       AdminCommandStrings.remove_admin)
+            password = self.message_handler.remove_command_from_message(ctx.message.get_body(),
+                                                                        AdminCommandStrings.remove_admin)
 
             previous_admin = self.admin.admin_id
-            if await self.admin.remove(message):
+            if await self.admin.remove(password):
                 await self.reply_with_warn_on_failure(ctx, 'Admin has been removed!')
                 if previous_admin is not None and subscriber_uuid != previous_admin:
                     msg_to_admin = self.message_handler.compose_message_to_admin('You are no longer an admin!',

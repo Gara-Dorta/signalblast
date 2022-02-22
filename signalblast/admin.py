@@ -29,7 +29,10 @@ class Admin():
             self._hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
         await self.save_to_file()
 
-    async def add(self, id: str, admin_password: str) -> bool:
+    async def add(self, id: str, admin_password: Optional[str]) -> bool:
+        if admin_password is None:
+            return False
+
         if bcrypt.checkpw(admin_password.encode(), self.get_hashed_password()):
             self.admin_id = id
             await self.save_to_file()
@@ -37,7 +40,10 @@ class Admin():
         else:
             return False
 
-    async def remove(self, admin_password: str) -> bool:
+    async def remove(self, admin_password: Optional[str]) -> bool:
+        if admin_password is None:
+            return False
+
         if bcrypt.checkpw(admin_password.encode(), self.get_hashed_password()):
             self.admin_id = None
             await self.save_to_file()

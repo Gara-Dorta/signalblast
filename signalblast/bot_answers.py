@@ -70,9 +70,9 @@ class BotAnswers():
                     return
 
                 await self.subscribers.add(subscriber_uuid)
+                await self.reply_with_warn_on_failure(ctx, "Subscription successful!")
                 if self.expiration_time is not None:
                     await ctx.bot.set_expiration(subscriber_uuid, self.expiration_time)
-                await self.reply_with_warn_on_failure(ctx, "Subscription successful!")
                 self.logger.info(f"{subscriber_uuid} subscribed")
         except Exception as e:
             self.logger.error(e, exc_info=True)

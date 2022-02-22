@@ -50,7 +50,7 @@ class BotAnswers():
         self.logger.debug('BotAnswers is initialised')
         return self
 
-    async def reply_with_warn_on_failure(self, ctx, message) -> bool:
+    async def reply_with_warn_on_failure(self, ctx: ChatContext, message: str) -> bool:
         if await ctx.message.reply(message):
             return True
         else:

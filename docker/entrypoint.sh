@@ -6,9 +6,7 @@ if [ ! -f ${SIGNALBLAST_PHONE_NUMBER_FILE} ]; then
   cp "/root/signalblast/docker/phone_number.sh" ${SIGNALBLAST_PHONE_NUMBER_FILE}
 fi
 
-export SIGNALD_TRUST_NEW_KEYS=true
-
-signald &> /var/log/signald.log &
+signald --trust-new-keys &> /var/log/signald.log &
 
 # Signald needs some time to start up
 sleep 5s

@@ -18,6 +18,9 @@
   * ```bash
     sed -i 's/SIGNAL_PHONE_NUMBER=/SIGNAL_PHONE_NUMBER=+123456789/g' /root/signalblast/signalblast/data/phone_number.sh
     ```
+    ```bash
+    source /root/signalblast/signalblast/data/phone_number.sh
+    ```
 * Link **or** register the phone number
   * Linking (recommended)
     * Run the link command and scan the QR code

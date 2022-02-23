@@ -21,7 +21,7 @@ The only required dependency is [docker](https://www.docker.com/).
 
 * Once docker is installed, get the signalblast image from docker hub
   * ```bash
-    docker pull eraxama/signalblast
+    docker pull eraxama/signalblast:latest
     ```
 * Run a container that uses the image
   * ```bash
@@ -29,7 +29,7 @@ The only required dependency is [docker](https://www.docker.com/).
        --restart=unless-stopped \
        -v "./data/signalblast:/root/signalblast/signalblast/data" \
        -v "./data/signald:/root/.config/signald" \
-       signalblast:latest <admin password> <expiration time>
+       eraxama/signalblast:latest <admin password> <expiration time>
     ```
   * The admin password and the expiration time (in seconds) parameters are optional. If only one argument is provided it is assumed to be the password.
 * Open a second terminal inside the container to configure the bot

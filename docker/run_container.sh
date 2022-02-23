@@ -13,4 +13,4 @@ docker container run \
   --restart=unless-stopped \
   -v "${SIGNALBLAST_BASE}/data/signalblast:/root/signalblast/signalblast/data" \
   -v "${SIGNALBLAST_BASE}/data/signald:/root/.config/signald" \
-  signalblast:latest "$@"
+  eraxama/signalblast:latest "$@"

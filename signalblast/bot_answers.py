@@ -324,6 +324,17 @@ class BotAnswers():
                 return
 
             user_id, message = message.split(' ', 1)
+
+            if user_id not in self.subscribers:
+                if ' ' in message:
+                    confirmation, message = message.split(' ', 1)
+                else:
+                    confirmation = None
+                if confirmation != '!force':
+                    warn_message = "User is not in subscribers list, use !reply !force to message them"
+                    await self.reply_with_warn_on_failure(ctx, warn_message)
+                    return
+
             message = 'Admin: ' + message
             attachments = self.message_handler.prepare_attachments(ctx.message.data_message.attachments)
 

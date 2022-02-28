@@ -1,7 +1,8 @@
 from asyncio import gather
 from typing import Optional
-from semaphore import ChatContext, StopPropagation
+from semaphore import ChatContext, StopPropagation, Job
 from logging import Logger
+from time import time
 
 from admin import Admin
 from users import Users
@@ -31,6 +32,7 @@ class BotAnswers():
         self.expiration_time = None
         self.subscribers_phone: Users = None
         self.banned_users_phone: Users = None
+        self.ping_job: Job = None
 
     @classmethod
     async def create(cls, logger: Logger, admin_pass: Optional[str], expiration_time: Optional[int]) -> 'BotAnswers':
@@ -385,6 +387,66 @@ class BotAnswers():
             self.logger.error(e, exc_info=True)
             try:
                 await self.reply_with_warn_on_failure(ctx, "Failed lift the ban on the user")
+            except Exception as e:
+                self.logger.error(e, exc_info=True)
+        finally:
+            raise StopPropagation
+
+    async def _send_ping(self, ctx: ChatContext) -> None:
+        try:
+            await self.reply_with_warn_on_failure(ctx, "Ping")
+        except Exception as e:
+            self.logger.error(e, exc_info=True)
+            try:
+                await self.reply_with_warn_on_failure(ctx, "Failed to send ping")
+            except Exception as e:
+                self.logger.error(e, exc_info=True)
+
+    async def set_ping(self, ctx: ChatContext) -> None:
+        try:
+            ping_time = self.message_handler.remove_command_from_message(ctx.message.get_body(),
+                                                                       AdminCommandStrings.set_ping)
+
+            if not await self.is_user_admin(ctx, AdminCommandStrings.lift_ban_subscriber):
+                return
+
+            if self.ping_job is not None:
+                self.ping_job.schedule_removal()
+                self.logger.info("Unset old ping job")
+                await self.reply_with_warn_on_failure(ctx, "Unset old ping job")
+
+            ping_time = int(ping_time)
+            now = time()
+
+            self.ping_job = await ctx.job_queue.run_repeating(now, self._send_ping, ctx, ping_time)
+
+            await self.reply_with_warn_on_failure(ctx, f"Ping set every {ping_time} seconds")
+            self.logger.info(f"Ping set every {ping_time} seconds")
+        except Exception as e:
+            self.logger.error(e, exc_info=True)
+            try:
+                await self.reply_with_warn_on_failure(ctx, "Failed set ping")
+            except Exception as e:
+                self.logger.error(e, exc_info=True)
+        finally:
+            raise StopPropagation
+
+    async def unset_ping(self, ctx: ChatContext) -> None:
+        try:
+            if not await self.is_user_admin(ctx, AdminCommandStrings.lift_ban_subscriber):
+                return
+
+            if self.ping_job is None:
+                await ctx.message.reply("Cannot unset because ping was not set!")
+                return
+
+            self.ping_job.schedule_removal()
+            self.ping_job = None
+            await ctx.message.reply("Ping unset!")
+        except Exception as e:
+            self.logger.error(e, exc_info=True)
+            try:
+                await self.reply_with_warn_on_failure(ctx, "Failed to unset ping")
             except Exception as e:
                 self.logger.error(e, exc_info=True)
         finally:

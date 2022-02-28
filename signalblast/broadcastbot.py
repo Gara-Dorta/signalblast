@@ -35,6 +35,8 @@ async def main(admin_pass: Optional[str], expiration_time: Optional[int]):
         bot.register_handler(CommandRegex.msg_from_admin, bot_answers.msg_from_admin)
         bot.register_handler(CommandRegex.ban_subscriber, bot_answers.ban_user)
         bot.register_handler(CommandRegex.lift_ban_subscriber, bot_answers.lift_ban_user)
+        bot.register_handler(CommandRegex.set_ping, bot_answers.set_ping)
+        bot.register_handler(CommandRegex.unset_ping, bot_answers.unset_ping)
         bot.register_handler(".*", bot_answers.display_help)
 
         # Run the bot until you press Ctrl-C.

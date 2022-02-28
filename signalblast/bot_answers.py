@@ -33,7 +33,7 @@ class BotAnswers():
         self.banned_users_phone: Users = None
 
     @classmethod
-    async def create(cls, logger: Logger, admin_pass: Optional[str], expiration_time: Optional[int]) -> None:
+    async def create(cls, logger: Logger, admin_pass: Optional[str], expiration_time: Optional[int]) -> 'BotAnswers':
         self = BotAnswers()
         self.subscribers = await Users.load_from_file(self.subscribers_data_path)
         self.banned_users = await Users.load_from_file(self.banned_users_data_path)

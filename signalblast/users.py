@@ -23,7 +23,7 @@ class Users():
                     f.write(subscriber)
 
     @staticmethod
-    async def _load_from_file(save_path):
+    async def _load_from_file(save_path) -> 'Users':
         users = Users(save_path)
         with open(save_path, "r") as f:
             users.data.add(f.readline().rstrip())
@@ -40,7 +40,7 @@ class Users():
         return len(self.data)
 
     @staticmethod
-    async def load_from_file(save_path):
+    async def load_from_file(save_path) -> 'Users':
         if not os.path.exists(save_path):
             return Users(save_path)
 

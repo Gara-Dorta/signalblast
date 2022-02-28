@@ -60,7 +60,7 @@ class Admin():
             f.write(self.get_hashed_password().decode())
 
     @staticmethod
-    async def _load_from_file():
+    async def _load_from_file() -> 'Admin':
         admin = Admin()
         with open(Admin.save_path, "r") as f:
             admin.admin_id = f.readline().rstrip()
@@ -72,7 +72,7 @@ class Admin():
         return admin
 
     @staticmethod
-    async def load_from_file(admin_password: Optional[str]):
+    async def load_from_file(admin_password: Optional[str]) -> 'Admin':
         if not os.path.exists(Admin.save_path):
             return await Admin.create(admin_password)
 

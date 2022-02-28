@@ -1,6 +1,6 @@
 from asyncio import gather
 from typing import Optional
-from semaphore import ChatContext
+from semaphore import ChatContext, StopPropagation
 from logging import Logger
 
 from admin import Admin
@@ -89,6 +89,8 @@ class BotAnswers():
                 await self.reply_with_warn_on_failure(ctx, "Could not subscribe!")
             except Exception as e:
                 self.logger.error(e, exc_info=True)
+        finally:
+            raise StopPropagation
 
     async def unsubscribe(self, ctx: ChatContext) -> None:
         try:
@@ -107,6 +109,8 @@ class BotAnswers():
                 await self.reply_with_warn_on_failure(ctx, "Could not unsubscribe!")
             except Exception as e:
                 self.logger.error(e, exc_info=True)
+        finally:
+            raise StopPropagation
 
     async def broadcast(self, ctx: ChatContext) -> None:
         num_broadcasts = 0
@@ -160,6 +164,8 @@ class BotAnswers():
                 await self.reply_with_warn_on_failure(ctx, error_str)
             except Exception as e:
                 self.logger.error(e, exc_info=True)
+        finally:
+            raise StopPropagation
 
     def _get_help_message(self, input_message, subscriber_uuid):
         if input_message.startswith(PublicCommandStrings.help):
@@ -226,6 +232,8 @@ class BotAnswers():
                 self.logger.warning(f"{subscriber_uuid} failed password check for add_admin")
         except Exception as e:
             self.logger.error(e, exc_info=True)
+        finally:
+            raise StopPropagation
 
     async def remove_admin(self, ctx: ChatContext) -> None:
         try:
@@ -250,6 +258,8 @@ class BotAnswers():
                 self.logger.warning(f"Failed password check for remove_admin {subscriber_uuid}")
         except Exception as e:
             self.logger.error(e, exc_info=True)
+        finally:
+            raise StopPropagation
 
     async def msg_to_admin(self, ctx: ChatContext) -> None:
         try:
@@ -277,6 +287,8 @@ class BotAnswers():
                 await self.reply_with_warn_on_failure(ctx, "Failed to send the message to the admin!")
             except Exception as e:
                 self.logger.error(e, exc_info=True)
+        finally:
+            raise StopPropagation
 
     async def is_user_admin(self, ctx: ChatContext, command: str) -> bool:
         subscriber_uuid = ctx.message.source.uuid
@@ -314,6 +326,8 @@ class BotAnswers():
                 await self.reply_with_warn_on_failure(ctx, "Failed to send the message to the user!")
             except Exception as e:
                 self.logger.error(e, exc_info=True)
+        finally:
+            raise StopPropagation
 
     async def ban_user(self, ctx: ChatContext) -> None:
         try:
@@ -339,6 +353,8 @@ class BotAnswers():
                 await self.reply_with_warn_on_failure(ctx, "Failed to ban user")
             except Exception as e:
                 self.logger.error(e, exc_info=True)
+        finally:
+            raise StopPropagation
 
     async def lift_ban_user(self, ctx: ChatContext) -> None:
         try:
@@ -366,3 +382,5 @@ class BotAnswers():
                 await self.reply_with_warn_on_failure(ctx, "Failed lift the ban on the user")
             except Exception as e:
                 self.logger.error(e, exc_info=True)
+        finally:
+            raise StopPropagation

@@ -164,8 +164,10 @@ class BotAnswers():
         except Exception as e:
             self.logger.error(e, exc_info=True)
             try:
-                error_str = "Something went wrong, could only send the message to "\
-                            f"{num_broadcasts} out of {num_subscribers} subscribers"
+                error_str = "Something went wrong when sending the message"
+                if num_broadcasts == num_subscribers:
+                    error_str += ", but it was sent to everybody"
+                error_str += ", please contact the admin if the problem persists"
                 await self.reply_with_warn_on_failure(ctx, error_str)
             except Exception as e:
                 self.logger.error(e, exc_info=True)

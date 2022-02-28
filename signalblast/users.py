@@ -15,10 +15,6 @@ class Users():
         await self.save_to_file()
 
     async def save_to_file(self):
-        if len(self.data) == 0:
-            os.remove(self.save_path)
-            return
-
         with open(self.save_path, "w") as f:
             for i, subscriber in enumerate(self.data):
                 if i < len(self.data) - 1:

@@ -71,18 +71,19 @@ class BotAnswers():
             if subscriber_uuid in self.subscribers:
                 await self.reply_with_warn_on_failure(ctx, "Already subscribed!")
                 self.logger.info("Already subscribed!")
-            else:
-                if subscriber_uuid in self.banned_users:
-                    await self.reply_with_warn_on_failure(ctx, "This number is not allowed to subscribe")
-                    self.logger.info(f"{subscriber_uuid} was not allowed to subscribe")
-                    return
+                return
 
-                await self.subscribers.add(subscriber_uuid)
-                await self.subscribers_phone.add(ctx.message.source.number)
-                await self.reply_with_warn_on_failure(ctx, "Subscription successful!")
-                if self.expiration_time is not None:
-                    await ctx.bot.set_expiration(subscriber_uuid, self.expiration_time)
-                self.logger.info(f"{subscriber_uuid} subscribed")
+            if subscriber_uuid in self.banned_users:
+                await self.reply_with_warn_on_failure(ctx, "This number is not allowed to subscribe")
+                self.logger.info(f"{subscriber_uuid} was not allowed to subscribe")
+                return
+
+            await self.subscribers.add(subscriber_uuid)
+            await self.subscribers_phone.add(ctx.message.source.number)
+            await self.reply_with_warn_on_failure(ctx, "Subscription successful!")
+            if self.expiration_time is not None:
+                await ctx.bot.set_expiration(subscriber_uuid, self.expiration_time)
+            self.logger.info(f"{subscriber_uuid} subscribed")
         except Exception as e:
             self.logger.error(e, exc_info=True)
             try:
@@ -95,14 +96,16 @@ class BotAnswers():
     async def unsubscribe(self, ctx: ChatContext) -> None:
         try:
             subscriber_uuid = ctx.message.source.uuid
-            if subscriber_uuid in self.subscribers:
-                await self.subscribers.remove(subscriber_uuid)
-                await self.subscribers_phone.remove(ctx.message.source.number)
-                await self.reply_with_warn_on_failure(ctx, "Successfully unsubscribed!")
-                self.logger.info(f"{subscriber_uuid} unsubscribed")
-            else:
+
+            if subscriber_uuid not in self.subscribers:
                 await self.reply_with_warn_on_failure(ctx, "Not subscribed!")
                 self.logger.info(f"{subscriber_uuid} tried to unsubscribe but they are not subscribed")
+                return
+
+            await self.subscribers.remove(subscriber_uuid)
+            await self.subscribers_phone.remove(ctx.message.source.number)
+            await self.reply_with_warn_on_failure(ctx, "Successfully unsubscribed!")
+            self.logger.info(f"{subscriber_uuid} unsubscribed")
         except Exception as e:
             self.logger.error(e, exc_info=True)
             try:
@@ -202,9 +205,10 @@ class BotAnswers():
                 # Only attachment, assume the user wants to forward that
                 self.logger.info(f"Received a file from {subscriber_uuid}, broadcasting!")
                 await self.broadcast(ctx)
-            else:
-                await self.reply_with_warn_on_failure(ctx, help_message)
-                self.logger.info(f"Sent help message to {subscriber_uuid}")
+                return
+
+            await self.reply_with_warn_on_failure(ctx, help_message)
+            self.logger.info(f"Sent help message to {subscriber_uuid}")
         except Exception as e:
             self.logger.error(e, exc_info=True)
 
@@ -270,17 +274,18 @@ class BotAnswers():
             if self.admin.admin_id is None:
                 await self.reply_with_warn_on_failure(ctx, "I'm sorry but there are no admins to contact!")
                 self.logger.info(f"Tried to contact an admin but there is none! {subscriber_uuid}")
-            else:
-                if subscriber_uuid in self.banned_users:
-                    await self.reply_with_warn_on_failure(ctx, "You are not allowed to contact the admin!")
-                    self.logger.info(f"Banned user {subscriber_uuid} tried to contact admin")
-                    return
+                return
 
-                msg_to_admin = self.message_handler.compose_message_to_admin('Sent you message:\n', subscriber_uuid)
-                msg_to_admin += message
-                attachments = self.message_handler.prepare_attachments(ctx.message.data_message.attachments)
-                await ctx.bot.send_message(self.admin.admin_id, msg_to_admin, attachments=attachments)
-                self.logger.info(f"Sent message from {subscriber_uuid} to admin {self.admin.admin_id}")
+            if subscriber_uuid in self.banned_users:
+                await self.reply_with_warn_on_failure(ctx, "You are not allowed to contact the admin!")
+                self.logger.info(f"Banned user {subscriber_uuid} tried to contact admin")
+                return
+
+            msg_to_admin = self.message_handler.compose_message_to_admin('Sent you message:\n', subscriber_uuid)
+            msg_to_admin += message
+            attachments = self.message_handler.prepare_attachments(ctx.message.data_message.attachments)
+            await ctx.bot.send_message(self.admin.admin_id, msg_to_admin, attachments=attachments)
+            self.logger.info(f"Sent message from {subscriber_uuid} to admin {self.admin.admin_id}")
         except Exception as e:
             self.logger.error(e, exc_info=True)
             try:

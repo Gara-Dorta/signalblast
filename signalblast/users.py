@@ -26,7 +26,9 @@ class Users():
     async def _load_from_file(save_path) -> 'Users':
         users = Users(save_path)
         with open(save_path, "r") as f:
-            users.data.add(f.readline().rstrip())
+            lines = f.readlines()
+            for line in lines:
+                users.data.add(line.rstrip())
         return users
 
     def __iter__(self):

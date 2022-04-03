@@ -1,4 +1,4 @@
-FROM signald/signald
+FROM signald/signald:0.17.0
 
 WORKDIR /root
 
@@ -8,7 +8,7 @@ RUN apt install -y python3-pip netcat-openbsd
 
 RUN pip install argparse bcrypt # semaphore-bot install semaphore from git until changes are merged
 
-RUN pip install git+https://github.com/Era-Dorta/semaphore.git@expiration-and-attachments
+RUN pip install git+https://github.com/lwesterhof/semaphore.git
 
 ARG COMMIT_ID
 

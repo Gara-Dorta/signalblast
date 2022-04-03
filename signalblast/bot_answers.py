@@ -12,11 +12,9 @@ from utils import get_code_data_path
 
 
 class BotAnswers():
-    subscribers_data_path = get_code_data_path() / 'subscribers.txt'
-    banned_users_data_path = get_code_data_path() / 'banned_users.txt'
+    subscribers_data_path = get_code_data_path() / 'subscribers.csv'
+    banned_users_data_path = get_code_data_path() / 'banned_users.csv'
 
-    subscribers_phone_data_path = get_code_data_path() / 'subscribers_phone.txt'
-    banned_users_phone_data_path = get_code_data_path() / 'banned_users_phone.txt'
 
     def __init__(self) -> None:
         self.subscribers: Users = None
@@ -30,8 +28,6 @@ class BotAnswers():
         self.must_subscribe_message: str = None
         self.logger: Logger = None
         self.expiration_time = None
-        self.subscribers_phone: Users = None
-        self.banned_users_phone: Users = None
         self.ping_job: Job = None
 
     @classmethod
@@ -39,9 +35,6 @@ class BotAnswers():
         self = BotAnswers()
         self.subscribers = await Users.load_from_file(self.subscribers_data_path)
         self.banned_users = await Users.load_from_file(self.banned_users_data_path)
-
-        self.subscribers_phone = await Users.load_from_file(self.subscribers_phone_data_path)
-        self.banned_users_phone = await Users.load_from_file(self.banned_users_phone_data_path)
 
         self.admin = await Admin.load_from_file(admin_pass)
         self.message_handler = MessageHandler()
@@ -80,8 +73,7 @@ class BotAnswers():
                 self.logger.info(f"{subscriber_uuid} was not allowed to subscribe")
                 return
 
-            await self.subscribers.add(subscriber_uuid)
-            await self.subscribers_phone.add(ctx.message.source.number)
+            await self.subscribers.add(subscriber_uuid, ctx.message.source.number)
             await self.reply_with_warn_on_failure(ctx, "Subscription successful!")
             if self.expiration_time is not None:
                 await ctx.bot.set_expiration(subscriber_uuid, self.expiration_time)
@@ -105,7 +97,6 @@ class BotAnswers():
                 return
 
             await self.subscribers.remove(subscriber_uuid)
-            await self.subscribers_phone.remove(ctx.message.source.number)
             await self.reply_with_warn_on_failure(ctx, "Successfully unsubscribed!")
             self.logger.info(f"{subscriber_uuid} unsubscribed")
         except Exception as e:
@@ -158,7 +149,6 @@ class BotAnswers():
                 else:
                     self.logger.warning(f"Could not send message to {subscriber}")
                     await self.subscribers.remove(ctx.message.source.uuid)
-                    await self.subscribers_phone.remove(ctx.message.source.number)
 
             self.message_handler.delete_attachments(attachments)
         except Exception as e:
@@ -331,7 +321,7 @@ class BotAnswers():
                 else:
                     confirmation = None
                 if confirmation != '!force':
-                    warn_message = "User is not in subscribers list, use !reply !force to message them"
+                    warn_message = "User is not in subscribers list, use !reply <uuid> !force to message them"
                     await self.reply_with_warn_on_failure(ctx, warn_message)
                     return
 
@@ -357,11 +347,10 @@ class BotAnswers():
             if not await self.is_user_admin(ctx, AdminCommandStrings.ban_subscriber):
                 return
 
+            user_phonenumber = self.subscribers.get_phone_number(user_id)
             if user_id in self.subscribers:
                 await self.subscribers.remove(user_id)
-                await self.subscribers_phone.remove(ctx.message.source.number)
-            await self.banned_users.add(user_id)
-            await self.banned_users_phone.add(ctx.message.source.number)
+            await self.banned_users.add(user_id, user_phonenumber)
 
             await ctx.bot.send_message(user_id, 'You have been banned')
             await self.reply_with_warn_on_failure(ctx, "Successfully banned user")
@@ -386,7 +375,6 @@ class BotAnswers():
 
             if user_id in self.banned_users:
                 await self.banned_users.remove(user_id)
-                await self.banned_users_phone.remove(ctx.message.source.number)
             else:
                 await self.reply_with_warn_on_failure(ctx, "Could not lift the ban because the user was not banned")
                 self.logger.info(f"Could not lift the ban of {user_id} because the user was not banned")

@@ -1,42 +1,49 @@
+import csv
 import os
+from typing import Optional
 
 
 class Users():
+    _uuid_str = 'uuid'
+    _phone_number_str = 'phone_number'
+
     def __init__(self, save_path: str) -> None:
         self.save_path = save_path
-        self.data = set()
+        self.data = dict()
 
-    async def add(self, element: str) -> None:
-        self.data.add(element)
+    async def add(self, uuid: str, phone_number: str) -> None:
+        self.data[uuid] = phone_number
         await self.save_to_file()
 
-    async def remove(self, element: str) -> None:
-        self.data.remove(element)
+    async def remove(self, uuid: str) -> None:
+        del self.data[uuid]
         await self.save_to_file()
 
     async def save_to_file(self):
         with open(self.save_path, "w") as f:
-            for i, subscriber in enumerate(self.data):
-                if i < len(self.data) - 1:
-                    f.write(subscriber + '\n')
-                else:
-                    f.write(subscriber)
+            csv_writer = csv.DictWriter(f, fieldnames=[self._uuid_str, self._phone_number_str])
+            csv_writer.writeheader()
+            for uuid, phone_number in self.data.items():
+                csv_writer.writerow({self._uuid_str: uuid, self._phone_number_str: phone_number})
 
     @staticmethod
     async def _load_from_file(save_path) -> 'Users':
         users = Users(save_path)
         with open(save_path, "r") as f:
-            lines = f.readlines()
-            for line in lines:
-                users.data.add(line.rstrip())
+            csv_reader = csv.DictReader(f)
+            for line in csv_reader:
+                users.data[line[Users._uuid_str]] = line[Users._phone_number_str]
         return users
 
-    def __iter__(self):
-        for user in self.data:
-            yield user
+    def get_phone_number(self, uuid: str) -> Optional[str]:
+        return self.data.get(uuid)
 
-    def __contains__(self, user: str):
-        return user in self.data
+    def __iter__(self):
+        for uuid in self.data:
+            yield uuid
+
+    def __contains__(self, uuid: str):
+        return uuid in self.data
 
     def __len__(self):
         return len(self.data)

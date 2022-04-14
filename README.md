@@ -19,7 +19,7 @@ Once the server is up and running, several commands are available:
 
 The only required dependency is [docker](https://www.docker.com/).
 
-* Once docker is installed, get the signalblast image from docker hub
+* Once docker is installed, get the signalblast image from the [docker hub repository](https://hub.docker.com/r/eraxama/signalblast)
   * ```bash
     docker pull eraxama/signalblast:latest
     ```

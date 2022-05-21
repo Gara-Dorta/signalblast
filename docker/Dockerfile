@@ -19,6 +19,8 @@ RUN pip install install -r ./signalblast/requirements.txt
 
 RUN pip install git+https://github.com/lwesterhof/semaphore.git
 
-# USER root # For development, run as root, as it is the only way to get the files to be owned by the user
+# For development, run as root, as it is the only way to get the files to be owned by the user
+# USER root
+# RUN pip install install -r ./signalblast/requirements.txt
 
 ENTRYPOINT ["/home/user/signalblast/docker/entrypoint.sh"]

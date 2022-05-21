@@ -1,8 +1,9 @@
 from asyncio import gather
 from typing import Optional
-from semaphore import ChatContext, StopPropagation, Job
+from semaphore import ChatContext, StopPropagation, Job, LinkPreview
 from logging import Logger
 from time import time
+from pathlib import Path
 
 from admin import Admin
 from users import Users
@@ -31,13 +32,14 @@ class BotAnswers():
         self.ping_job: Job = None
 
     @classmethod
-    async def create(cls, logger: Logger, admin_pass: Optional[str], expiration_time: Optional[int]) -> 'BotAnswers':
+    async def create(cls, logger: Logger, admin_pass: Optional[str], expiration_time: Optional[int],
+                     signald_data_path: Path) -> 'BotAnswers':
         self = BotAnswers()
         self.subscribers = await Users.load_from_file(self.subscribers_data_path)
         self.banned_users = await Users.load_from_file(self.banned_users_data_path)
 
         self.admin = await Admin.load_from_file(admin_pass)
-        self.message_handler = MessageHandler()
+        self.message_handler = MessageHandler(signald_data_path / 'attachments')
 
         self.help_message = self.message_handler.compose_help_message(is_help=True)
         self.wrong_command_message = self.message_handler.compose_help_message(is_help=False)
@@ -129,7 +131,8 @@ class BotAnswers():
             await ctx.message.mark_read()
             message = self.message_handler.remove_command_from_message(ctx.message.get_body(),
                                                                        PublicCommandStrings.broadcast)
-            attachments = self.message_handler.prepare_attachments(ctx.message.data_message.attachments)
+            attachments = self.message_handler.empty_list_to_none(ctx.message.data_message.attachments)
+            link_previews = self.message_handler.empty_list_to_none(ctx.message.data_message.previews)
 
             if message is None and attachments is None:
                 return
@@ -138,7 +141,8 @@ class BotAnswers():
             send_tasks = [None] * len(self.subscribers)
 
             for i, subscriber in enumerate(self.subscribers):
-                send_tasks[i] = ctx.bot.send_message(subscriber, message, attachments=attachments)
+                send_tasks[i] = ctx.bot.send_message(subscriber, message, attachments=attachments,
+                                                     link_previews=link_previews)
 
             send_task_results = await gather(*send_tasks)
 
@@ -150,7 +154,7 @@ class BotAnswers():
                     self.logger.warning(f"Could not send message to {subscriber}")
                     await self.subscribers.remove(ctx.message.source.uuid)
 
-            self.message_handler.delete_attachments(attachments)
+            self.message_handler.delete_attachments(attachments, link_previews)
         except Exception as e:
             self.logger.error(e, exc_info=True)
             try:
@@ -277,7 +281,7 @@ class BotAnswers():
 
             msg_to_admin = self.message_handler.compose_message_to_admin('Sent you message:\n', subscriber_uuid)
             msg_to_admin += message
-            attachments = self.message_handler.prepare_attachments(ctx.message.data_message.attachments)
+            attachments = self.message_handler.empty_list_to_none(ctx.message.data_message.attachments)
             await ctx.bot.send_message(self.admin.admin_id, msg_to_admin, attachments=attachments)
             self.logger.info(f"Sent message from {subscriber_uuid} to admin {self.admin.admin_id}")
         except Exception as e:
@@ -326,7 +330,7 @@ class BotAnswers():
                     return
 
             message = 'Admin: ' + message
-            attachments = self.message_handler.prepare_attachments(ctx.message.data_message.attachments)
+            attachments = self.message_handler.empty_list_to_none(ctx.message.data_message.attachments)
 
             await ctx.bot.send_message(user_id, message, attachments=attachments)
             self.logger.info(f"Sent message from admin {self.admin.admin_id} to user {user_id}")

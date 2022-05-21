@@ -28,7 +28,7 @@ async def main(admin_pass: Optional[str], expiration_time: Optional[int], signal
     # Connect the bot to number.
     async with Bot(os.environ["SIGNAL_PHONE_NUMBER"], logging_level=INFO,
                    socket_path=socket_path) as bot:
-        bot_answers = await BotAnswers.create(logger, admin_pass, expiration_time)
+        bot_answers = await BotAnswers.create(logger, admin_pass, expiration_time, signald_data_path)
 
         bot.register_handler(CommandRegex.subscribe, bot_answers.subscribe)
         bot.register_handler(CommandRegex.unsubscribe, bot_answers.unsubscribe)

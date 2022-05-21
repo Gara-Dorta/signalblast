@@ -1,10 +1,15 @@
-FROM signald/signald:0.17.0
+FROM ubuntu:22.04
 
-WORKDIR /root
+# RUN apt-get update && apt-get upgrade -y
+RUN apt-get update
 
-RUN apt update && apt upgrade -y
+RUN apt-get install -y python3-pip netcat-openbsd git
 
-RUN apt install -y python3-pip netcat-openbsd
+RUN useradd --create-home --shell /bin/bash --uid 1337 user
+
+USER user
+
+WORKDIR /home/user
 
 RUN pip install argparse bcrypt # semaphore-bot install semaphore from git until changes are merged
 
@@ -14,8 +19,4 @@ ARG COMMIT_ID
 
 RUN git clone https://github.com/Era-Dorta/signalblast && cd signalblast && git checkout $COMMIT_ID
 
-RUN mkdir /var/run/signald
-
-RUN echo "socketpath: /var/run/signald/signald.sock" >> /root/.config/signaldctl.yaml
-
-ENTRYPOINT ["/root/signalblast/docker/entrypoint.sh"]
+ENTRYPOINT ["/home/user/signalblast/docker/entrypoint.sh"]

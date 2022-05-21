@@ -47,11 +47,14 @@ async def main(admin_pass: Optional[str], expiration_time: Optional[int]):
 
 
 if __name__ == '__main__':
-    expiration_time = 60 * 60 * 24 * 7  # Number of seconds in a week
+    default_expiration_time = 60 * 60 * 24 * 7  # Number of seconds in a week
+    if os.environ.get("SIGNALBLAST_EXPIRATION_TIME") is not None:
+        default_expiration_time = os.environ["SIGNALBLAST_EXPIRATION_TIME"]
 
     args_parser = argparse.ArgumentParser()
-    args_parser.add_argument("--admin_pass", type=str, required=False, help="the password to add or remove admins")
-    args_parser.add_argument("--expiration_time", type=int, required=False, default=expiration_time,
+    args_parser.add_argument("--admin_pass", type=str, help="the password to add or remove admins",
+                             default=os.environ.get("SIGNALBLAST_PASSWORD"))
+    args_parser.add_argument("--expiration_time", type=int, default=default_expiration_time,
                              help="the expiration time for the chats")
 
     args = args_parser.parse_args()

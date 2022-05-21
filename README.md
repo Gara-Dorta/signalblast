@@ -21,7 +21,7 @@ The only required dependency is [docker](https://www.docker.com/).
 
 * Run a container for signald
   * ```bash
-    docker run -v "./data/signald:/signald" signald/signald:0.18.0
+    docker run -v "./data/signald:/signald" signald/signald:0.18.5-non-root
     ```
 * Open a second terminal inside the container to configure signald
   * ```bash

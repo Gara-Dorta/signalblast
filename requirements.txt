@@ -1,0 +1,14 @@
+anyio>=3.5.0
+attrs>=21.2.0
+bcrypt>=3.2.2
+cffi>=1.15.0
+flake8>=4.0.1
+idna>=3.3
+mccabe>=0.6.1
+pycodestyle>=2.8.0
+pycparser>=2.21
+pyflakes>=2.4.0
+python-dateutil>=2.8.1
+semaphore-bot>=0.14.0
+six>=1.16.0
+sniffio>=1.2.0

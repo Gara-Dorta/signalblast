@@ -11,13 +11,13 @@ USER user
 
 WORKDIR /home/user
 
-RUN pip install argparse bcrypt # semaphore-bot install semaphore from git until changes are merged
-
-RUN pip install git+https://github.com/lwesterhof/semaphore.git
-
 ARG COMMIT_ID
 
 RUN git clone https://github.com/Era-Dorta/signalblast && cd signalblast && git checkout $COMMIT_ID
+
+RUN pip install install -r ./signalblast/requirements.txt
+
+RUN pip install git+https://github.com/lwesterhof/semaphore.git
 
 # USER root # For development, run as root, as it is the only way to get the files to be owned by the user
 

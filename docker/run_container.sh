@@ -12,5 +12,5 @@ CURRENT_DIR=$(dirname $(realpath $0))
 docker container run \
   --restart=unless-stopped \
   -v "${SIGNALBLAST_BASE}/data/signalblast:/home/user/signalblast/signalblast/data" \
-  -v "${SIGNALBLAST_BASE}/data/signald:/home/user/.config/signald" \
+  -v "${SIGNALBLAST_BASE}/data/signald:/home/user/signald" \
   eraxama/signalblast:latest

@@ -59,7 +59,7 @@ The only required dependency is [docker](https://www.docker.com/).
        docker container run \
        --restart=unless-stopped \
        -v "./data/signalblast:/home/user/signalblast/signalblast/data" \
-       -v "./data/signald:/home/user/.config/signald" \
+       -v "./data/signald:/home/user/signald" \
        -e SIGNAL_PHONE_NUMBER="Your phone number" \
        eraxama/signalblast:latest
     ```

@@ -6,6 +6,7 @@ import os
 from semaphore import Bot
 from logging import INFO
 from typing import Optional
+from pathlib import Path
 
 
 from bot_answers import BotAnswers
@@ -13,7 +14,7 @@ from bot_commands import CommandRegex
 from utils import get_logger, redirect_semaphore_logger, get_code_data_path
 
 
-async def main(admin_pass: Optional[str], expiration_time: Optional[int]):
+async def main(admin_pass: Optional[str], expiration_time: Optional[int], signald_data_path: Path):
     """Start the bot."""
 
     log_file = get_code_data_path() / 'signalblast.log' 
@@ -22,7 +23,7 @@ async def main(admin_pass: Optional[str], expiration_time: Optional[int]):
 
     os.makedirs(get_code_data_path(), exist_ok=True)
 
-    socket_path = get_code_data_path().parents[1] / 'data' / 'signald' / 'signald.sock'
+    socket_path = signald_data_path / 'signald.sock'
 
     # Connect the bot to number.
     async with Bot(os.environ["SIGNAL_PHONE_NUMBER"], logging_level=INFO,
@@ -56,6 +57,9 @@ if __name__ == '__main__':
                              default=os.environ.get("SIGNALBLAST_PASSWORD"))
     args_parser.add_argument("--expiration_time", type=int, default=default_expiration_time,
                              help="the expiration time for the chats")
+    args_parser.add_argument("--signald_data_path", type=Path,
+                             default=Path("/home/user/signald"),
+                             help="the path to the folder containig the signald socket")
 
     args = args_parser.parse_args()
-    anyio.run(main, args.admin_pass, args.expiration_time)
+    anyio.run(main, args.admin_pass, args.expiration_time, args.signald_data_path)

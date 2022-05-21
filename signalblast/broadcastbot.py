@@ -16,14 +16,17 @@ from utils import get_logger, redirect_semaphore_logger, get_code_data_path
 async def main(admin_pass: Optional[str], expiration_time: Optional[int]):
     """Start the bot."""
 
-    log_file = '/var/log/signalblast.log'
+    log_file = get_code_data_path() / 'signalblast.log' 
     logger = get_logger(log_file, logging_level=INFO)
     redirect_semaphore_logger(log_file)
 
     os.makedirs(get_code_data_path(), exist_ok=True)
 
+    socket_path = get_code_data_path().parents[1] / 'data' / 'signald' / 'signald.sock'
+
     # Connect the bot to number.
-    async with Bot(os.environ["SIGNAL_PHONE_NUMBER"], logging_level=INFO) as bot:
+    async with Bot(os.environ["SIGNAL_PHONE_NUMBER"], logging_level=INFO,
+                   socket_path=socket_path) as bot:
         bot_answers = await BotAnswers.create(logger, admin_pass, expiration_time)
 
         bot.register_handler(CommandRegex.subscribe, bot_answers.subscribe)

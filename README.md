@@ -51,9 +51,9 @@ The only required dependency is [docker](https://www.docker.com/).
         signaldctl account verify $"SIGNAL_PHONE_NUMBER" nnnnn
         ```
 * Verify that signald is properly configured (substitute target for who you are sending the message to, and "a message" with your message) 
-      * ```bash
-        signaldctl message send -a $"SIGNAL_PHONE_NUMBER" target "a message" 
-        ```
+  * ```bash
+    signaldctl message send -a $"SIGNAL_PHONE_NUMBER" target "a message" 
+    ```
 * Once signald is configured, lets run a container with signalblast
   * ```bash
        docker container run \
@@ -66,5 +66,5 @@ The only required dependency is [docker](https://www.docker.com/).
   * There are two optional parameters
     * `-e SIGNALBLAST_PASSWORD="a password"` -> the admin password for signalblast
     * `-e SIGNALBLAST_EXPIRATION_TIME="time"` -> an automatic message expiration time in seconds
-* Send message to the bot, a good first message is `!help`. The bot should reply immediately.
-* If this is not the case, check the logs at `./data/signalblast.log`
+* Now you can send message to the bot, a good first message is `!help`. The bot should reply immediately.
+* If this is not the case, check the logs at `./data/signalblast/signalblast.log`

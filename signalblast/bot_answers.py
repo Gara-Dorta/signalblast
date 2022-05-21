@@ -208,6 +208,8 @@ class BotAnswers():
             await self.reply_with_warn_on_failure(ctx, help_message)
             self.logger.info(f"Sent help message to {subscriber_uuid}")
         except Exception as e:
+            if isinstance(e, StopPropagation):
+                raise
             self.logger.error(e, exc_info=True)
 
     async def add_admin(self, ctx: ChatContext) -> None:

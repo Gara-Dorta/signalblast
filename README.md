@@ -19,32 +19,19 @@ Once the server is up and running, several commands are available:
 
 The only required dependency is [docker](https://www.docker.com/).
 
-* Once docker is installed, get the signalblast image from the [docker hub repository](https://hub.docker.com/r/eraxama/signalblast)
+* Run a container for signald
   * ```bash
-    docker pull eraxama/signalblast:latest
+    docker run -v "./data/signald:/signald" signald/signald:0.18.0
     ```
-* Run a container that uses the image
-  * ```bash
-       docker container run \
-       --restart=unless-stopped \
-       -v "./data/signalblast:/root/signalblast/signalblast/data" \
-       -v "./data/signald:/root/.config/signald" \
-       eraxama/signalblast:latest <admin password> <expiration time>
-    ```
-  * The admin password and the expiration time (in seconds) parameters are optional. If only one argument is provided it is assumed to be the password.
-* Open a second terminal inside the container to configure the bot
+* Open a second terminal inside the container to configure signald
   * ```bash
     docker exec -it <container name> bash
     ```
-  * If you don't know the name of the container, run `docker container list` to find out.
-* Add the bot phone number to the config file
-  * Replace `123456789` with your bot phone number, including the country code
-  * ```bash
-    sed -i 's/SIGNAL_PHONE_NUMBER=/SIGNAL_PHONE_NUMBER=+123456789/g' /root/signalblast/signalblast/data/phone_number.sh
-    ```
-    ```bash
-    source /root/signalblast/signalblast/data/phone_number.sh
-    ```
+  * Export the phone number for easy configuration later on
+    * ```bash
+      SIGNAL_PHONE_NUMBER="Your phone number"
+      ```
+    SIGNAL_PHONE_NUMBER
 * Link **or** register the phone number
   * Linking (easier)
     * Run the link command and scan the QR code
@@ -64,5 +51,21 @@ The only required dependency is [docker](https://www.docker.com/).
       * ```bash
         signaldctl account verify $"SIGNAL_PHONE_NUMBER" nnnnn
         ```
+* Verify that signald is properly configured (substitute target for who you are sending the message to, and "a message" with your message) 
+      * ```bash
+        signaldctl message send -a $"SIGNAL_PHONE_NUMBER" target "a message" 
+        ```
+* Once signald is configured, lets run a container with signalblast
+  * ```bash
+       docker container run \
+       --restart=unless-stopped \
+       -v "./data/signalblast:/home/user/signalblast/signalblast/data" \
+       -v "./data/signald:/home/user/.config/signald" \
+       -e SIGNAL_PHONE_NUMBER="Your phone number" \
+       eraxama/signalblast:latest
+    ```
+  * There are two optional parameters
+    * `-e SIGNALBLAST_PASSWORD="a password"` -> the admin password for signalblast
+    * `-e SIGNALBLAST_EXPIRATION_TIME="time"` -> an automatic message expiration time in seconds
 * Send message to the bot, a good first message is `!help`. The bot should reply immediately.
-* If this is not the case, check the logs at `/var/log/signalblast.log`
+* If this is not the case, check the logs at `./data/signalblast.log`

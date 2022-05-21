@@ -27,15 +27,11 @@ The only required dependency is [docker](https://www.docker.com/).
   * ```bash
     docker exec -it <container name> bash
     ```
-  * Export the phone number for easy configuration later on
-    * ```bash
-      SIGNAL_PHONE_NUMBER="Your phone number"
-      ```
 * Link **or** register the phone number
   * Linking (easier)
     * Run the link command and scan the QR code
       * ```bash
-        signaldctl account link $"SIGNAL_PHONE_NUMBER"
+        signaldctl account link "Your phone number"
         ```
   * Registering (harder)
     * Get the captcha helper from here https://gitlab.com/signald/captcha-helper
@@ -44,15 +40,15 @@ The only required dependency is [docker](https://www.docker.com/).
                            ```
     * Register the account using the captcha (substitue nnnnn for the captcha output)
       * ```bash
-        signaldctl account register $"SIGNAL_PHONE_NUMBER" --captcha nnnnn
+        signaldctl account register "Your phone number" --captcha nnnnn
         ```
     * Verify the account (substitute nnnnn for the sms verification code)
       * ```bash
-        signaldctl account verify $"SIGNAL_PHONE_NUMBER" nnnnn
+        signaldctl account verify "Your phone number" nnnnn
         ```
 * Verify that signald is properly configured (substitute target for who you are sending the message to, and "a message" with your message) 
   * ```bash
-    signaldctl message send -a $"SIGNAL_PHONE_NUMBER" target "a message" 
+    signaldctl message send -a "Your phone number" target "a message"
     ```
 * Once signald is configured, lets run a container with signalblast
   * ```bash

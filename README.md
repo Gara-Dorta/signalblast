@@ -31,7 +31,6 @@ The only required dependency is [docker](https://www.docker.com/).
     * ```bash
       SIGNAL_PHONE_NUMBER="Your phone number"
       ```
-    SIGNAL_PHONE_NUMBER
 * Link **or** register the phone number
   * Linking (easier)
     * Run the link command and scan the QR code

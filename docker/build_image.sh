@@ -6,4 +6,4 @@ if [ "$#" -ne 1 ]; then
     exit 1
 fi
 
-docker build --build-arg COMMIT_ID=$1 --tag eraxama/signalblast ${CURRENT_DIR}
+docker build --progress plain --build-arg COMMIT_ID=$1 --tag eraxama/signalblast ${CURRENT_DIR}

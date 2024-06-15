@@ -1,11 +1,11 @@
 FROM ubuntu:22.04
 
-RUN apt-get update
+RUN apt update
 
 # Additional upgade, good for safety but optional
-# RUN apt-get upgrade -y
+# RUN apt upgrade -y
 
-RUN apt-get install -y python3-pip netcat-openbsd git
+RUN apt install -y python3-pip netcat-openbsd git
 
 # This uid is the same uid as the non-root user in the signald container, if that changes, it should be changed here too.
 RUN useradd --create-home --shell /bin/bash --uid 1337 user

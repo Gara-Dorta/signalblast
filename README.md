@@ -19,37 +19,7 @@ Once the server is up and running, several commands are available:
 
 The only required dependency is [docker](https://www.docker.com/).
 
-* Run a container for signald
-  * ```bash
-    docker run -v "./data/signald:/signald" signald/signald:0.18.5-non-root
-    ```
-* Open a second terminal inside the container to configure signald, substitute \<container name\> with the container name
-  * ```bash
-    docker exec -it <container name> bash
-    ```
-* Link **or** register the phone number
-  * Linking (easier)
-    * Run the link command and scan the QR code, substitute \<Your phone number\> with your phone number
-      * ```bash
-        signaldctl account link <Your phone number>
-        ```
-  * Registering (harder)
-    * Get the captcha helper from here https://gitlab.com/signald/captcha-helper
-      * Run captcha helper ```bash
-                           ./signal-captcha-helper
-                           ```
-    * Register the account using the captcha (substitue \<nnnnn\> for the captcha output)
-      * ```bash
-        signaldctl account register <Your phone number> --captcha <nnnnn>
-        ```
-    * Verify the account (substitute \<nnnnn\> for the sms verification code)
-      * ```bash
-        signaldctl account verify <Your phone number> <nnnnn>
-        ```
-* Verify that signald is properly configured 
-  * ```bash
-    signaldctl message send -a <Your phone number> <recipient phone number> <a message>
-    ```
+* Set up signalbot as specified [here](https://github.com/filipre/signalbot)
 * Once signald is configured, lets run a container with signalblast
   * ```bash
        docker container run \

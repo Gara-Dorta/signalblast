@@ -1,6 +1,5 @@
 import os
 from typing import Optional, List
-from semaphore import Attachment, LinkPreview
 from pathlib import Path
 
 from bot_commands import AdminCommandStrings, PublicCommandStrings, AdminCommandArgs
@@ -11,8 +10,8 @@ class MessageHandler():
         self.attachments_folder = attachments_folder
 
     @staticmethod
-    def remove_command_from_message(message: str, command: str) -> str:
-        if message == '':
+    def remove_command_from_message(message: Optional[str], command: str) -> Optional[str]:
+        if message == '' or message is None:
             return None
         else:
             message = message.replace(command, '', 1).strip()
@@ -21,13 +20,13 @@ class MessageHandler():
             else:
                 return message
 
-    def empty_list_to_none(self, attachments: Optional[List[Attachment]]) -> List:
+    def empty_list_to_none(self, attachments: Optional[List[str]]) -> Optional[List]:
         if attachments == []:
             return None
 
         return attachments
 
-    def delete_attachments(self, attachments: Optional[List[Attachment]], link_previews: Optional[List[LinkPreview]]):
+    def delete_attachments(self, attachments: Optional[List[str]], link_previews: Optional[List[str]]):
         if attachments is not None:
             for attachment in attachments:
                 os.remove(self.attachments_folder / Path(attachment.stored_filename).name)

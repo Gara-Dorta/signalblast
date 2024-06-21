@@ -29,12 +29,11 @@ class MessageHandler():
     def delete_attachments(self, attachments: Optional[List[str]], link_previews: Optional[List[str]]):
         if attachments is not None:
             for attachment in attachments:
-                os.remove(self.attachments_folder / Path(attachment.stored_filename).name)
+                (self.attachments_folder / attachment).unlink()
 
         if link_previews is not None:
             for link_preview in link_previews:
-                if link_preview.attachment is not None:
-                    os.remove(self.attachments_folder / Path(link_preview.attachment.stored_filename).name)
+                raise NotImplementedError("Link previews are not implemented yet")
 
     @staticmethod
     def _compose_help_message(add_admin_commands: bool) -> str:

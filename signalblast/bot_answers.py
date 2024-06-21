@@ -160,7 +160,8 @@ class Broadcast(Command):
                     bot.logger.warning(f"Could not send message to {subscriber}")
                     await bot.subscribers.remove(ctx.message.source_uuid)
 
-            bot.message_handler.delete_attachments(attachments, link_previews=None)
+            attachments_filenames = bot.message_handler.empty_list_to_none(ctx.message.attachments_filenames)
+            bot.message_handler.delete_attachments(attachments_filenames, link_previews=None)
 
             await bot.reply_with_warn_on_failure(ctx, f"Message sent to {num_broadcasts - 1} people")
         except Exception as e:

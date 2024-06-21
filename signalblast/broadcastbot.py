@@ -14,7 +14,8 @@ from signalbot import Context as ChatContext
 from signalbot import SignalBot
 import functools
 from re import Pattern
-
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.job import Job
 class BroadcasBot():
     subscribers_data_path = get_code_data_path() / 'subscribers.csv'
     banned_users_data_path = get_code_data_path() / 'banned_users.csv'
@@ -22,18 +23,21 @@ class BroadcasBot():
 
     def __init__(self, config: dict):
         self._bot = SignalBot(config)
-        self.subscribers: Users = None
-        self.banned_users: Users = None
-        self.admin: Admin = None
-        self.message_handler: MessageHandler = None
-        self.help_message: str = None
-        self.wrong_command_message: str = None
-        self.admin_help_message: str = None
-        self.admin_wrong_command_message: str = None
-        self.must_subscribe_message: str = None
-        self.logger: Logger = None
-        self.expiration_time = None
-        # self.ping_job: Job = None
+        self.ping_job: Optional[Job] = None
+
+        # Type hint the other attributes that will get defined in load_data
+        self.subscribers: Users
+        self.banned_users: Users
+        self.admin: Admin
+        self.message_handler: MessageHandler
+        self.help_message: str
+        self.wrong_command_message: str
+        self.admin_help_message: str
+        self.admin_wrong_command_message: str
+        self.must_subscribe_message: str
+        self.logger: Logger
+        self.expiration_time: int
+        
 
     async def send(self,         
                    receiver: str,
@@ -62,7 +66,7 @@ class BroadcasBot():
 
     def register(self,         command: Command,
         contacts: Optional[Union[List[str], bool]] = True,
-        groups: Optional[Union[List[str], bool]] = True,
+        groups: Optional[Union[List[str], bool]] = False,
         f: Optional[Callable[[Message], bool]] = None):
         self._bot.register(
             command=command,
@@ -71,9 +75,12 @@ class BroadcasBot():
             f=f
         )
 
-
     def start(self):
         self._bot.start()
+
+    @property
+    def scheduler(self) -> AsyncIOScheduler:
+        return self._bot.scheduler
 
     async def load_data(self, logger: Logger, admin_pass: Optional[str], expiration_time: Optional[int],
                      signald_data_path: Path):

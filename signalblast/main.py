@@ -15,7 +15,7 @@ logging.getLogger("apscheduler").setLevel(logging.WARNING)
 from bot_answers import BroadcasBot, Subscribe, Unsubscribe, SetPing, UnsetPing, AddAdmin, RemoveAdmin, BanSubscriber, LiftBanSubscriber, Broadcast, DisplayHelp, MessageToAdmin, MessageFromAdmin
            
 
-async def initialise_bot(signal_service: str, phone_number: str, storage: Optional[str] = None) -> BroadcasBot:
+async def initialise_bot(signal_service: str, phone_number: str, admin_pass: str, expiration_time: int, storage: Optional[str] = None) -> BroadcasBot:
     config = {
         "signal_service": signal_service,
         "phone_number": phone_number,
@@ -27,8 +27,8 @@ async def initialise_bot(signal_service: str, phone_number: str, storage: Option
     bot = BroadcasBot(config)
     await bot.load_data(
                logger=logging.getLogger("signalblast"),
-               admin_pass="123",
-               expiration_time="5",
+               admin_pass=admin_pass,
+               expiration_time=expiration_time,
                signald_data_path=Path.home() / (".local/share/signal-api/"))
     
     bot.register(Subscribe(bot=bot))
@@ -36,6 +36,13 @@ async def initialise_bot(signal_service: str, phone_number: str, storage: Option
     bot.register(Broadcast(bot=bot))
     bot.register(DisplayHelp(bot=bot))
     bot.register(AddAdmin(bot=bot))
+    bot.register(RemoveAdmin(bot=bot))
+    bot.register(BanSubscriber(bot=bot))
+    bot.register(LiftBanSubscriber(bot=bot))
+    bot.register(SetPing(bot=bot), contacts=False, groups=True)
+    bot.register(UnsetPing(bot=bot), contacts=False, groups=True)
+    bot.register(MessageToAdmin(bot=bot))
+    bot.register(MessageFromAdmin(bot=bot))
     return bot
     
 
@@ -60,5 +67,5 @@ if __name__ == '__main__':
     args = args_parser.parse_args()
 
     loop = asyncio.get_event_loop()
-    bot = loop.run_until_complete(initialise_bot(signal_service, phone_number))
+    bot = loop.run_until_complete(initialise_bot(signal_service, phone_number, args.admin_pass, args.expiration_time))
     bot.start()

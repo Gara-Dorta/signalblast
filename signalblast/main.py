@@ -12,10 +12,10 @@ from utils import get_code_data_path
 logging.getLogger().setLevel(logging.INFO)
 logging.getLogger("apscheduler").setLevel(logging.WARNING)
 
-from bot_answers import BotAnswers, Subscribe, Unsubscribe, SetPing, UnsetPing, AddAdmin, RemoveAdmin, BanSubscriber, LiftBanSubscriber, Broadcast, DisplayHelp, MessageToAdmin, MessageFromAdmin
+from bot_answers import BroadcasBot, Subscribe, Unsubscribe, SetPing, UnsetPing, AddAdmin, RemoveAdmin, BanSubscriber, LiftBanSubscriber, Broadcast, DisplayHelp, MessageToAdmin, MessageFromAdmin
            
 
-async def initialise_bot(signal_service: str, phone_number: str, storage: Optional[str] = None) -> BotAnswers:
+async def initialise_bot(signal_service: str, phone_number: str, storage: Optional[str] = None) -> BroadcasBot:
     config = {
         "signal_service": signal_service,
         "phone_number": phone_number,
@@ -24,7 +24,7 @@ async def initialise_bot(signal_service: str, phone_number: str, storage: Option
 
     get_code_data_path().mkdir(parents=True, exist_ok=True)
 
-    bot = BotAnswers(config)
+    bot = BroadcasBot(config)
     await bot.load_data(
                logger=logging.getLogger("signalblast"),
                admin_pass="123",

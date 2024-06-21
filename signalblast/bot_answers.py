@@ -1,5 +1,5 @@
 from asyncio import gather
-from typing import Optional
+from typing import Optional, Callable, Union, List
 from logging import Logger
 from time import time
 from pathlib import Path
@@ -9,11 +9,12 @@ from users import Users
 from bot_commands import CommandRegex, AdminCommandStrings, PublicCommandStrings
 from message_handler import MessageHandler
 from utils import get_code_data_path
-from signalbot import Command #, triggered
+from signalbot import Command, Message #, triggered
 from signalbot import Context as ChatContext
 from signalbot import SignalBot
 import functools
 from re import Pattern
+from signalblast.broadcastbot import BroadcasBot
 
 def triggered(pattern: Pattern):
     def decorator_triggered(func):
@@ -33,73 +34,10 @@ def triggered(pattern: Pattern):
 
     return decorator_triggered
 
-class BotAnswers(SignalBot):
-    subscribers_data_path = get_code_data_path() / 'subscribers.csv'
-    banned_users_data_path = get_code_data_path() / 'banned_users.csv'
 
-
-    def __init__(self, config: dict):
-        super().__init__(config)
-        self.subscribers: Users = None
-        self.banned_users: Users = None
-        self.admin: Admin = None
-        self.message_handler: MessageHandler = None
-        self.help_message: str = None
-        self.wrong_command_message: str = None
-        self.admin_help_message: str = None
-        self.admin_wrong_command_message: str = None
-        self.must_subscribe_message: str = None
-        self.logger: Logger = None
-        self.expiration_time = None
-        # self.ping_job: Job = None
-
-
-    async def load_data(self, logger: Logger, admin_pass: Optional[str], expiration_time: Optional[int],
-                     signald_data_path: Path):
-        self.subscribers = await Users.load_from_file(self.subscribers_data_path)
-        self.banned_users = await Users.load_from_file(self.banned_users_data_path)
-
-        self.admin = await Admin.load_from_file(admin_pass)
-        self.message_handler = MessageHandler(signald_data_path / 'attachments')
-
-        self.help_message = self.message_handler.compose_help_message(is_help=True)
-        self.wrong_command_message = self.message_handler.compose_help_message(is_help=False)
-        self.admin_help_message = self.message_handler.compose_help_message(add_admin_commands=True)
-        self.admin_wrong_command_message = self.message_handler.compose_help_message(add_admin_commands=True,
-                                                                                     is_help=False)
-
-        self.must_subscribe_message = self.message_handler.compose_must_subscribe_message()
-
-        self.expiration_time = expiration_time
-
-        self.logger = logger
-        self.logger.debug('BotAnswers is initialised')
-
-    async def reply_with_warn_on_failure(self, ctx: ChatContext, message: str) -> bool:
-        if await ctx.reply(message):
-            return True
-        else:
-            self.logger.warning(f"Could not send message to {ctx.message.source_uuid}")
-            return False
-
-    async def is_user_admin(self, ctx: ChatContext, command: str) -> bool:
-        subscriber_uuid = ctx.message.source_uuid
-        if self.admin.admin_id is None:
-            await self.reply_with_warn_on_failure(ctx, "I'm sorry but there are no admins")
-            self.logger.info(f"Tried to {command} but there are no admins! {subscriber_uuid}")
-            return False
-
-        if self.admin.admin_id != subscriber_uuid:
-            await self.reply_with_warn_on_failure(ctx, "I'm sorry but you are not an admin")
-            msg_to_admin = self.message_handler.compose_message_to_admin(f'Tried to {command}', subscriber_uuid)
-            await self.send(self.admin.admin_id, msg_to_admin)
-            self.logger.info(f"{subscriber_uuid} tried to {command} but admin is {self.admin.admin_id}")
-            return False
-
-        return True
 
 class Subscribe(Command):
-    def __init__(self, bot: BotAnswers) -> None:
+    def __init__(self, bot: BroadcasBot) -> None:
         super().__init__()
         self.bot = bot
 
@@ -132,7 +70,7 @@ class Subscribe(Command):
         #     raise StopPropagation
 
 class Unsubscribe(Command):
-    def __init__(self, bot: BotAnswers) -> None:
+    def __init__(self, bot: BroadcasBot) -> None:
         super().__init__()
         self.bot = bot
 
@@ -159,12 +97,12 @@ class Unsubscribe(Command):
         #     raise StopPropagation
 
 class Broadcast(Command):
-    def __init__(self, bot: BotAnswers) -> None:
+    def __init__(self, bot: BroadcasBot) -> None:
         super().__init__()
         self.bot = bot
 
     @staticmethod
-    async def broadcast(bot: BotAnswers, ctx: ChatContext) -> None:
+    async def broadcast(bot: BroadcasBot, ctx: ChatContext) -> None:
         num_broadcasts = 0
         num_subscribers = -1
 
@@ -235,7 +173,7 @@ class Broadcast(Command):
 
 
 class DisplayHelp(Command):
-    def __init__(self, bot: BotAnswers) -> None:
+    def __init__(self, bot: BroadcasBot) -> None:
         super().__init__()
         self.bot = bot
 
@@ -290,7 +228,7 @@ class DisplayHelp(Command):
             self.bot.logger.error(e, exc_info=True)
 
 class AddAdmin(Command):
-    def __init__(self, bot: BotAnswers) -> None:
+    def __init__(self, bot: BroadcasBot) -> None:
         super().__init__()
         self.bot = bot
 
@@ -323,7 +261,7 @@ class AddAdmin(Command):
         #     raise StopPropagation
         
 class RemoveAdmin(Command):
-    def __init__(self, bot: BotAnswers) -> None:
+    def __init__(self, bot: BroadcasBot) -> None:
         super().__init__()
         self.bot = bot
 
@@ -355,7 +293,7 @@ class RemoveAdmin(Command):
         #     raise StopPropagation
 
 class MessageToAdmin(Command):
-    def __init__(self, bot: BotAnswers) -> None:
+    def __init__(self, bot: BroadcasBot) -> None:
         super().__init__()
         self.bot = bot
 
@@ -393,7 +331,7 @@ class MessageToAdmin(Command):
 
 
 class MessageFromAdmin(Command):
-    def __init__(self, bot: BotAnswers) -> None:
+    def __init__(self, bot: BroadcasBot) -> None:
         super().__init__()
         self.bot = bot
 
@@ -433,7 +371,7 @@ class MessageFromAdmin(Command):
         #     raise StopPropagation
 
 class BanSubscriber(Command):
-    def __init__(self, bot: BotAnswers) -> None:
+    def __init__(self, bot: BroadcasBot) -> None:
         super().__init__()
         self.bot = bot
 
@@ -443,7 +381,7 @@ class BanSubscriber(Command):
             user_id = self.bot.message_handler.remove_command_from_message(ctx.message.get_body(),
                                                                        AdminCommandStrings.ban_subscriber)
 
-            if not await self.is_user_admin(ctx, AdminCommandStrings.ban_subscriber):
+            if not await self.bot.is_user_admin(ctx, AdminCommandStrings.ban_subscriber):
                 return
 
             user_phonenumber = self.bot.subscribers.get_phone_number(user_id)
@@ -465,7 +403,7 @@ class BanSubscriber(Command):
         #     raise StopPropagation
 
 class LiftBanSubscriber(Command):
-    def __init__(self, bot: BotAnswers) -> None:
+    def __init__(self, bot: BroadcasBot) -> None:
         super().__init__()
         self.bot = bot
 
@@ -475,7 +413,7 @@ class LiftBanSubscriber(Command):
             user_id = self.bot.message_handler.remove_command_from_message(ctx.message.get_body(),
                                                                        AdminCommandStrings.lift_ban_subscriber)
 
-            if not await self.is_user_admin(ctx, AdminCommandStrings.lift_ban_subscriber):
+            if not await self.bot.is_user_admin(ctx, AdminCommandStrings.lift_ban_subscriber):
                 return
 
             if user_id in self.bot.banned_users:
@@ -501,7 +439,7 @@ class LiftBanSubscriber(Command):
 
 
 class SetPing(Command):
-    def __init__(self, bot: BotAnswers) -> None:
+    def __init__(self, bot: BroadcasBot) -> None:
         super().__init__()
         self.bot = bot
 
@@ -521,7 +459,7 @@ class SetPing(Command):
             ping_time = self.bot.message_handler.remove_command_from_message(ctx.message.get_body(),
                                                                        AdminCommandStrings.set_ping)
 
-            if not await self.is_user_admin(ctx, AdminCommandStrings.lift_ban_subscriber):
+            if not await self.bot.is_user_admin(ctx, AdminCommandStrings.lift_ban_subscriber):
                 return
 
             if self.ping_job is not None:
@@ -546,23 +484,23 @@ class SetPing(Command):
         #     raise StopPropagation
 
 class UnsetPing(Command):
-    def __init__(self, bot: BotAnswers) -> None:
+    def __init__(self, bot: BroadcasBot) -> None:
         super().__init__()
         self.bot = bot
 
     @triggered(CommandRegex.unset_ping)
     async def unset_ping(self, ctx: ChatContext) -> None:
         try:
-            if not await self.is_user_admin(ctx, AdminCommandStrings.lift_ban_subscriber):
+            if not await self.bot.is_user_admin(ctx, AdminCommandStrings.lift_ban_subscriber):
                 return
 
             if self.ping_job is None:
-                await ctx.message.reply("Cannot unset because ping was not set!")
+                await ctx.reply("Cannot unset because ping was not set!")
                 return
 
             self.ping_job.schedule_removal()
             self.ping_job = None
-            await ctx.message.reply("Ping unset!")
+            await ctx.reply("Ping unset!")
         except Exception as e:
             self.bot.logger.error(e, exc_info=True)
             try:

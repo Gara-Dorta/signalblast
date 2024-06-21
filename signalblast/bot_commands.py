@@ -1,6 +1,6 @@
-from dataclasses import dataclass
-import re
 import inspect
+import re
+from dataclasses import dataclass
 
 
 class _IterableDataClass:
@@ -10,7 +10,7 @@ class _IterableDataClass:
     def _get_public_attributes(cls):
         cls._public_attr = []
         for attr, value in inspect.getmembers(cls):
-            if not attr.startswith('_'):
+            if not attr.startswith("_"):
                 if not inspect.ismethod(value):
                     cls._public_attr.append(value)
 

@@ -1,21 +1,20 @@
-import os
-from typing import Optional, List
 from pathlib import Path
+from typing import List, Optional
 
-from bot_commands import AdminCommandStrings, PublicCommandStrings, AdminCommandArgs
+from signalblast.bot_commands import AdminCommandArgs, AdminCommandStrings, PublicCommandStrings
 
 
-class MessageHandler():
+class MessageHandler:
     def __init__(self, attachments_folder: Path) -> None:
         self.attachments_folder = attachments_folder
 
     @staticmethod
     def remove_command_from_message(message: Optional[str], command: str) -> Optional[str]:
-        if message == '' or message is None:
+        if message == "" or message is None:
             return None
         else:
-            message = message.replace(command, '', 1).strip()
-            if message == '':
+            message = message.replace(command, "", 1).strip()
+            if message == "":
                 return None
             else:
                 return message
@@ -47,7 +46,7 @@ class MessageHandler():
                 message += "\t" + command_str + " " + command_arg + "\n"
             return message
 
-        message = _add_commands('')
+        message = _add_commands("")
         if add_admin_commands:
             message = _add_admin_commands(message)
         return message

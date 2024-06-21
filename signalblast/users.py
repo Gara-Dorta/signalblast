@@ -1,11 +1,13 @@
+from __future__ import annotations
+
 import csv
 import os
 from typing import Optional
 
 
-class Users():
-    _uuid_str = 'uuid'
-    _phone_number_str = 'phone_number'
+class Users:
+    _uuid_str = "uuid"
+    _phone_number_str = "phone_number"
 
     def __init__(self, save_path: str) -> None:
         self.save_path = save_path
@@ -27,7 +29,7 @@ class Users():
                 csv_writer.writerow({self._uuid_str: uuid, self._phone_number_str: phone_number})
 
     @staticmethod
-    async def _load_from_file(save_path) -> 'Users':
+    async def _load_from_file(save_path) -> "Users":
         users = Users(save_path)
         with open(save_path, "r") as f:
             csv_reader = csv.DictReader(f)
@@ -49,7 +51,7 @@ class Users():
         return len(self.data)
 
     @staticmethod
-    async def load_from_file(save_path) -> 'Users':
+    async def load_from_file(save_path) -> Users:
         if not os.path.exists(save_path):
             return Users(save_path)
 

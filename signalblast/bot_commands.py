@@ -78,6 +78,7 @@ class _CommandRegex(_IterableDataClass):
     lift_ban_subscriber = re.compile(_begings_with(AdminCommandStrings.lift_ban_subscriber))
     set_ping = re.compile(_begings_with(AdminCommandStrings.set_ping))
     unset_ping = re.compile(_begings_with(AdminCommandStrings.unset_ping))
+    help = re.compile(_begings_with(PublicCommandStrings.help))
 
 
 CommandRegex = _CommandRegex()

@@ -50,8 +50,8 @@ class BroadcasBot():
         mentions: list = None,
         text_mode: str = None,
         listen: bool = False,
-    ) -> int:
-        await self._bot.send(
+    ) -> str:
+        return await self._bot.send(
             receiver=receiver,
             text=text,
             base64_attachments=base64_attachments,

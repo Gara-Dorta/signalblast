@@ -41,22 +41,24 @@ class Subscribe(Command):
         super().__init__()
         self.broadcastbot = bot
 
-    @triggered(CommandRegex.subscribe)
-    async def handle(self, ctx: ChatContext) -> None:
+    async def subscribe(self, ctx: ChatContext, verbose: bool = False) -> None:
         try:
             subscriber_uuid = ctx.message.source_uuid
             if subscriber_uuid in self.broadcastbot.subscribers:
-                await self.broadcastbot.reply_with_warn_on_failure(ctx, "Already subscribed!")
-                self.broadcastbot.logger.info("Already subscribed!")
+                if verbose:
+                    await self.broadcastbot.reply_with_warn_on_failure(ctx, "Already subscribed!")
+                    self.broadcastbot.logger.info("Already subscribed!")
                 return
 
             if subscriber_uuid in self.broadcastbot.banned_users:
-                await self.broadcastbot.reply_with_warn_on_failure(ctx, "This number is not allowed to subscribe")
-                self.broadcastbot.logger.info(f"{subscriber_uuid} was not allowed to subscribe")
+                if verbose:
+                    await self.broadcastbot.reply_with_warn_on_failure(ctx, "This number is not allowed to subscribe")
+                    self.broadcastbot.logger.info(f"{subscriber_uuid} was not allowed to subscribe")
                 return
 
             await self.broadcastbot.subscribers.add(subscriber_uuid, ctx.message.source_number)
-            await self.broadcastbot.reply_with_warn_on_failure(ctx, "Subscription successful!")
+            if verbose:
+                await self.broadcastbot.reply_with_warn_on_failure(ctx, "Subscription successful!")
             # if self.broadcastbot.expiration_time is not None:
             #     await ctx.bot.set_expiration(subscriber_uuid, self.broadcastbot.expiration_time)
             self.broadcastbot.logger.info(f"{subscriber_uuid} subscribed")
@@ -66,8 +68,10 @@ class Subscribe(Command):
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Could not subscribe!")
             except Exception as e:
                 self.broadcastbot.logger.error(e, exc_info=True)
-        # finally:
-        #     raise StopPropagation
+
+    @triggered(CommandRegex.subscribe)
+    async def handle(self, ctx: ChatContext) -> None:
+        await Subscribe.subscribe(self, ctx, verbose=True)
 
 class Unsubscribe(Command):
     def __init__(self, bot: BroadcasBot) -> None:
@@ -100,6 +104,13 @@ class Broadcast(Command):
     def __init__(self, bot: BroadcasBot) -> None:
         super().__init__()
         self.broadcastbot = bot
+
+    def is_valid_command(self, message: str, invalid_command: Pattern) -> bool:
+            regex: Pattern
+            for regex in CommandRegex:
+                if regex != invalid_command and regex.search(message) is not None:
+                    return True                
+            return False
 
     @staticmethod
     async def broadcast(bot: BroadcasBot, ctx: ChatContext) -> None:
@@ -136,14 +147,13 @@ class Broadcast(Command):
             send_tasks = [None] * len(bot.subscribers)
 
             for i, subscriber in enumerate(bot.subscribers):
-                # This only works with phone numbers and not with UUIDs
                 send_tasks[i] = bot.send(subscriber, message, base64_attachments=attachments)
                                                     #  link_previews=link_previews)
 
             send_task_results = await gather(*send_tasks)
 
             for send_task_result in send_task_results:
-                if send_task_result:
+                if isinstance(send_task_result, str):
                     num_broadcasts += 1
                     bot.logger.info(f"Message successfully sent to {subscriber}")
                 else:
@@ -152,7 +162,7 @@ class Broadcast(Command):
 
             bot.message_handler.delete_attachments(attachments, link_previews=None)
 
-            await bot.reply_with_warn_on_failure(ctx, f"Message sent to {num_broadcasts} subscribers")
+            await bot.reply_with_warn_on_failure(ctx, f"Message sent to {num_broadcasts - 1} people")
         except Exception as e:
             bot.logger.error(e, exc_info=True)
             try:
@@ -166,9 +176,27 @@ class Broadcast(Command):
         # finally:
         #     raise StopPropagation
 
-    @triggered(CommandRegex.broadcast)
     async def handle(self, ctx: ChatContext) -> None:
-        Broadcast.broadcast(self.broadcastbot, ctx)
+        message = ctx.message.text
+        subscriber_uuid = ctx.message.source_uuid
+        if message == None:
+            if ctx.message.base64_attachments == []:
+                self.broadcastbot.logger.info(f"Received reaction, sticker or similar from {subscriber_uuid}")
+                return
+
+            # Only attachment, assume the user wants to forward that
+            self.broadcastbot.logger.info(f"Received a file from {subscriber_uuid}, broadcasting!")
+            await Broadcast.broadcast(self.broadcastbot, ctx)
+            return
+
+        if self.is_valid_command(message, invalid_command=CommandRegex.broadcast):
+            return
+        
+        if subscriber_uuid not in self.broadcastbot.subscribers:
+            await Subscribe(bot=self.broadcastbot).subscribe(ctx)
+
+        # By default broadcast all the messages
+        await Broadcast.broadcast(self.broadcastbot, ctx)
 
 
 
@@ -194,29 +222,11 @@ class DisplayHelp(Command):
             else:
                 return self.broadcastbot.admin_help_message
 
-    def is_valid_command(self, message: str) -> bool:
-            regex: Pattern
-            for regex in CommandRegex:
-                if regex.search(message) is not None:
-                    return True                
-            return False
-
+    @triggered(CommandRegex.help)
     async def handle(self, ctx: ChatContext) -> None:
         try:
             subscriber_uuid = ctx.message.source_uuid
             message = ctx.message.text
-            if message == None:
-                if ctx.message.base64_attachments == []:
-                    self.broadcastbot.logger.info(f"Received reaction, sticker or similar from {subscriber_uuid}")
-                    return
-
-                # Only attachment, assume the user wants to forward that
-                self.broadcastbot.logger.info(f"Received a file from {subscriber_uuid}, broadcasting!")
-                await Broadcast.broadcast(self.broadcastbot, ctx)
-                return
-
-            if self.is_valid_command(message):
-                return
             
             help_message = self._get_help_message(message, subscriber_uuid)
 

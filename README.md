@@ -20,17 +20,9 @@ Once the server is up and running, several commands are available:
 The only required dependency is [docker](https://www.docker.com/).
 
 * Set up signalbot as specified [here](https://github.com/filipre/signalbot)
-* Once signald is configured, lets run a container with signalblast
-  * ```bash
-       docker container run \
-       --restart=unless-stopped \
-       -v "./data/signalblast:/home/user/signalblast/signalblast/data" \
-       -v "./data/signald:/home/user/signald" \
-       -e SIGNAL_PHONE_NUMBER=<Your phone number> \
-       eraxama/signalblast:latest
-    ```
-  * There are two optional parameters
-    * `-e SIGNALBLAST_PASSWORD=<a password>` -> the admin password for signalblast
-    * `-e SIGNALBLAST_EXPIRATION_TIME=<time>` -> an automatic message expiration time in seconds
-* Now you can send message to the bot, a good first message is `!help`. The bot should reply immediately.
-* If this is not the case, check the logs at `./data/signalblast/signalblast.log`
+* Create a virtual environment
+* Clone the repo git
+* Install with `poetry install`
+* Run
+  * Directly via `python -m signalblast.main`
+  * Via systemd with `systemd/signalblast.service`

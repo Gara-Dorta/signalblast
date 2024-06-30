@@ -34,12 +34,12 @@ async def initialise_bot(
     admin_pass: str,
     expiration_time: int,
     signal_data_path: Path,
-    storage: Optional[str] = None,
+    storage: Optional[dict[str, str]] = None,
 ) -> BroadcasBot:
     config = {
         "signal_service": signal_service,
         "phone_number": phone_number,
-        "storage": None,
+        "storage": storage,
     }
 
     get_code_data_path().mkdir(parents=True, exist_ok=True)

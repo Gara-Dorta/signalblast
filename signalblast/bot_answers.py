@@ -268,7 +268,7 @@ class RemoveAdmin(Command):
         try:
             subscriber_uuid = ctx.message.source_uuid
             password = self.broadcastbot.message_handler.remove_command_from_message(
-                ctx.message.get_body(), AdminCommandStrings.remove_admin
+                ctx.message.text, AdminCommandStrings.remove_admin
             )
 
             previous_admin = self.broadcastbot.admin.admin_id

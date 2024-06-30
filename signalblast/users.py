@@ -11,9 +11,9 @@ class Users:
 
     def __init__(self, save_path: str) -> None:
         self.save_path = save_path
-        self.data = dict()
+        self.data: dict[str, Optional[str]] = dict()
 
-    async def add(self, uuid: str, phone_number: str) -> None:
+    async def add(self, uuid: str, phone_number: Optional[str]) -> None:
         self.data[uuid] = phone_number
         await self.save_to_file()
 
@@ -29,7 +29,7 @@ class Users:
                 csv_writer.writerow({self._uuid_str: uuid, self._phone_number_str: phone_number})
 
     @staticmethod
-    async def _load_from_file(save_path) -> "Users":
+    async def _load_from_file(save_path) -> Users:
         users = Users(save_path)
         with open(save_path, "r") as f:
             csv_reader = csv.DictReader(f)

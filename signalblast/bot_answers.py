@@ -305,7 +305,7 @@ class MessageToAdmin(Command):
         try:
             subscriber_uuid = ctx.message.source_uuid
             message = self.broadcastbot.message_handler.remove_command_from_message(
-                ctx.message.get_body(), PublicCommandStrings.msg_to_admin
+                ctx.message.text, PublicCommandStrings.msg_to_admin
             )
 
             if self.broadcastbot.admin.admin_id is None:
@@ -322,8 +322,8 @@ class MessageToAdmin(Command):
                 "Sent you message:\n", subscriber_uuid
             )
             msg_to_admin += message
-            attachments = self.broadcastbot.message_handler.empty_list_to_none(ctx.message.data_message.attachments)
-            await self.broadcastbot.send(self.broadcastbot.admin.admin_id, msg_to_admin, attachments=attachments)
+            attachments = self.broadcastbot.message_handler.empty_list_to_none(ctx.message.base64_attachments)
+            await self.broadcastbot.send(self.broadcastbot.admin.admin_id, msg_to_admin, base64_attachments=attachments)
             self.broadcastbot.logger.info(
                 f"Sent message from {subscriber_uuid} to admin {self.broadcastbot.admin.admin_id}"
             )
@@ -344,7 +344,7 @@ class MessageFromAdmin(Command):
     async def handle(self, ctx: ChatContext) -> None:
         try:
             message = self.broadcastbot.message_handler.remove_command_from_message(
-                ctx.message.get_body(), AdminCommandStrings.msg_from_admin
+                ctx.message.text, AdminCommandStrings.msg_from_admin
             )
 
             if not await self.broadcastbot.is_user_admin(ctx, AdminCommandStrings.msg_from_admin):
@@ -363,9 +363,9 @@ class MessageFromAdmin(Command):
                     return
 
             message = "Admin: " + message
-            attachments = self.broadcastbot.message_handler.empty_list_to_none(ctx.message.data_message.attachments)
+            attachments = self.broadcastbot.message_handler.empty_list_to_none(ctx.message.base64_attachments)
 
-            await self.broadcastbot.send(user_id, message, attachments=attachments)
+            await self.broadcastbot.send(user_id, message, base64_attachments=attachments)
             self.broadcastbot.logger.info(
                 f"Sent message from admin {self.broadcastbot.admin.admin_id} to user {user_id}"
             )

@@ -1,0 +1,9 @@
+[Service]
+Type=exec
+ExecStart=/home/pi/.miniforge3/envs/signalblast/bin/python -m signalblast.main
+Restart=always
+User=pi
+Group=pi
+
+[Install]
+WantedBy=multi-user.target

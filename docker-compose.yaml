@@ -1,0 +1,18 @@
+services:
+  signal-api-json-rpc:
+    image: bbernhard/signal-cli-rest-api:0.85
+    ports:
+      - "8080:8080"
+    volumes:
+      - "$HOME/.local/share/signal-api:/home/.local/share/signal-cli"
+    environment:
+      - MODE=json-rpc
+      - AUTO_RECEIVE_SCHEDULE_SEND_READ_RECEIPTS=true
+  signalblast:
+    image: "eradorta/signalblast:latest"
+    volumes:
+      - "${SIGNALBLAST_BASE}/data/signalblast:/home/user/signalblast/signalblast/data"
+    environment:
+      - SIGNAL_PHONE_NUMBER="+31000000000"
+      - SIGNALBLAST_PASSWORD="1234"
+      # - SIGNAL_DATA_PATH

@@ -1,3 +1,3 @@
 #!/bin/bash
 
-export SIGNAL_PHONE_NUMBER=
+export SIGNALBLAST_PHONE_NUMBER=

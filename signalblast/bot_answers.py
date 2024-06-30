@@ -89,8 +89,6 @@ class Unsubscribe(Command):
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Could not unsubscribe!")
             except Exception as e:
                 self.broadcastbot.logger.error(e, exc_info=True)
-        # finally:
-        #     raise StopPropagation
 
 
 class Broadcast(Command):
@@ -166,8 +164,6 @@ class Broadcast(Command):
                 await bot.reply_with_warn_on_failure(ctx, error_str)
             except Exception as e:
                 bot.logger.error(e, exc_info=True)
-        # finally:
-        #     raise StopPropagation
 
     async def handle(self, ctx: ChatContext) -> None:
         message = ctx.message.text
@@ -263,8 +259,6 @@ class AddAdmin(Command):
                 self.broadcastbot.logger.warning(f"{subscriber_uuid} failed password check for add_admin")
         except Exception as e:
             self.broadcastbot.logger.error(e, exc_info=True)
-        # finally:
-        #     raise StopPropagation
 
 
 class RemoveAdmin(Command):
@@ -299,8 +293,6 @@ class RemoveAdmin(Command):
                 self.broadcastbot.logger.warning(f"Failed password check for remove_admin {subscriber_uuid}")
         except Exception as e:
             self.broadcastbot.logger.error(e, exc_info=True)
-        # finally:
-        #     raise StopPropagation
 
 
 class MessageToAdmin(Command):
@@ -341,8 +333,6 @@ class MessageToAdmin(Command):
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed to send the message to the admin!")
             except Exception as e:
                 self.broadcastbot.logger.error(e, exc_info=True)
-        # finally:
-        #     raise StopPropagation
 
 
 class MessageFromAdmin(Command):
@@ -385,8 +375,6 @@ class MessageFromAdmin(Command):
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed to send the message to the user!")
             except Exception as e:
                 self.broadcastbot.logger.error(e, exc_info=True)
-        # finally:
-        #     raise StopPropagation
 
 
 class BanSubscriber(Command):
@@ -420,8 +408,6 @@ class BanSubscriber(Command):
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed to ban user")
             except Exception as e:
                 self.broadcastbot.logger.error(e, exc_info=True)
-        # finally:
-        #     raise StopPropagation
 
 
 class LiftBanSubscriber(Command):
@@ -458,8 +444,6 @@ class LiftBanSubscriber(Command):
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed lift the ban on the user")
             except Exception as e:
                 self.broadcastbot.logger.error(e, exc_info=True)
-        # finally:
-        #     raise StopPropagation
 
 
 class SetPing(Command):
@@ -504,8 +488,6 @@ class SetPing(Command):
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed set ping")
             except Exception as e:
                 self.broadcastbot.logger.error(e, exc_info=True)
-        # finally:
-        #     raise StopPropagation
 
 
 class UnsetPing(Command):
@@ -532,5 +514,3 @@ class UnsetPing(Command):
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed to unset ping")
             except Exception as e:
                 self.broadcastbot.logger.error(e, exc_info=True)
-        # finally:
-        #     raise StopPropagation

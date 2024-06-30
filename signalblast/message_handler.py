@@ -63,8 +63,8 @@ class MessageHandler:
 
     @staticmethod
     def compose_must_subscribe_message() -> str:
-        message = "To be able to send messages you must be a subscriber too.\n"
-        message += "Please subscribe by sending:\n"
+        message = "To be able to send messages you must sign up.\n"
+        message += "Please sign up by sending:\n"
         message += f"\t{PublicCommandStrings.subscribe}\n"
         message += "and try again after that."
         return message

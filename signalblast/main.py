@@ -68,9 +68,7 @@ async def initialise_bot(
 
 
 if __name__ == "__main__":
-    default_expiration_time = 60 * 60 * 24 * 7  # Number of seconds in a week
-    if os.environ.get("SIGNALBLAST_EXPIRATION_TIME") is not None:
-        default_expiration_time = os.environ["SIGNALBLAST_EXPIRATION_TIME"]
+    one_week = 60 * 60 * 24 * 7  # Number of seconds in a week
 
     args_parser = argparse.ArgumentParser()
     args_parser.add_argument(
@@ -80,21 +78,48 @@ if __name__ == "__main__":
         default=os.environ.get("SIGNALBLAST_PASSWORD"),
     )
     args_parser.add_argument(
-        "--expiration_time", type=int, default=default_expiration_time, help="the expiration time for the chats"
+        "--expiration_time",
+        type=int,
+        default=os.environ.get("SIGNALBLAST_EXPIRATION_TIME", one_week),
+        help="the expiration time for the chats in seconds",
     )
     args_parser.add_argument(
-        "--signald_data_path",
+        "--signal_data_path",
         type=Path,
-        default=Path("/home/user/signald"),
-        help="the path to the folder containig the signald socket",
+        default=os.environ.get("SIGNAL_DATA_PATH", Path.home() / (".local/share/signal-api/")),
+        help="the path to the folder containig the signal api data",
     )
 
-    signal_service = os.environ.get("SIGNAL_SERVICE", "localhost:8080")
+    args_parser.add_argument(
+        "--signal_service",
+        type=str,
+        default=os.environ.get("SIGNAL_SERVICE", "localhost:8080"),
+        help="the address of the signal cli rest api",
+    )
 
-    phone_number = os.environ.get("PHONE_NUMBER", "+31000000000")
+    args_parser.add_argument(
+        "--phone_number",
+        type=str,
+        default=os.environ.get("SIGNALBLAST_PHONE_NUMBER"),
+        help="the phone number of the bot",
+    )
 
     args = args_parser.parse_args()
 
+    if args.phone_number is None:
+        raise ValueError("The bot phone number is not set")
+
+    if args.admin_pass is None:
+        raise ValueError("The bot admin password is not set")
+
     loop = asyncio.get_event_loop()
-    bot = loop.run_until_complete(initialise_bot(signal_service, phone_number, args.admin_pass, args.expiration_time))
+    bot = loop.run_until_complete(
+        initialise_bot(
+            signal_service=args.signal_service,
+            phone_number=args.phone_number,
+            signal_data_path=args.signal_data_path,
+            admin_pass=args.admin_pass,
+            expiration_time=args.expiration_time,
+        )
+    )
     bot.start()

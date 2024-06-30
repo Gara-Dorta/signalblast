@@ -181,9 +181,6 @@ class Broadcast(Command):
         if self.is_valid_command(message, invalid_command=CommandRegex.broadcast):
             return
 
-        if subscriber_uuid not in self.broadcastbot.subscribers:
-            await Subscribe(bot=self.broadcastbot).subscribe(ctx)
-
         # By default broadcast all the messages
         await Broadcast.broadcast(self.broadcastbot, ctx)
 

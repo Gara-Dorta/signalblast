@@ -109,9 +109,6 @@ if __name__ == "__main__":
     if args.phone_number is None:
         raise ValueError("The bot phone number is not set")
 
-    if args.admin_pass is None:
-        raise ValueError("The bot admin password is not set")
-
     loop = asyncio.get_event_loop()
     bot = loop.run_until_complete(
         initialise_bot(

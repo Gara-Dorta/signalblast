@@ -24,7 +24,7 @@ from signalblast.bot_answers import (
 )
 from signalblast.utils import get_code_data_path
 
-logging.getLogger().setLevel(logging.INFO)
+logging.getLogger().setLevel(logging.WARNING)
 logging.getLogger("apscheduler").setLevel(logging.WARNING)
 
 

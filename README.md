@@ -26,3 +26,5 @@ The only required dependency is [docker](https://www.docker.com/).
 * Run
   * Directly via `python -m signalblast.main`
   * Via systemd with `systemd/signalblast.service`
+    * Run once with the password in the env file.
+    * From there one, the password is stored encrypted and it can be removed from the env file

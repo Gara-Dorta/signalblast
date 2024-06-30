@@ -7,3 +7,16 @@ Group=pi
 
 [Install]
 WantedBy=multi-user.target
+
+
+# Visualise the journal by running
+# journalctl -u signalblast.service
+
+# The service was added to the system services by running
+# sudo ln -sn /home/pi/simplex-chat/signalblast.service /etc/systemd/system/signalblast.service
+
+# The service can be added and enabled with (enabling makes it start on boot)
+# sudo systemctl daemon-reload && sudo systemctl enable signalblast.service
+
+# Start the service inmediately for testing with
+# sudo systemctl start signalblast.service

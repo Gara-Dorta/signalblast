@@ -29,7 +29,12 @@ logging.getLogger("apscheduler").setLevel(logging.WARNING)
 
 
 async def initialise_bot(
-    signal_service: str, phone_number: str, admin_pass: str, expiration_time: int, storage: Optional[str] = None
+    signal_service: str,
+    phone_number: str,
+    admin_pass: str,
+    expiration_time: int,
+    signal_data_path: Path,
+    storage: Optional[str] = None,
 ) -> BroadcasBot:
     config = {
         "signal_service": signal_service,
@@ -44,7 +49,7 @@ async def initialise_bot(
         logger=logging.getLogger("signalblast"),
         admin_pass=admin_pass,
         expiration_time=expiration_time,
-        signald_data_path=Path.home() / (".local/share/signal-api/"),
+        signal_data_path=signal_data_path,
     )
 
     bot.register(Subscribe(bot=bot))

@@ -78,13 +78,13 @@ class BroadcasBot:
         return self._bot.scheduler
 
     async def load_data(
-        self, logger: Logger, admin_pass: Optional[str], expiration_time: Optional[int], signald_data_path: Path
+        self, logger: Logger, admin_pass: Optional[str], expiration_time: Optional[int], signal_data_path: Path
     ):
         self.subscribers = await Users.load_from_file(self.subscribers_data_path)
         self.banned_users = await Users.load_from_file(self.banned_users_data_path)
 
         self.admin = await Admin.load_from_file(admin_pass)
-        self.message_handler = MessageHandler(signald_data_path / "attachments")
+        self.message_handler = MessageHandler(signal_data_path / "attachments")
 
         self.help_message = self.message_handler.compose_help_message(is_help=True)
         self.wrong_command_message = self.message_handler.compose_help_message(is_help=False)

@@ -607,7 +607,7 @@ websockets = "^10.2"
 
 [package.source]
 type = "git"
-url = "git@github.com:Era-Dorta/signalbot.git"
+url = "https://github.com/Era-Dorta/signalbot.git"
 reference = "broadcastbot"
 resolved_reference = "3d89d95010217f11088122d6cd819b5e2e60ec47"
 
@@ -854,4 +854,4 @@ multidict = ">=4.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "3a6cad684d34c8046a8e705abb3240a2b1730cda40d3d38f39d4dae99c5584d2"
+content-hash = "1c5c8f6d0e82056774f8665cd31dd5839b3c45974752d757f6aefee047d9ac16"

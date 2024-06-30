@@ -408,8 +408,8 @@ class BanSubscriber(Command):
             if user_id in self.broadcastbot.subscribers:
                 await self.broadcastbot.subscribers.remove(user_id)
 
-            user_phonenumber = self.broadcastbot.subscribers.get_phone_number(user_id)
-            await self.broadcastbot.banned_users.add(user_id, user_phonenumber)
+            user_phone_number = self.broadcastbot.subscribers.get_phone_number(user_id)
+            await self.broadcastbot.banned_users.add(user_id, user_phone_number)
 
             await self.broadcastbot.send(user_id, "You have been banned")
             await self.broadcastbot.reply_with_warn_on_failure(ctx, "Successfully banned user")

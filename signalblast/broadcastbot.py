@@ -34,6 +34,7 @@ class BroadcasBot:
         self.must_subscribe_message: str
         self.logger: Logger
         self.expiration_time: int
+        self.welcome_message: str
 
     async def send(
         self,
@@ -78,7 +79,12 @@ class BroadcasBot:
         return self._bot.scheduler
 
     async def load_data(
-        self, logger: Logger, admin_pass: Optional[str], expiration_time: Optional[int], signal_data_path: Path
+        self,
+        logger: Logger,
+        admin_pass: Optional[str],
+        expiration_time: Optional[int],
+        signal_data_path: Path,
+        welcome_message: Optional[str] = None,
     ):
         self.subscribers = await Users.load_from_file(self.subscribers_data_path)
         self.banned_users = await Users.load_from_file(self.banned_users_data_path)
@@ -92,6 +98,7 @@ class BroadcasBot:
         self.admin_wrong_command_message = self.message_handler.compose_help_message(
             add_admin_commands=True, is_help=False
         )
+        self.welcome_message = self.message_handler.compose_welcome_message(welcome_message)
 
         self.must_subscribe_message = self.message_handler.compose_must_subscribe_message()
 

@@ -34,6 +34,7 @@ async def initialise_bot(
     admin_pass: str,
     expiration_time: int,
     signal_data_path: Path,
+    welcome_message: Optional[str] = None,
     storage: Optional[dict[str, str]] = None,
 ) -> BroadcasBot:
     config = {
@@ -50,6 +51,7 @@ async def initialise_bot(
         admin_pass=admin_pass,
         expiration_time=expiration_time,
         signal_data_path=signal_data_path,
+        welcome_message=welcome_message,
     )
 
     bot.register(Subscribe(bot=bot))
@@ -104,6 +106,13 @@ if __name__ == "__main__":
         help="the phone number of the bot",
     )
 
+    args_parser.add_argument(
+        "--welcome_message",
+        type=str,
+        default=os.environ.get("SIGNALBLAST_WELCOME_MESSAGE"),
+        help="the initial message that the user receives",
+    )
+
     args = args_parser.parse_args()
 
     if args.phone_number is None:
@@ -117,6 +126,7 @@ if __name__ == "__main__":
             signal_data_path=args.signal_data_path,
             admin_pass=args.admin_pass,
             expiration_time=args.expiration_time,
+            welcome_message=args.welcome_message,
         )
     )
     bot.start()

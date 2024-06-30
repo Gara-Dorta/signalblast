@@ -49,8 +49,7 @@ class Subscribe(Command):
                 return
 
             await self.broadcastbot.subscribers.add(subscriber_uuid, ctx.message.source_number)
-            if verbose:
-                await self.broadcastbot.reply_with_warn_on_failure(ctx, "Subscription successful!")
+            await self.broadcastbot.reply_with_warn_on_failure(ctx, self.broadcastbot.welcome_message)
             # if self.broadcastbot.expiration_time is not None:
             #     await ctx.bot.set_expiration(subscriber_uuid, self.broadcastbot.expiration_time)
             self.broadcastbot.logger.info(f"{subscriber_uuid} subscribed")

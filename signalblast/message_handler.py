@@ -75,3 +75,10 @@ class MessageHandler:
         if user is not None:
             header += user + "\n"
         return header + message
+
+    @staticmethod
+    def compose_welcome_message(default_message: Optional[str]) -> str:
+        if default_message is None:
+            return "Subscription successful!"
+        else:
+            return default_message

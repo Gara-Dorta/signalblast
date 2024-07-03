@@ -28,8 +28,11 @@ Once the bot is up and running, several commands are available:
     * Run once with the password in the env file.
     * From there one, the password is stored encrypted and it can be removed from the env file
 
-## TODO
-* Fix docker deployment, both `Dockerfile` and `docker-compose.yaml` are broken
+## Roadmap
+* Fix docker deployment
+  * Fix the `Dockerfile` and `docker-compose.yaml` files
+  * Add hodolint to the `pre-commit` config
+  * Build docker images for `arm` and `x86` targets using the github CI
 * Figure out how to use `poetry build` with the git signalbot dependency
 * Split the `bot_answers.py` in several files
 * Make instructions clearer and add pictures to the readme

@@ -8,7 +8,7 @@ The idea for this bot came from [Signalboost](https://web.archive.org/web/https:
 
 ## Usage
 
-Once the server is up and running, several commands are available:
+Once the bot is up and running, several commands are available:
 * `!subscribe` send this to sign up to the list
 * `!broadcast` after subscribing any message preceded by this will be broadcasted to every subscriber
 * `!unsubscribe` to stop receiving messages
@@ -17,10 +17,9 @@ Once the server is up and running, several commands are available:
 
 ## Installation
 
-The only required dependency is [docker](https://www.docker.com/).
-
+* Install [docker](https://www.docker.com/).
 * Set up signalbot as specified [here](https://github.com/filipre/signalbot)
-* Create a virtual environment
+* Create a python virtual environment
 * Clone the repo git
 * Install with `poetry install`
 * Run
@@ -28,3 +27,9 @@ The only required dependency is [docker](https://www.docker.com/).
   * Via systemd with `systemd/signalblast.service`
     * Run once with the password in the env file.
     * From there one, the password is stored encrypted and it can be removed from the env file
+
+## TODO
+* Fix docker deployment, both `Dockerfile` and `docker-compose.yaml` are broken
+* Figure out how to use `poetry build` with the git signalbot dependency
+* Split the `bot_answers.py` in several files
+* Make instructions clearer and add pictures to the readme

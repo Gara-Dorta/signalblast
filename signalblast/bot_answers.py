@@ -1,6 +1,7 @@
 import asyncio
 import functools
 from re import Pattern
+from typing import Optional
 
 from signalbot import Command
 from signalbot import Context as ChatContext
@@ -104,9 +105,38 @@ class Broadcast(Command):
         return False
 
     @staticmethod
+    async def check_send_tasks_results(send_tasks: list[Optional[asyncio.Task]], bot: BroadcasBot) -> int:
+        num_broadcasts = 0
+        subscribers_to_remove: list[str] = []
+        for send_task, subscriber in zip(send_tasks, bot.subscribers):
+            if send_task is not None:
+                if send_task.exception() is None:
+                    num_broadcasts += 1
+                    bot.logger.info(f"Message successfully sent to {subscriber}")
+                else:
+                    bot.logger.warning(f"Could not send message to {subscriber}")
+                    subscribers_to_remove.append(subscriber)
+
+        for subscriber in subscribers_to_remove:
+            await bot.subscribers.remove(subscriber)
+            remove_message = "The bot is having problems sending you messages. "
+            remove_message += "You have been removed from the list. "
+            remove_message += "Please update signal, remove old linked devices and try subscribing again"
+            try:
+                # Most likely will fail to send the message but try anyway
+                await bot.send(subscriber, remove_message)
+            except Exception:
+                pass
+
+        return num_broadcasts
+
+    @staticmethod
     async def broadcast(bot: BroadcasBot, ctx: ChatContext) -> None:
         num_broadcasts = 0
         num_subscribers = -1
+        attachments_deleted = False
+        send_tasks_checked = False
+        send_tasks: list[Optional[asyncio.Task]] = []
 
         try:
             subscriber_uuid = ctx.message.source_uuid
@@ -134,33 +164,36 @@ class Broadcast(Command):
                 message = ""
 
             # Broadcast message to all subscribers.
-            send_tasks = [None] * num_subscribers
+            send_tasks: list[Optional[asyncio.Task]] = [None] * num_subscribers
 
             for i, subscriber in enumerate(bot.subscribers):
                 send_tasks[i] = asyncio.create_task(bot.send(subscriber, message, base64_attachments=attachments))
                 await asyncio.sleep(2)  # Avoid rate limiting by waiting a few seconds between messages
 
-            send_task_results = await asyncio.gather(*send_tasks)
+            await asyncio.wait(send_tasks)
 
-            for send_task_result in send_task_results:
-                if isinstance(send_task_result, str):
-                    num_broadcasts += 1
-                    bot.logger.info(f"Message successfully sent to {subscriber}")
-                else:
-                    bot.logger.warning(f"Could not send message to {subscriber}")
-                    await bot.subscribers.remove(ctx.message.source_uuid)
+            num_broadcasts = await Broadcast.check_send_tasks_results(send_tasks, bot)
+            send_tasks_checked = True
 
             attachments_filenames = bot.message_handler.empty_list_to_none(ctx.message.attachments_filenames)
             bot.message_handler.delete_attachments(attachments_filenames, link_previews=None)
+            attachments_deleted = True
 
             await bot.reply_with_warn_on_failure(ctx, f"Message sent to {num_broadcasts - 1} people")
         except Exception as e:
             bot.logger.error(e, exc_info=True)
             try:
+                if send_tasks_checked is False:
+                    num_broadcasts = await Broadcast.check_send_tasks_results(send_tasks, bot)
+
                 error_str = "Something went wrong when sending the message"
-                error_str += f", it was only sent to {num_broadcasts - 1} out of {num_subscribers} people"
+                error_str += f", it was only sent to {num_broadcasts - 1} out of {num_subscribers - 1} people"
                 error_str += ", please contact the admin if the problem persists"
                 await bot.reply_with_warn_on_failure(ctx, error_str)
+
+                if attachments_deleted is False:
+                    attachments_filenames = bot.message_handler.empty_list_to_none(ctx.message.attachments_filenames)
+                    bot.message_handler.delete_attachments(attachments_filenames, link_previews=None)
             except Exception as e:
                 bot.logger.error(e, exc_info=True)
 

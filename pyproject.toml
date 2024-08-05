@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "signalblast"
-version = "0.0.1.dev0"
+version = "0.0.2"
 description = "Broadcast bot for Signal"
 authors = ["Era Dorta"]
 readme = "README.md"

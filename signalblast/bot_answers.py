@@ -1,5 +1,5 @@
+import asyncio
 import functools
-from asyncio import gather
 from re import Pattern
 
 from signalbot import Command
@@ -134,13 +134,13 @@ class Broadcast(Command):
                 message = ""
 
             # Broadcast message to all subscribers.
-            send_tasks = [None] * len(bot.subscribers)
+            send_tasks = [None] * num_subscribers
 
             for i, subscriber in enumerate(bot.subscribers):
-                send_tasks[i] = bot.send(subscriber, message, base64_attachments=attachments)
-                #  link_previews=link_previews)
+                send_tasks[i] = asyncio.create_task(bot.send(subscriber, message, base64_attachments=attachments))
+                await asyncio.sleep(2)  # Avoid rate limiting by waiting a few seconds between messages
 
-            send_task_results = await gather(*send_tasks)
+            send_task_results = await asyncio.gather(*send_tasks)
 
             for send_task_result in send_task_results:
                 if isinstance(send_task_result, str):
@@ -158,8 +158,7 @@ class Broadcast(Command):
             bot.logger.error(e, exc_info=True)
             try:
                 error_str = "Something went wrong when sending the message"
-                if num_broadcasts == num_subscribers:
-                    error_str += ", but it was sent to everybody"
+                error_str += f", it was only sent to {num_broadcasts - 1} out of {num_subscribers} people"
                 error_str += ", please contact the admin if the problem persists"
                 await bot.reply_with_warn_on_failure(ctx, error_str)
             except Exception as e:

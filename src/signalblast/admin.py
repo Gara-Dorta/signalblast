@@ -17,10 +17,10 @@ class Admin:
         await self.set_hashed_password(admin_password)
         return self
 
-    def get_hashed_password(self):
+    def get_hashed_password(self) -> str:
         return self._hashed_password
 
-    async def set_hashed_password(self, password: str):
+    async def set_hashed_password(self, password: str) -> None:
         if password is None:
             self._hashed_password = b""
         else:

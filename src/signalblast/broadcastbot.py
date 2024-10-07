@@ -20,7 +20,7 @@ class BroadcasBot:
     subscribers_data_path = get_code_data_path() / "subscribers.csv"
     banned_users_data_path = get_code_data_path() / "banned_users.csv"
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict) -> None:
         self._bot = SignalBot(config)
         self.ping_job: Job | None = None
 
@@ -70,10 +70,10 @@ class BroadcasBot:
         contacts: list[str] | bool | None = True,  # noqa: FBT002
         groups: list[str] | bool | None = False,  # noqa: FBT002
         f: Callable[[Message], bool] | None = None,
-    ):
+    ) -> None:
         self._bot.register(command=command, contacts=contacts, groups=groups, f=f)
 
-    def start(self):
+    def start(self) -> None:
         self._bot.start()
 
     @property
@@ -87,7 +87,7 @@ class BroadcasBot:
         expiration_time: int | None,
         signal_data_path: Path,
         welcome_message: str | None = None,
-    ):
+    ) -> None:
         self.subscribers = await Users.load_from_file(self.subscribers_data_path)
         self.banned_users = await Users.load_from_file(self.banned_users_data_path)
 

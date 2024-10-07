@@ -21,10 +21,16 @@ from signalblast.commands import (
     UnsetPing,
     Unsubscribe,
 )
-from signalblast.utils import get_code_data_path
+from signalblast.utils import get_code_data_path, get_logger
 
-logging.getLogger().setLevel(logging.WARNING)
-logging.getLogger("apscheduler").setLevel(logging.WARNING)
+LOGGING_LEVEL = logging.WARNING
+LOG_TO_FILE = False
+if LOG_TO_FILE:
+    get_logger(None, Path("signalbot.log"), LOGGING_LEVEL)
+else:
+    logging.getLogger().setLevel(LOGGING_LEVEL)
+
+logging.getLogger("apscheduler").setLevel(LOGGING_LEVEL)
 
 
 async def initialise_bot(  # noqa: PLR0913 Too many arguments in function definition
@@ -43,10 +49,15 @@ async def initialise_bot(  # noqa: PLR0913 Too many arguments in function defini
     }
 
     get_code_data_path().mkdir(parents=True, exist_ok=True)
+    if LOG_TO_FILE:
+        logger = get_logger("signalblast", Path("signalblast.log"), LOGGING_LEVEL)
+    else:
+        logger = logging.getLogger("signalblast")
+        logger.setLevel(LOGGING_LEVEL)
 
     bot = BroadcasBot(config)
     await bot.load_data(
-        logger=logging.getLogger("signalblast"),
+        logger=logger,
         admin_pass=admin_pass,
         expiration_time=expiration_time,
         signal_data_path=signal_data_path,

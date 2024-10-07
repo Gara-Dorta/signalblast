@@ -92,7 +92,7 @@ class Broadcast(Command):
 
             await bot.reply_with_warn_on_failure(ctx, f"Message sent to {num_broadcasts - 1} people")
         except Exception as e:
-            bot.logger.error(e)
+            bot.logger.exception(e)
             try:
                 if send_tasks_checked is False:
                     num_broadcasts = await Broadcast.check_send_tasks_results(send_tasks, bot)

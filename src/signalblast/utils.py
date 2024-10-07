@@ -39,7 +39,7 @@ def get_code_data_path() -> Path:
 def triggered(pattern: Pattern) -> Callable:
     def decorator_triggered(func: Callable) -> Callable:
         @functools.wraps(func)
-        async def wrapper_triggered(*args, **kwargs):
+        async def wrapper_triggered(*args, **kwargs) -> Callable:  # noqa: ANN002, ANN003
             c: ChatContext = args[1]
             text = c.message.text
             if not isinstance(text, str):

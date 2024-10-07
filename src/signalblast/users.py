@@ -4,6 +4,7 @@ import csv
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
     from pathlib import Path
 
 
@@ -23,7 +24,7 @@ class Users:
         del self.data[uuid]
         await self.save_to_file()
 
-    async def save_to_file(self):
+    async def save_to_file(self) -> None:
         with self.save_path.open("w") as f:
             csv_writer = csv.DictWriter(f, fieldnames=[self._uuid_str, self._phone_number_str])
             csv_writer.writeheader()
@@ -42,13 +43,13 @@ class Users:
     def get_phone_number(self, uuid: str) -> str | None:
         return self.data.get(uuid)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str | None]:
         yield from self.data
 
-    def __contains__(self, uuid: str):
+    def __contains__(self, uuid: str) -> bool:
         return uuid in self.data
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.data)
 
     @staticmethod

@@ -22,7 +22,7 @@ class MessageHandler:
 
         return attachments
 
-    def delete_attachments(self, attachments: list[str] | None, link_previews: list[str] | None):
+    def delete_attachments(self, attachments: list[str] | None, link_previews: list[str] | None) -> None:
         if attachments is not None:
             for attachment in attachments:
                 (self.attachments_folder / attachment).unlink()
@@ -34,12 +34,12 @@ class MessageHandler:
 
     @staticmethod
     def _compose_help_message(*, add_admin_commands: bool) -> str:
-        def _add_commands(message):
+        def _add_commands(message: str) -> str:
             for command_str in PublicCommandStrings:
                 message += "\t" + command_str + "\n"
             return message
 
-        def _add_admin_commands(message):
+        def _add_admin_commands(message: str) -> str:
             for command_str, command_arg in zip(AdminCommandStrings, AdminCommandArgs, strict=False):
                 message += "\t" + command_str + " " + command_arg + "\n"
             return message

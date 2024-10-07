@@ -42,7 +42,6 @@ line-length = 120
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
-  "ANN", # Annotations
   "D",   # Docstrings
   "FIX", # TODO, FIXME and other messages
   "ERA001", # Commented out code

@@ -1,5 +1,6 @@
 import inspect
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
 
 
@@ -7,13 +8,13 @@ class _IterableDataClass:
     _public_attr = None
 
     @classmethod
-    def _get_public_attributes(cls):
-        cls._public_attr = []
+    def _get_public_attributes(cls) -> None:
+        cls._public_attr: list[str] = []
         for attr, value in inspect.getmembers(cls):
             if not (attr.startswith("_") or inspect.ismethod(value)):
                 cls._public_attr.append(value)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[str]:
         if self._public_attr is None:
             self._get_public_attributes()
 

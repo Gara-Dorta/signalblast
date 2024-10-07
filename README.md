@@ -38,9 +38,7 @@ Once the bot is up and running, several commands are available:
 
 ## Roadmap
 * Fix docker deployment
-  * Fix the `Dockerfile` and `docker-compose.yaml` files
+  * Fix the `docker-compose.yaml` files
   * Add hodolint to the `pre-commit` config
   * Build docker images for `arm` and `x86` targets using the github CI
-* Figure out how to use `poetry build` with the git signalbot dependency
-* Split the `bot_answers.py` in several files
 * Make instructions clearer and add pictures to the readme

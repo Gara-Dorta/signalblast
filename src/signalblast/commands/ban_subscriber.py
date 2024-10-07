@@ -30,7 +30,7 @@ class BanSubscriber(Command):
             await self.broadcastbot.send(user_id, "You have been banned")
             await self.broadcastbot.reply_with_warn_on_failure(ctx, "Successfully banned user")
 
-            self.broadcastbot.logger.info(f"Banned user {user_id}")
+            self.broadcastbot.logger.info("Banned user %s", user_id)
         except Exception as e:
             self.broadcastbot.logger.exception(e)
             try:

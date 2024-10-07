@@ -38,7 +38,7 @@ class MessageFromAdmin(Command):
 
             await self.broadcastbot.send(user_id, message, base64_attachments=attachments)
             self.broadcastbot.logger.info(
-                f"Sent message from admin {self.broadcastbot.admin.admin_id} to user {user_id}"
+                "Sent message from admin %s to user %s", self.broadcastbot.admin.admin_id, user_id
             )
         except Exception as e:
             self.broadcastbot.logger.exception(e)

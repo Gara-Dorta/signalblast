@@ -36,6 +36,6 @@ class AddAdmin(Command):
                         "Tried to be added as admin", subscriber_uuid
                     )
                     await self.broadcastbot.send(previous_admin, msg_to_admin)
-                self.broadcastbot.logger.warning(f"{subscriber_uuid} failed password check for add_admin")
+                self.broadcastbot.logger.warning("%s failed password check for add_admin", subscriber_uuid)
         except Exception as e:
             self.broadcastbot.logger.exception(e)

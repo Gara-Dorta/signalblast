@@ -21,12 +21,12 @@ class MessageToAdmin(Command):
 
             if self.broadcastbot.admin.admin_id is None:
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "I'm sorry but there are no admins to contact!")
-                self.broadcastbot.logger.info(f"Tried to contact an admin but there is none! {subscriber_uuid}")
+                self.broadcastbot.logger.info("Tried to contact an admin but there is none! %s", subscriber_uuid)
                 return
 
             if subscriber_uuid in self.broadcastbot.banned_users:
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "You are not allowed to contact the admin!")
-                self.broadcastbot.logger.info(f"Banned user {subscriber_uuid} tried to contact admin")
+                self.broadcastbot.logger.info("Banned user %s tried to contact admin", subscriber_uuid)
                 return
 
             msg_to_admin = self.broadcastbot.message_handler.compose_message_to_admin(
@@ -36,7 +36,7 @@ class MessageToAdmin(Command):
             attachments = self.broadcastbot.message_handler.empty_list_to_none(ctx.message.base64_attachments)
             await self.broadcastbot.send(self.broadcastbot.admin.admin_id, msg_to_admin, base64_attachments=attachments)
             self.broadcastbot.logger.info(
-                f"Sent message from {subscriber_uuid} to admin {self.broadcastbot.admin.admin_id}"
+                "Sent message from %s to admin %s", subscriber_uuid, self.broadcastbot.admin.admin_id
             )
         except Exception as e:
             self.broadcastbot.logger.exception(e)

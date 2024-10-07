@@ -27,7 +27,7 @@ class RemoveAdmin(Command):
                         "You are no longer an admin!", subscriber_uuid
                     )
                     await self.broadcastbot.send(previous_admin, msg_to_admin)
-                self.broadcastbot.logger.info(f"{previous_admin} is no longer an admin")
+                self.broadcastbot.logger.info("%s is no longer an admin", previous_admin)
             else:
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Removing failed: admin password is incorrect!")
                 if previous_admin is not None:
@@ -35,6 +35,6 @@ class RemoveAdmin(Command):
                         "Tried to remove you as admin", subscriber_uuid
                     )
                     await self.broadcastbot.send(previous_admin, msg_to_admin)
-                self.broadcastbot.logger.warning(f"Failed password check for remove_admin {subscriber_uuid}")
+                self.broadcastbot.logger.warning("Failed password check for remove_admin %s", subscriber_uuid)
         except Exception as e:
             self.broadcastbot.logger.exception(e)

@@ -18,12 +18,12 @@ class Unsubscribe(Command):
 
             if subscriber_uuid not in self.broadcastbot.subscribers:
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Not subscribed!")
-                self.broadcastbot.logger.info(f"{subscriber_uuid} tried to unsubscribe but they are not subscribed")
+                self.broadcastbot.logger.info("%s tried to unsubscribe but they are not subscribed", subscriber_uuid)
                 return
 
             await self.broadcastbot.subscribers.remove(subscriber_uuid)
             await self.broadcastbot.reply_with_warn_on_failure(ctx, "Successfully unsubscribed!")
-            self.broadcastbot.logger.info(f"{subscriber_uuid} unsubscribed")
+            self.broadcastbot.logger.info("%s unsubscribed", subscriber_uuid)
         except Exception as e:
             self.broadcastbot.logger.exception(e)
             try:

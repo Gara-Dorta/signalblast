@@ -23,14 +23,14 @@ class Subscribe(Command):
             if subscriber_uuid in self.broadcastbot.banned_users:
                 if verbose:
                     await self.broadcastbot.reply_with_warn_on_failure(ctx, "This number is not allowed to subscribe")
-                    self.broadcastbot.logger.info(f"{subscriber_uuid} was not allowed to subscribe")
+                    self.broadcastbot.logger.info("%s was not allowed to subscribe", subscriber_uuid)
                 return
 
             await self.broadcastbot.subscribers.add(subscriber_uuid, ctx.message.source_number)
             await self.broadcastbot.reply_with_warn_on_failure(ctx, self.broadcastbot.welcome_message)
             # if self.broadcastbot.expiration_time is not None:
             #     await ctx.bot.set_expiration(subscriber_uuid, self.broadcastbot.expiration_time)
-            self.broadcastbot.logger.info(f"{subscriber_uuid} subscribed")
+            self.broadcastbot.logger.info("%s subscribed", subscriber_uuid)
         except Exception as e:
             self.broadcastbot.logger.exception(e)
             try:

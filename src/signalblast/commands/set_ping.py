@@ -41,7 +41,7 @@ class SetPing(Command):
             )
 
             await self.broadcastbot.reply_with_warn_on_failure(ctx, f"Ping set every {ping_time} seconds")
-            self.broadcastbot.logger.info(f"Ping set every {ping_time} seconds")
+            self.broadcastbot.logger.info("Ping set every %s seconds", ping_time)
         except Exception as e:
             self.broadcastbot.logger.exception(e)
             try:

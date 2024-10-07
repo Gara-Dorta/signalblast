@@ -109,21 +109,21 @@ class BroadcasBot:
     async def reply_with_warn_on_failure(self, ctx: ChatContext, message: str) -> bool:
         if await ctx.reply(message):
             return True
-        self.logger.warning(f"Could not send message to {ctx.message.source_uuid}")
+        self.logger.warning("Could not send message to %s", ctx.message.source_uuid)
         return False
 
     async def is_user_admin(self, ctx: ChatContext, command: str) -> bool:
         subscriber_uuid = ctx.message.source_uuid
         if self.admin.admin_id is None:
             await self.reply_with_warn_on_failure(ctx, "I'm sorry but there are no admins")
-            self.logger.info(f"Tried to {command} but there are no admins! {subscriber_uuid}")
+            self.logger.info("Tried to %s but there are no admins! %s", command, subscriber_uuid)
             return False
 
         if self.admin.admin_id != subscriber_uuid:
             await self.reply_with_warn_on_failure(ctx, "I'm sorry but you are not an admin")
             msg_to_admin = self.message_handler.compose_message_to_admin(f"Tried to {command}", subscriber_uuid)
             await self.send(self.admin.admin_id, msg_to_admin)
-            self.logger.info(f"{subscriber_uuid} tried to {command} but admin is {self.admin.admin_id}")
+            self.logger.info("%s tried to %s but admin is %s", subscriber_uuid, command, self.admin.admin_id)
             return False
 
         return True

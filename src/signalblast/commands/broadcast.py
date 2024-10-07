@@ -25,9 +25,9 @@ class Broadcast(Command):
             if send_task is not None:
                 if send_task.exception() is None:
                     num_broadcasts += 1
-                    bot.logger.info(f"Message successfully sent to {subscriber}")
+                    bot.logger.info("Message successfully sent to %s", subscriber)
                 else:
-                    bot.logger.warning(f"Could not send message to {subscriber}")
+                    bot.logger.warning("Could not send message to %s", subscriber)
                     subscribers_to_remove.append(subscriber)
 
         for subscriber in subscribers_to_remove:
@@ -53,12 +53,12 @@ class Broadcast(Command):
             subscriber_uuid = ctx.message.source_uuid
             if subscriber_uuid in bot.banned_users:
                 await bot.send(subscriber_uuid, "This number is not allowed to broadcast messages")
-                bot.logger.info(f"{subscriber_uuid} tried to broadcast but they are banned")
+                bot.logger.info("%s tried to broadcast but they are banned", subscriber_uuid)
                 return
 
             if subscriber_uuid not in bot.subscribers:
                 await bot.send(subscriber_uuid, bot.must_subscribe_message)
-                bot.logger.info(f"{subscriber_uuid} tried to broadcast but they are not subscribed")
+                bot.logger.info("%s tried to broadcast but they are not subscribed", subscriber_uuid)
                 return
 
             num_subscribers = len(bot.subscribers)
@@ -113,11 +113,11 @@ class Broadcast(Command):
         subscriber_uuid = ctx.message.source_uuid
         if message is None:
             if ctx.message.base64_attachments == []:
-                self.broadcastbot.logger.info(f"Received reaction, sticker or similar from {subscriber_uuid}")
+                self.broadcastbot.logger.info("Received reaction, sticker or similar from %s", subscriber_uuid)
                 return
 
             # Only attachment, assume the user wants to forward that
-            self.broadcastbot.logger.info(f"Received a file from {subscriber_uuid}, broadcasting!")
+            self.broadcastbot.logger.info("Received a file from %s, broadcasting!", subscriber_uuid)
             await Broadcast.broadcast(self.broadcastbot, ctx)
             return
 

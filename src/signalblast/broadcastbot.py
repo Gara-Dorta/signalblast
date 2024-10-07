@@ -1,7 +1,6 @@
 from collections.abc import Callable
 from logging import Logger
 from pathlib import Path
-from typing import List, Optional, Union
 
 from apscheduler.job import Job
 from apscheduler.schedulers.asyncio import AsyncIOScheduler

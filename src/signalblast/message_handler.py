@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import List, Optional
 
 from signalblast.commands_strings import AdminCommandArgs, AdminCommandStrings, PublicCommandStrings
 
@@ -29,8 +28,9 @@ class MessageHandler:
                 (self.attachments_folder / attachment).unlink()
 
         if link_previews is not None:
-            for link_preview in link_previews:
-                raise NotImplementedError("Link previews are not implemented yet")
+            error_msg = "Link previews are not implemented yet"
+            for _ in link_previews:
+                raise NotImplementedError(error_msg)
 
     @staticmethod
     def _compose_help_message(add_admin_commands: bool) -> str:

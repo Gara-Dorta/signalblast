@@ -41,13 +41,14 @@ line-length = 120
 
 [tool.ruff.lint]
 select = [
+  "E", "F", "W", # flake8
+  "B",           # flake8-bugbear
   "I",           # isort
+  "ARG",         # flake8-unused-arguments
+  "C4",          # flake8-comprehensions
+  "EM",          # flake8-errmsg
 ]
 ignore = [
   "PLR",    # Design related pylint codes
   "ISC001", # Conflicts with formatter
-]
-unfixable = [
-  "F401",   # Would remove unused imports
-  "F841",   # Would remove unused variables
 ]

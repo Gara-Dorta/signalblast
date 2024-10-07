@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import csv
 import os
-from typing import Optional
 
 
 class Users:
@@ -11,7 +10,7 @@ class Users:
 
     def __init__(self, save_path: str) -> None:
         self.save_path = save_path
-        self.data: dict[str, str | None] = dict()
+        self.data: dict[str, str | None] = {}
 
     async def add(self, uuid: str, phone_number: str | None) -> None:
         self.data[uuid] = phone_number

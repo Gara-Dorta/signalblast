@@ -5,7 +5,6 @@ import asyncio
 import logging
 import os
 from pathlib import Path
-from typing import Optional
 
 from signalblast.broadcastbot import BroadcasBot
 from signalblast.commands import (
@@ -116,7 +115,8 @@ if __name__ == "__main__":
     args = args_parser.parse_args()
 
     if args.phone_number is None:
-        raise ValueError("The bot phone number is not set")
+        value_error_msg = "The bot phone number is not set"
+        raise ValueError(value_error_msg)
 
     loop = asyncio.get_event_loop()
     bot = loop.run_until_complete(

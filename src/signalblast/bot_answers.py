@@ -6,8 +6,8 @@ from typing import Optional
 from signalbot import Command
 from signalbot import Context as ChatContext
 
-from signalblast.bot_commands import AdminCommandStrings, CommandRegex, PublicCommandStrings
 from signalblast.broadcastbot import BroadcasBot
+from signalblast.commands_strings import AdminCommandStrings, CommandRegex, PublicCommandStrings
 
 
 def triggered(pattern: Pattern):

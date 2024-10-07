@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import List, Optional
 
-from signalblast.bot_commands import AdminCommandArgs, AdminCommandStrings, PublicCommandStrings
+from signalblast.commands_strings import AdminCommandArgs, AdminCommandStrings, PublicCommandStrings
 
 
 class MessageHandler:

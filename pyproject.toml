@@ -36,6 +36,7 @@ source = "vcs"
 version-file = "_version.py"
 
 [tool.ruff]
+src = ["src"]
 line-length = 120
 
 [tool.ruff.lint]

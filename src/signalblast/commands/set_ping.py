@@ -15,11 +15,11 @@ class SetPing(Command):
         try:
             await self.broadcastbot.reply_with_warn_on_failure(ctx, "Ping")
         except Exception as e:
-            self.broadcastbot.logger.error(e, exc_info=True)
+            self.broadcastbot.logger.exception(e)
             try:
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed to send ping")
             except Exception as e:
-                self.broadcastbot.logger.error(e, exc_info=True)
+                self.broadcastbot.logger.exception(e)
 
     @triggered(CommandRegex.set_ping)
     async def handle(self, ctx: ChatContext) -> None:
@@ -43,8 +43,8 @@ class SetPing(Command):
             await self.broadcastbot.reply_with_warn_on_failure(ctx, f"Ping set every {ping_time} seconds")
             self.broadcastbot.logger.info(f"Ping set every {ping_time} seconds")
         except Exception as e:
-            self.broadcastbot.logger.error(e, exc_info=True)
+            self.broadcastbot.logger.exception(e)
             try:
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed set ping")
             except Exception as e:
-                self.broadcastbot.logger.error(e, exc_info=True)
+                self.broadcastbot.logger.exception(e)

@@ -25,8 +25,8 @@ class UnsetPing(Command):
             self.broadcastbot.ping_job = None
             await ctx.reply("Ping unset!")
         except Exception as e:
-            self.broadcastbot.logger.error(e, exc_info=True)
+            self.broadcastbot.logger.exception(e)
             try:
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed to unset ping")
             except Exception as e:
-                self.broadcastbot.logger.error(e, exc_info=True)
+                self.broadcastbot.logger.exception(e)

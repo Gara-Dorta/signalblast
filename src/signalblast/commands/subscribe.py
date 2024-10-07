@@ -32,11 +32,11 @@ class Subscribe(Command):
             #     await ctx.bot.set_expiration(subscriber_uuid, self.broadcastbot.expiration_time)
             self.broadcastbot.logger.info(f"{subscriber_uuid} subscribed")
         except Exception as e:
-            self.broadcastbot.logger.error(e, exc_info=True)
+            self.broadcastbot.logger.exception(e)
             try:
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Could not subscribe!")
             except Exception as e:
-                self.broadcastbot.logger.error(e, exc_info=True)
+                self.broadcastbot.logger.exception(e)
 
     @triggered(CommandRegex.subscribe)
     async def handle(self, ctx: ChatContext) -> None:

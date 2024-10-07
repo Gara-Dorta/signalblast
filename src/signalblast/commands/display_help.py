@@ -38,4 +38,4 @@ class DisplayHelp(Command):
         except Exception as e:
             # if isinstance(e, StopPropagation):
             #     raise
-            self.broadcastbot.logger.error(e, exc_info=True)
+            self.broadcastbot.logger.exception(e)

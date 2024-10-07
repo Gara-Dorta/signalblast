@@ -35,8 +35,8 @@ class LiftBanSubscriber(Command):
 
             self.broadcastbot.logger.info(f"Lifted the ban on user {user_id}")
         except Exception as e:
-            self.broadcastbot.logger.error(e, exc_info=True)
+            self.broadcastbot.logger.exception(e)
             try:
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed lift the ban on the user")
             except Exception as e:
-                self.broadcastbot.logger.error(e, exc_info=True)
+                self.broadcastbot.logger.exception(e)

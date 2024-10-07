@@ -41,8 +41,8 @@ class MessageFromAdmin(Command):
                 f"Sent message from admin {self.broadcastbot.admin.admin_id} to user {user_id}"
             )
         except Exception as e:
-            self.broadcastbot.logger.error(e, exc_info=True)
+            self.broadcastbot.logger.exception(e)
             try:
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed to send the message to the user!")
             except Exception as e:
-                self.broadcastbot.logger.error(e, exc_info=True)
+                self.broadcastbot.logger.exception(e)

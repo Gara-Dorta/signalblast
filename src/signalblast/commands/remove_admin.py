@@ -37,4 +37,4 @@ class RemoveAdmin(Command):
                     await self.broadcastbot.send(previous_admin, msg_to_admin)
                 self.broadcastbot.logger.warning(f"Failed password check for remove_admin {subscriber_uuid}")
         except Exception as e:
-            self.broadcastbot.logger.error(e, exc_info=True)
+            self.broadcastbot.logger.exception(e)

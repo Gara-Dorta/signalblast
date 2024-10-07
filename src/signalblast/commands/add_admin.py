@@ -38,4 +38,4 @@ class AddAdmin(Command):
                     await self.broadcastbot.send(previous_admin, msg_to_admin)
                 self.broadcastbot.logger.warning(f"{subscriber_uuid} failed password check for add_admin")
         except Exception as e:
-            self.broadcastbot.logger.error(e, exc_info=True)
+            self.broadcastbot.logger.exception(e)

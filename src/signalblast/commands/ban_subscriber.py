@@ -32,8 +32,8 @@ class BanSubscriber(Command):
 
             self.broadcastbot.logger.info(f"Banned user {user_id}")
         except Exception as e:
-            self.broadcastbot.logger.error(e, exc_info=True)
+            self.broadcastbot.logger.exception(e)
             try:
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed to ban user")
             except Exception as e:
-                self.broadcastbot.logger.error(e, exc_info=True)
+                self.broadcastbot.logger.exception(e)

@@ -39,8 +39,8 @@ class MessageToAdmin(Command):
                 f"Sent message from {subscriber_uuid} to admin {self.broadcastbot.admin.admin_id}"
             )
         except Exception as e:
-            self.broadcastbot.logger.error(e, exc_info=True)
+            self.broadcastbot.logger.exception(e)
             try:
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed to send the message to the admin!")
             except Exception as e:
-                self.broadcastbot.logger.error(e, exc_info=True)
+                self.broadcastbot.logger.exception(e)

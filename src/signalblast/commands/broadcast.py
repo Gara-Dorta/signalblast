@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 from re import Pattern
 
 from signalbot import Command
@@ -14,11 +15,7 @@ class Broadcast(Command):
         self.broadcastbot = bot
 
     def is_valid_command(self, message: str, invalid_command: Pattern) -> bool:
-        regex: Pattern
-        for regex in CommandRegex:
-            if regex != invalid_command and regex.search(message) is not None:
-                return True
-        return False
+        return any(regex != invalid_command and regex.search(message) is not None for regex in CommandRegex)
 
     @staticmethod
     async def check_send_tasks_results(send_tasks: list[asyncio.Task | None], bot: BroadcasBot) -> int:
@@ -38,11 +35,9 @@ class Broadcast(Command):
             remove_message = "The bot is having problems sending you messages. "
             remove_message += "You have been removed from the list. "
             remove_message += "Please update signal, remove old linked devices and try subscribing again"
-            try:
+            with contextlib.suppress(Exception):
                 # Most likely will fail to send the message but try anyway
                 await bot.send(subscriber, remove_message)
-            except Exception:
-                pass
 
         return num_broadcasts
 

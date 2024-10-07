@@ -10,16 +10,14 @@ class _IterableDataClass:
     def _get_public_attributes(cls):
         cls._public_attr = []
         for attr, value in inspect.getmembers(cls):
-            if not attr.startswith("_"):
-                if not inspect.ismethod(value):
-                    cls._public_attr.append(value)
+            if not attr.startswith("_") and not inspect.ismethod(value):
+                cls._public_attr.append(value)
 
     def __iter__(self):
         if self._public_attr is None:
             self._get_public_attributes()
 
-        for value in self._public_attr:
-            yield value
+        yield from self._public_attr
 
 
 @dataclass

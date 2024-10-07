@@ -40,8 +40,7 @@ class Users:
         return self.data.get(uuid)
 
     def __iter__(self):
-        for uuid in self.data:
-            yield uuid
+        yield from self.data
 
     def __contains__(self, uuid: str):
         return uuid in self.data

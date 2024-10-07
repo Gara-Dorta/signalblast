@@ -12,10 +12,7 @@ class DisplayHelp(Command):
         self.broadcastbot = bot
 
     def _get_help_message(self, input_message: str, subscriber_uuid: str) -> str:
-        if input_message.startswith(PublicCommandStrings.help):
-            is_wrong_command = False
-        else:
-            is_wrong_command = True
+        is_wrong_command = not input_message.startswith(PublicCommandStrings.help)
 
         if subscriber_uuid != self.broadcastbot.admin.admin_id:
             if is_wrong_command:

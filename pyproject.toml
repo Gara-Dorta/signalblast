@@ -53,6 +53,13 @@ select = [
   "PGH",         # pygrep-hooks
   "PIE",         # flake8-pie
   "PL",          # pylint
+  "PT",          # flake8-pytest-style
+  "RET",         # flake8-return
+  "RUF",         # Ruff-specific
+  "SIM",         # flake8-simplify
+  "UP",          # pyupgrade
+  "YTT",         # flake8-2020
+  "EXE",         # flake8-executable
 ]
 ignore = [
   "PLR",    # Design related pylint codes

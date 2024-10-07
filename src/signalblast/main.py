@@ -27,7 +27,7 @@ logging.getLogger().setLevel(logging.WARNING)
 logging.getLogger("apscheduler").setLevel(logging.WARNING)
 
 
-async def initialise_bot(
+async def initialise_bot(  # noqa: PLR0913 Too many arguments in function definition
     signal_service: str,
     phone_number: str,
     admin_pass: str,

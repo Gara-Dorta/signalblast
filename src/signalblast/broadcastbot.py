@@ -35,7 +35,7 @@ class BroadcasBot:
         self.expiration_time: int
         self.welcome_message: str
 
-    async def send(
+    async def send(  # noqa: PLR0913 Too many arguments in function definition
         self,
         receiver: str,
         text: str,

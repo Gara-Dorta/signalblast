@@ -1,0 +1,45 @@
+import asyncio
+import functools
+from re import Pattern
+from typing import Optional
+
+from signalbot import Command
+from signalbot import Context as ChatContext
+
+from signalblast.broadcastbot import BroadcasBot
+from signalblast.commands_strings import AdminCommandStrings, CommandRegex, PublicCommandStrings
+from signalblast.utils import triggered
+
+
+class RemoveAdmin(Command):
+    def __init__(self, bot: BroadcasBot) -> None:
+        super().__init__()
+        self.broadcastbot = bot
+
+    @triggered(CommandRegex.remove_admin)
+    async def handle(self, ctx: ChatContext) -> None:
+        try:
+            subscriber_uuid = ctx.message.source_uuid
+            password = self.broadcastbot.message_handler.remove_command_from_message(
+                ctx.message.text, AdminCommandStrings.remove_admin
+            )
+
+            previous_admin = self.broadcastbot.admin.admin_id
+            if await self.broadcastbot.admin.remove(password):
+                await self.broadcastbot.reply_with_warn_on_failure(ctx, "Admin has been removed!")
+                if previous_admin is not None and subscriber_uuid != previous_admin:
+                    msg_to_admin = self.broadcastbot.message_handler.compose_message_to_admin(
+                        "You are no longer an admin!", subscriber_uuid
+                    )
+                    await self.broadcastbot.send(previous_admin, msg_to_admin)
+                self.broadcastbot.logger.info(f"{previous_admin} is no longer an admin")
+            else:
+                await self.broadcastbot.reply_with_warn_on_failure(ctx, "Removing failed: admin password is incorrect!")
+                if previous_admin is not None:
+                    msg_to_admin = self.broadcastbot.message_handler.compose_message_to_admin(
+                        "Tried to remove you as admin", subscriber_uuid
+                    )
+                    await self.broadcastbot.send(previous_admin, msg_to_admin)
+                self.broadcastbot.logger.warning(f"Failed password check for remove_admin {subscriber_uuid}")
+        except Exception as e:
+            self.broadcastbot.logger.error(e, exc_info=True)

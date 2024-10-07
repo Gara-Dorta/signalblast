@@ -1,6 +1,10 @@
+import functools
 import pathlib
 from logging import Formatter, Logger, getLogger
 from logging.handlers import RotatingFileHandler
+from re import Pattern
+
+from signalbot import Context as ChatContext
 
 
 def _get_rotating_handler(log_file: str) -> RotatingFileHandler:
@@ -27,3 +31,22 @@ def redirect_semaphore_logger(log_file: str) -> None:
 
 def get_code_data_path():
     return pathlib.Path(__file__).parent.absolute() / "data"
+
+
+def triggered(pattern: Pattern):
+    def decorator_triggered(func):
+        @functools.wraps(func)
+        async def wrapper_triggered(*args, **kwargs):
+            c: ChatContext = args[1]
+            text = c.message.text
+            if not isinstance(text, str):
+                return None
+
+            if pattern.match(text) is None:
+                return None
+
+            return await func(*args, **kwargs)
+
+        return wrapper_triggered
+
+    return decorator_triggered

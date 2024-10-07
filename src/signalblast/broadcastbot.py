@@ -1,6 +1,7 @@
+from collections.abc import Callable
 from logging import Logger
 from pathlib import Path
-from typing import Callable, List, Optional, Union
+from typing import List, Optional, Union
 
 from apscheduler.job import Job
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -19,7 +20,7 @@ class BroadcasBot:
 
     def __init__(self, config: dict):
         self._bot = SignalBot(config)
-        self.ping_job: Optional[Job] = None
+        self.ping_job: Job | None = None
 
         # Type hint the other attributes that will get defined in load_data
         self.subscribers: Users
@@ -64,9 +65,9 @@ class BroadcasBot:
     def register(
         self,
         command: Command,
-        contacts: Optional[Union[List[str], bool]] = True,
-        groups: Optional[Union[List[str], bool]] = False,
-        f: Optional[Callable[[Message], bool]] = None,
+        contacts: list[str] | bool | None = True,
+        groups: list[str] | bool | None = False,
+        f: Callable[[Message], bool] | None = None,
     ):
         self._bot.register(command=command, contacts=contacts, groups=groups, f=f)
 
@@ -80,10 +81,10 @@ class BroadcasBot:
     async def load_data(
         self,
         logger: Logger,
-        admin_pass: Optional[str],
-        expiration_time: Optional[int],
+        admin_pass: str | None,
+        expiration_time: int | None,
         signal_data_path: Path,
-        welcome_message: Optional[str] = None,
+        welcome_message: str | None = None,
     ):
         self.subscribers = await Users.load_from_file(self.subscribers_data_path)
         self.banned_users = await Users.load_from_file(self.banned_users_data_path)
@@ -109,9 +110,8 @@ class BroadcasBot:
     async def reply_with_warn_on_failure(self, ctx: ChatContext, message: str) -> bool:
         if await ctx.reply(message):
             return True
-        else:
-            self.logger.warning(f"Could not send message to {ctx.message.source_uuid}")
-            return False
+        self.logger.warning(f"Could not send message to {ctx.message.source_uuid}")
+        return False
 
     async def is_user_admin(self, ctx: ChatContext, command: str) -> bool:
         subscriber_uuid = ctx.message.source_uuid

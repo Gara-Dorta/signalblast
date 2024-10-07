@@ -14,7 +14,7 @@ class Admin:
         self._hashed_password: str = None
 
     @classmethod
-    async def create(cls, admin_password: Optional[str]) -> None:
+    async def create(cls, admin_password: str | None) -> None:
         self = Admin()
         self.admin_id = None
         await self.set_hashed_password(admin_password)
@@ -25,12 +25,12 @@ class Admin:
 
     async def set_hashed_password(self, password: str):
         if password is None:
-            self._hashed_password = "".encode()
+            self._hashed_password = b""
         else:
             self._hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
         await self.save_to_file()
 
-    async def add(self, id: str, admin_password: Optional[str]) -> bool:
+    async def add(self, id: str, admin_password: str | None) -> bool:
         if admin_password is None:
             return False
 
@@ -38,10 +38,9 @@ class Admin:
             self.admin_id = id
             await self.save_to_file()
             return True
-        else:
-            return False
+        return False
 
-    async def remove(self, admin_password: Optional[str]) -> bool:
+    async def remove(self, admin_password: str | None) -> bool:
         if admin_password is None:
             return False
 
@@ -49,8 +48,7 @@ class Admin:
             self.admin_id = None
             await self.save_to_file()
             return True
-        else:
-            return False
+        return False
 
     async def save_to_file(self) -> None:
         with open(self.save_path, "w") as f:
@@ -63,7 +61,7 @@ class Admin:
     @staticmethod
     async def _load_from_file() -> "Admin":
         admin = Admin()
-        with open(Admin.save_path, "r") as f:
+        with open(Admin.save_path) as f:
             admin.admin_id = f.readline().rstrip()
             admin._hashed_password = f.readline().encode()
 
@@ -73,7 +71,7 @@ class Admin:
         return admin
 
     @staticmethod
-    async def load_from_file(admin_password: Optional[str]) -> "Admin":
+    async def load_from_file(admin_password: str | None) -> "Admin":
         if not os.path.exists(Admin.save_path):
             return await Admin.create(admin_password)
 

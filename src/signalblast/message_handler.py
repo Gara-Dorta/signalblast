@@ -9,23 +9,21 @@ class MessageHandler:
         self.attachments_folder = attachments_folder
 
     @staticmethod
-    def remove_command_from_message(message: Optional[str], command: str) -> Optional[str]:
+    def remove_command_from_message(message: str | None, command: str) -> str | None:
         if message == "" or message is None:
             return None
-        else:
-            message = message.replace(command, "", 1).strip()
-            if message == "":
-                return None
-            else:
-                return message
+        message = message.replace(command, "", 1).strip()
+        if message == "":
+            return None
+        return message
 
-    def empty_list_to_none(self, attachments: Optional[List[str]]) -> Optional[List]:
+    def empty_list_to_none(self, attachments: list[str] | None) -> list | None:
         if attachments == []:
             return None
 
         return attachments
 
-    def delete_attachments(self, attachments: Optional[List[str]], link_previews: Optional[List[str]]):
+    def delete_attachments(self, attachments: list[str] | None, link_previews: list[str] | None):
         if attachments is not None:
             for attachment in attachments:
                 (self.attachments_folder / attachment).unlink()
@@ -42,7 +40,7 @@ class MessageHandler:
             return message
 
         def _add_admin_commands(message):
-            for command_str, command_arg in zip(AdminCommandStrings, AdminCommandArgs):
+            for command_str, command_arg in zip(AdminCommandStrings, AdminCommandArgs, strict=False):
                 message += "\t" + command_str + " " + command_arg + "\n"
             return message
 
@@ -56,10 +54,9 @@ class MessageHandler:
         message = MessageHandler._compose_help_message(add_admin_commands)
         if is_help:
             return "I'm happy to help! This are the commands that you can use:\n\n" + message
-        else:
-            message = "I'm sorry, I didn't understand you but I understand the following commands:\n\n" + message
-            message += "\nPlease try again"
-            return message
+        message = "I'm sorry, I didn't understand you but I understand the following commands:\n\n" + message
+        message += "\nPlease try again"
+        return message
 
     @staticmethod
     def compose_must_subscribe_message() -> str:
@@ -70,15 +67,14 @@ class MessageHandler:
         return message
 
     @staticmethod
-    def compose_message_to_admin(message: str, user: Optional[str]) -> str:
+    def compose_message_to_admin(message: str, user: str | None) -> str:
         header = "***Admin***\n"
         if user is not None:
             header += user + "\n"
         return header + message
 
     @staticmethod
-    def compose_welcome_message(default_message: Optional[str]) -> str:
+    def compose_welcome_message(default_message: str | None) -> str:
         if default_message is None:
             return "Subscription successful!"
-        else:
-            return default_message
+        return default_message

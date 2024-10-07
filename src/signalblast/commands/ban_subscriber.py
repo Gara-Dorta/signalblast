@@ -1,0 +1,44 @@
+import asyncio
+import functools
+from re import Pattern
+from typing import Optional
+
+from signalbot import Command
+from signalbot import Context as ChatContext
+
+from signalblast.broadcastbot import BroadcasBot
+from signalblast.commands_strings import AdminCommandStrings, CommandRegex, PublicCommandStrings
+from signalblast.utils import triggered
+
+
+class BanSubscriber(Command):
+    def __init__(self, bot: BroadcasBot) -> None:
+        super().__init__()
+        self.broadcastbot = bot
+
+    @triggered(CommandRegex.ban_subscriber)
+    async def handle(self, ctx: ChatContext) -> None:
+        try:
+            user_id = self.broadcastbot.message_handler.remove_command_from_message(
+                ctx.message.text, AdminCommandStrings.ban_subscriber
+            )
+
+            if not await self.broadcastbot.is_user_admin(ctx, AdminCommandStrings.ban_subscriber):
+                return
+
+            if user_id in self.broadcastbot.subscribers:
+                await self.broadcastbot.subscribers.remove(user_id)
+
+            user_phone_number = self.broadcastbot.subscribers.get_phone_number(user_id)
+            await self.broadcastbot.banned_users.add(user_id, user_phone_number)
+
+            await self.broadcastbot.send(user_id, "You have been banned")
+            await self.broadcastbot.reply_with_warn_on_failure(ctx, "Successfully banned user")
+
+            self.broadcastbot.logger.info(f"Banned user {user_id}")
+        except Exception as e:
+            self.broadcastbot.logger.error(e, exc_info=True)
+            try:
+                await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed to ban user")
+            except Exception as e:
+                self.broadcastbot.logger.error(e, exc_info=True)

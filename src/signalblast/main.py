@@ -7,10 +7,10 @@ import os
 from pathlib import Path
 from typing import Optional
 
-from signalblast.bot_answers import (
+from signalblast.broadcastbot import BroadcasBot
+from signalblast.commands import (
     AddAdmin,
     BanSubscriber,
-    BroadcasBot,
     Broadcast,
     DisplayHelp,
     LiftBanSubscriber,
@@ -34,8 +34,8 @@ async def initialise_bot(
     admin_pass: str,
     expiration_time: int,
     signal_data_path: Path,
-    welcome_message: Optional[str] = None,
-    storage: Optional[dict[str, str]] = None,
+    welcome_message: str | None = None,
+    storage: dict[str, str] | None = None,
 ) -> BroadcasBot:
     config = {
         "signal_service": signal_service,

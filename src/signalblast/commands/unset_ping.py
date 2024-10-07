@@ -1,0 +1,37 @@
+import asyncio
+import functools
+from re import Pattern
+from typing import Optional
+
+from signalbot import Command
+from signalbot import Context as ChatContext
+
+from signalblast.broadcastbot import BroadcasBot
+from signalblast.commands_strings import AdminCommandStrings, CommandRegex, PublicCommandStrings
+from signalblast.utils import triggered
+
+
+class UnsetPing(Command):
+    def __init__(self, bot: BroadcasBot) -> None:
+        super().__init__()
+        self.broadcastbot = bot
+
+    @triggered(CommandRegex.unset_ping)
+    async def handle(self, ctx: ChatContext) -> None:
+        try:
+            if not await self.broadcastbot.is_user_admin(ctx, AdminCommandStrings.unset_ping):
+                return
+
+            if self.broadcastbot.ping_job is None:
+                await ctx.reply("Cannot unset because ping was not set!")
+                return
+
+            self.broadcastbot.scheduler.remove_job(self.broadcastbot.ping_job.id)
+            self.broadcastbot.ping_job = None
+            await ctx.reply("Ping unset!")
+        except Exception as e:
+            self.broadcastbot.logger.error(e, exc_info=True)
+            try:
+                await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed to unset ping")
+            except Exception as e:
+                self.broadcastbot.logger.error(e, exc_info=True)

@@ -11,9 +11,9 @@ class Users:
 
     def __init__(self, save_path: str) -> None:
         self.save_path = save_path
-        self.data: dict[str, Optional[str]] = dict()
+        self.data: dict[str, str | None] = dict()
 
-    async def add(self, uuid: str, phone_number: Optional[str]) -> None:
+    async def add(self, uuid: str, phone_number: str | None) -> None:
         self.data[uuid] = phone_number
         await self.save_to_file()
 
@@ -31,13 +31,13 @@ class Users:
     @staticmethod
     async def _load_from_file(save_path) -> Users:
         users = Users(save_path)
-        with open(save_path, "r") as f:
+        with open(save_path) as f:
             csv_reader = csv.DictReader(f)
             for line in csv_reader:
                 users.data[line[Users._uuid_str]] = line[Users._phone_number_str]
         return users
 
-    def get_phone_number(self, uuid: str) -> Optional[str]:
+    def get_phone_number(self, uuid: str) -> str | None:
         return self.data.get(uuid)
 
     def __iter__(self):

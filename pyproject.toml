@@ -40,4 +40,14 @@ src = ["src"]
 line-length = 120
 
 [tool.ruff.lint]
-select = ["I"] # isort
+select = [
+  "I",           # isort
+]
+ignore = [
+  "PLR",    # Design related pylint codes
+  "ISC001", # Conflicts with formatter
+]
+unfixable = [
+  "F401",   # Would remove unused imports
+  "F841",   # Would remove unused variables
+]

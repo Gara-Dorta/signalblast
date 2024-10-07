@@ -15,7 +15,8 @@ class BanSubscriber(Command):
     async def handle(self, ctx: ChatContext) -> None:
         try:
             user_id = self.broadcastbot.message_handler.remove_command_from_message(
-                ctx.message.text, AdminCommandStrings.ban_subscriber
+                ctx.message.text,
+                AdminCommandStrings.ban_subscriber,
             )
 
             if not await self.broadcastbot.is_user_admin(ctx, AdminCommandStrings.ban_subscriber):
@@ -31,9 +32,9 @@ class BanSubscriber(Command):
             await self.broadcastbot.reply_with_warn_on_failure(ctx, "Successfully banned user")
 
             self.broadcastbot.logger.info("Banned user %s", user_id)
-        except Exception as e:
-            self.broadcastbot.logger.exception(e)
+        except Exception:
+            self.broadcastbot.logger.exception("")
             try:
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed to ban user")
-            except Exception as e:
-                self.broadcastbot.logger.exception(e)
+            except Exception:
+                self.broadcastbot.logger.exception("")

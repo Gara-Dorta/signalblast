@@ -16,7 +16,8 @@ class MessageToAdmin(Command):
         try:
             subscriber_uuid = ctx.message.source_uuid
             message = self.broadcastbot.message_handler.remove_command_from_message(
-                ctx.message.text, PublicCommandStrings.msg_to_admin
+                ctx.message.text,
+                PublicCommandStrings.msg_to_admin,
             )
 
             if self.broadcastbot.admin.admin_id is None:
@@ -30,17 +31,20 @@ class MessageToAdmin(Command):
                 return
 
             msg_to_admin = self.broadcastbot.message_handler.compose_message_to_admin(
-                "Sent you message:\n", subscriber_uuid
+                "Sent you message:\n",
+                subscriber_uuid,
             )
             msg_to_admin += message
             attachments = self.broadcastbot.message_handler.empty_list_to_none(ctx.message.base64_attachments)
             await self.broadcastbot.send(self.broadcastbot.admin.admin_id, msg_to_admin, base64_attachments=attachments)
             self.broadcastbot.logger.info(
-                "Sent message from %s to admin %s", subscriber_uuid, self.broadcastbot.admin.admin_id
+                "Sent message from %s to admin %s",
+                subscriber_uuid,
+                self.broadcastbot.admin.admin_id,
             )
-        except Exception as e:
-            self.broadcastbot.logger.exception(e)
+        except Exception:
+            self.broadcastbot.logger.exception("")
             try:
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed to send the message to the admin!")
-            except Exception as e:
-                self.broadcastbot.logger.exception(e)
+            except Exception:
+                self.broadcastbot.logger.exception("")

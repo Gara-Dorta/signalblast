@@ -91,8 +91,8 @@ class Broadcast(Command):
             attachments_deleted = True
 
             await bot.reply_with_warn_on_failure(ctx, f"Message sent to {num_broadcasts - 1} people")
-        except Exception as e:
-            bot.logger.exception(e)
+        except Exception:
+            bot.logger.exception("")
             try:
                 if send_tasks_checked is False:
                     num_broadcasts = await Broadcast.check_send_tasks_results(send_tasks, bot)
@@ -105,8 +105,8 @@ class Broadcast(Command):
                 if attachments_deleted is False:
                     attachments_filenames = bot.message_handler.empty_list_to_none(ctx.message.attachments_filenames)
                     bot.message_handler.delete_attachments(attachments_filenames, link_previews=None)
-            except Exception as e:
-                bot.logger.exception(e)
+            except Exception:
+                bot.logger.exception("")
 
     async def handle(self, ctx: ChatContext) -> None:
         message = ctx.message.text

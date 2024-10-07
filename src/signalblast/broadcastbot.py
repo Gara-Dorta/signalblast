@@ -1,8 +1,8 @@
 from collections.abc import Callable
 from logging import Logger
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from apscheduler.job import Job
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from signalbot import Command, Message, SignalBot
 from signalbot import Context as ChatContext
@@ -11,6 +11,9 @@ from signalblast.admin import Admin
 from signalblast.message_handler import MessageHandler
 from signalblast.users import Users
 from signalblast.utils import get_code_data_path
+
+if TYPE_CHECKING:
+    from apscheduler.job import Job
 
 
 class BroadcasBot:
@@ -46,7 +49,7 @@ class BroadcasBot:
         quote_timestamp: str | None = None,
         mentions: list | None = None,
         text_mode: str | None = None,
-        listen: bool = False,
+        listen: bool = False,  # noqa: FBT001, FBT002
     ) -> str:
         return await self._bot.send(
             receiver=receiver,
@@ -64,8 +67,8 @@ class BroadcasBot:
     def register(
         self,
         command: Command,
-        contacts: list[str] | bool | None = True,
-        groups: list[str] | bool | None = False,
+        contacts: list[str] | bool | None = True,  # noqa: FBT002
+        groups: list[str] | bool | None = False,  # noqa: FBT002
         f: Callable[[Message], bool] | None = None,
     ):
         self._bot.register(command=command, contacts=contacts, groups=groups, f=f)
@@ -95,7 +98,8 @@ class BroadcasBot:
         self.wrong_command_message = self.message_handler.compose_help_message(is_help=False)
         self.admin_help_message = self.message_handler.compose_help_message(add_admin_commands=True)
         self.admin_wrong_command_message = self.message_handler.compose_help_message(
-            add_admin_commands=True, is_help=False
+            add_admin_commands=True,
+            is_help=False,
         )
         self.welcome_message = self.message_handler.compose_welcome_message(welcome_message)
 

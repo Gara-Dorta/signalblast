@@ -40,24 +40,10 @@ src = ["src"]
 line-length = 120
 
 [tool.ruff.lint]
-select = [
-  "E", "F", "W", # flake8
-  "B",           # flake8-bugbear
-  "I",           # isort
-  "ARG",         # flake8-unused-arguments
-  "C4",          # flake8-comprehensions
-  "EM",          # flake8-errmsg
-  "ICN",         # flake8-import-conventions
-  "ISC",         # flake8-implicit-str-concat
-  "G",           # flake8-logging-format
-  "PGH",         # pygrep-hooks
-  "PIE",         # flake8-pie
-  "PL",          # pylint
-  "PT",          # flake8-pytest-style
-  "RET",         # flake8-return
-  "RUF",         # Ruff-specific
-  "SIM",         # flake8-simplify
-  "UP",          # pyupgrade
-  "YTT",         # flake8-2020
-  "EXE",         # flake8-executable
+select = ["ALL"]
+ignore = [
+  "ANN", # Annotations
+  "D",   # Docstrings
+  "FIX", # TODO, FIXME and other messages
+  "ERA001", # Commented out code
 ]

@@ -127,6 +127,6 @@ if __name__ == "__main__":
             admin_pass=args.admin_pass,
             expiration_time=args.expiration_time,
             welcome_message=args.welcome_message,
-        )
+        ),
     )
     bot.start()

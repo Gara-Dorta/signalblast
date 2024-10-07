@@ -15,7 +15,8 @@ class MessageFromAdmin(Command):
     async def handle(self, ctx: ChatContext) -> None:
         try:
             message = self.broadcastbot.message_handler.remove_command_from_message(
-                ctx.message.text, AdminCommandStrings.msg_from_admin
+                ctx.message.text,
+                AdminCommandStrings.msg_from_admin,
             )
 
             if not await self.broadcastbot.is_user_admin(ctx, AdminCommandStrings.msg_from_admin):
@@ -38,11 +39,13 @@ class MessageFromAdmin(Command):
 
             await self.broadcastbot.send(user_id, message, base64_attachments=attachments)
             self.broadcastbot.logger.info(
-                "Sent message from admin %s to user %s", self.broadcastbot.admin.admin_id, user_id
+                "Sent message from admin %s to user %s",
+                self.broadcastbot.admin.admin_id,
+                user_id,
             )
-        except Exception as e:
-            self.broadcastbot.logger.exception(e)
+        except Exception:
+            self.broadcastbot.logger.exception("")
             try:
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed to send the message to the user!")
-            except Exception as e:
-                self.broadcastbot.logger.exception(e)
+            except Exception:
+                self.broadcastbot.logger.exception("")

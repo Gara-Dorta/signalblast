@@ -1,5 +1,3 @@
-import os
-
 import bcrypt
 
 from signalblast.utils import get_code_data_path
@@ -29,12 +27,12 @@ class Admin:
             self._hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
         await self.save_to_file()
 
-    async def add(self, id: str, admin_password: str | None) -> bool:
+    async def add(self, admin_id: str, admin_password: str | None) -> bool:
         if admin_password is None:
             return False
 
         if bcrypt.checkpw(admin_password.encode(), self.get_hashed_password()):
-            self.admin_id = id
+            self.admin_id = admin_id
             await self.save_to_file()
             return True
         return False
@@ -50,7 +48,7 @@ class Admin:
         return False
 
     async def save_to_file(self) -> None:
-        with open(self.save_path, "w") as f:
+        with self.save_path.open("w") as f:
             if self.admin_id is None:
                 f.write("\n")
             else:
@@ -60,9 +58,9 @@ class Admin:
     @staticmethod
     async def _load_from_file() -> "Admin":
         admin = Admin()
-        with open(Admin.save_path) as f:
+        with Admin.save_path.open() as f:
             admin.admin_id = f.readline().rstrip()
-            admin._hashed_password = f.readline().encode()
+            admin._hashed_password = f.readline().encode()  # noqa: SLF001
 
         if admin.admin_id == "":
             admin.admin_id = None
@@ -71,7 +69,7 @@ class Admin:
 
     @staticmethod
     async def load_from_file(admin_password: str | None) -> "Admin":
-        if not os.path.exists(Admin.save_path):
+        if not Admin.save_path.exists():
             return await Admin.create(admin_password)
 
         admin = await Admin._load_from_file()

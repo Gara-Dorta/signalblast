@@ -3,8 +3,10 @@ import pathlib
 from logging import Formatter, Logger, getLogger
 from logging.handlers import RotatingFileHandler
 from re import Pattern
+from typing import TYPE_CHECKING
 
-from signalbot import Context as ChatContext
+if TYPE_CHECKING:
+    from signalbot import Context as ChatContext
 
 
 def _get_rotating_handler(log_file: str) -> RotatingFileHandler:

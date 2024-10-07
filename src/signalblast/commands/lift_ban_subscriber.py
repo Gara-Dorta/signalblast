@@ -15,7 +15,8 @@ class LiftBanSubscriber(Command):
     async def handle(self, ctx: ChatContext) -> None:
         try:
             user_id = self.broadcastbot.message_handler.remove_command_from_message(
-                ctx.message.text, AdminCommandStrings.lift_ban_subscriber
+                ctx.message.text,
+                AdminCommandStrings.lift_ban_subscriber,
             )
 
             if not await self.broadcastbot.is_user_admin(ctx, AdminCommandStrings.lift_ban_subscriber):
@@ -25,7 +26,8 @@ class LiftBanSubscriber(Command):
                 await self.broadcastbot.banned_users.remove(user_id)
             else:
                 await self.broadcastbot.reply_with_warn_on_failure(
-                    ctx, "Could not lift the ban because the user was not banned"
+                    ctx,
+                    "Could not lift the ban because the user was not banned",
                 )
                 self.broadcastbot.logger.info("Could not lift the ban of %s because the user was not banned", user_id)
                 return
@@ -34,9 +36,9 @@ class LiftBanSubscriber(Command):
             await self.broadcastbot.reply_with_warn_on_failure(ctx, "Successfully lifted the ban on the user")
 
             self.broadcastbot.logger.info("Lifted the ban on user %s", user_id)
-        except Exception as e:
-            self.broadcastbot.logger.exception(e)
+        except Exception:
+            self.broadcastbot.logger.exception("")
             try:
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed lift the ban on the user")
-            except Exception as e:
-                self.broadcastbot.logger.exception(e)
+            except Exception:
+                self.broadcastbot.logger.exception("")

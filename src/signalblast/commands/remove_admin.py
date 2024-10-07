@@ -16,7 +16,8 @@ class RemoveAdmin(Command):
         try:
             subscriber_uuid = ctx.message.source_uuid
             password = self.broadcastbot.message_handler.remove_command_from_message(
-                ctx.message.text, AdminCommandStrings.remove_admin
+                ctx.message.text,
+                AdminCommandStrings.remove_admin,
             )
 
             previous_admin = self.broadcastbot.admin.admin_id
@@ -24,7 +25,8 @@ class RemoveAdmin(Command):
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Admin has been removed!")
                 if previous_admin is not None and subscriber_uuid != previous_admin:
                     msg_to_admin = self.broadcastbot.message_handler.compose_message_to_admin(
-                        "You are no longer an admin!", subscriber_uuid
+                        "You are no longer an admin!",
+                        subscriber_uuid,
                     )
                     await self.broadcastbot.send(previous_admin, msg_to_admin)
                 self.broadcastbot.logger.info("%s is no longer an admin", previous_admin)
@@ -32,9 +34,10 @@ class RemoveAdmin(Command):
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Removing failed: admin password is incorrect!")
                 if previous_admin is not None:
                     msg_to_admin = self.broadcastbot.message_handler.compose_message_to_admin(
-                        "Tried to remove you as admin", subscriber_uuid
+                        "Tried to remove you as admin",
+                        subscriber_uuid,
                     )
                     await self.broadcastbot.send(previous_admin, msg_to_admin)
                 self.broadcastbot.logger.warning("Failed password check for remove_admin %s", subscriber_uuid)
-        except Exception as e:
-            self.broadcastbot.logger.exception(e)
+        except Exception:
+            self.broadcastbot.logger.exception("")

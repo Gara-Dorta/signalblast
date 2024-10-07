@@ -32,7 +32,7 @@ class DisplayHelp(Command):
 
             await self.broadcastbot.reply_with_warn_on_failure(ctx, help_message)
             self.broadcastbot.logger.info("Sent help message to %s", subscriber_uuid)
-        except Exception as e:
+        except Exception:
             # if isinstance(e, StopPropagation):
             #     raise
-            self.broadcastbot.logger.exception(e)
+            self.broadcastbot.logger.exception("")

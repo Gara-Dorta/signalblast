@@ -60,11 +60,12 @@ class _AdminCommandArgs(_IterableDataClass):
 AdminCommandArgs = _AdminCommandArgs()
 
 
+def _begings_with(in_str: str) -> str:
+    return "^(" + in_str + ")"
+
+
 @dataclass
 class _CommandRegex(_IterableDataClass):
-    def _begings_with(in_str):
-        return "^(" + in_str + ")"
-
     subscribe = re.compile(_begings_with(PublicCommandStrings.subscribe))
     unsubscribe = re.compile(_begings_with(PublicCommandStrings.unsubscribe))
     broadcast = re.compile(_begings_with(PublicCommandStrings.broadcast))

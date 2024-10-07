@@ -24,9 +24,9 @@ class Unsubscribe(Command):
             await self.broadcastbot.subscribers.remove(subscriber_uuid)
             await self.broadcastbot.reply_with_warn_on_failure(ctx, "Successfully unsubscribed!")
             self.broadcastbot.logger.info("%s unsubscribed", subscriber_uuid)
-        except Exception as e:
-            self.broadcastbot.logger.exception(e)
+        except Exception:
+            self.broadcastbot.logger.exception("")
             try:
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Could not unsubscribe!")
-            except Exception as e:
-                self.broadcastbot.logger.exception(e)
+            except Exception:
+                self.broadcastbot.logger.exception("")

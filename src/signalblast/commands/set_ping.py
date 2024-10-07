@@ -14,18 +14,19 @@ class SetPing(Command):
     async def _send_ping(self, ctx: ChatContext) -> None:
         try:
             await self.broadcastbot.reply_with_warn_on_failure(ctx, "Ping")
-        except Exception as e:
-            self.broadcastbot.logger.exception(e)
+        except Exception:
+            self.broadcastbot.logger.exception("")
             try:
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed to send ping")
-            except Exception as e:
-                self.broadcastbot.logger.exception(e)
+            except Exception:
+                self.broadcastbot.logger.exception("")
 
     @triggered(CommandRegex.set_ping)
     async def handle(self, ctx: ChatContext) -> None:
         try:
             ping_time = self.broadcastbot.message_handler.remove_command_from_message(
-                ctx.message.text, AdminCommandStrings.set_ping
+                ctx.message.text,
+                AdminCommandStrings.set_ping,
             )
 
             if not await self.broadcastbot.is_user_admin(ctx, AdminCommandStrings.set_ping):
@@ -37,14 +38,17 @@ class SetPing(Command):
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Unset old ping job")
 
             self.broadcastbot.ping_job = self.broadcastbot.scheduler.add_job(
-                self._send_ping, "interval", seconds=int(ping_time), args=[ctx]
+                self._send_ping,
+                "interval",
+                seconds=int(ping_time),
+                args=[ctx],
             )
 
             await self.broadcastbot.reply_with_warn_on_failure(ctx, f"Ping set every {ping_time} seconds")
             self.broadcastbot.logger.info("Ping set every %s seconds", ping_time)
-        except Exception as e:
-            self.broadcastbot.logger.exception(e)
+        except Exception:
+            self.broadcastbot.logger.exception("")
             try:
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed set ping")
-            except Exception as e:
-                self.broadcastbot.logger.exception(e)
+            except Exception:
+                self.broadcastbot.logger.exception("")

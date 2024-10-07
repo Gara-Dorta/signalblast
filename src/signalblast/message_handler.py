@@ -33,7 +33,7 @@ class MessageHandler:
                 raise NotImplementedError(error_msg)
 
     @staticmethod
-    def _compose_help_message(add_admin_commands: bool) -> str:
+    def _compose_help_message(*, add_admin_commands: bool) -> str:
         def _add_commands(message):
             for command_str in PublicCommandStrings:
                 message += "\t" + command_str + "\n"
@@ -50,8 +50,8 @@ class MessageHandler:
         return message
 
     @staticmethod
-    def compose_help_message(add_admin_commands: bool = False, is_help: bool = True) -> str:
-        message = MessageHandler._compose_help_message(add_admin_commands)
+    def compose_help_message(*, add_admin_commands: bool = False, is_help: bool = True) -> str:
+        message = MessageHandler._compose_help_message(add_admin_commands=add_admin_commands)
         if is_help:
             return "I'm happy to help! This are the commands that you can use:\n\n" + message
         message = "I'm sorry, I didn't understand you but I understand the following commands:\n\n" + message

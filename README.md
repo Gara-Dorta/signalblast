@@ -38,7 +38,6 @@ Once the bot is up and running, several commands are available:
 
 ## Roadmap
 * Fix docker deployment
-  * Fix the `docker-compose.yaml` files
-  * Add hodolint to the `pre-commit` config
+  * Fix the `docker-compose.yaml` files and use signalblast version from hatch
   * Build docker images for `arm` and `x86` targets using the github CI
 * Make instructions clearer and add pictures to the readme

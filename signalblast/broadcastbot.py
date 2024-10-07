@@ -4,9 +4,8 @@ from typing import Callable, List, Optional, Union
 
 from apscheduler.job import Job
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from signalbot import Command
+from signalbot import Command, Message, SignalBot
 from signalbot import Context as ChatContext
-from signalbot import Message, SignalBot
 
 from signalblast.admin import Admin
 from signalblast.message_handler import MessageHandler

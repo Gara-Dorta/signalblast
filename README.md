@@ -19,11 +19,19 @@ Once the bot is up and running, several commands are available:
 
 * Install [docker](https://www.docker.com/).
 * Set up signalbot as specified [here](https://github.com/filipre/signalbot)
-* Create a python virtual environment
-* Clone the repo git
-* Install with `poetry install`
+* Create a new virtual environment, [uv](https://docs.astral.sh/uv/) is recommended
+* Install with `pip install signalblast`
+* Run via `python -m signalblast.main`
+
+## Development
+
+* Set up docker and signalbot as specified in the [installation](#installation) section.
+* Clone the repo
+* Install [uv](https://docs.astral.sh/uv/)
+* Install the repo and the dependencies in a new virtual environment with `uv sync`
+* Install the pre-commit hook `uv run pre-commit install`
 * Run
-  * Directly via `python -m signalblast.main`
+  * Directly via `uv run python -m signalblast.main`
   * Via systemd with `systemd/signalblast.service`
     * Run once with the password in the env file.
     * From there one, the password is stored encrypted and it can be removed from the env file

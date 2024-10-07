@@ -1,6 +1,6 @@
 [project]
 name = "signalblast"
-version = "0.0.2"
+dynamic = ["version"]
 description = "Broadcast bot for Signal"
 authors = [{name = "Era Dorta"}]
 readme = "README.md"
@@ -26,8 +26,14 @@ dev-dependencies = [
 signalbot = { git = "https://github.com/Era-Dorta/signalbot.git", branch = "broadcastbot" }
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "_version.py"
 
 [tool.ruff]
 line-length = 120

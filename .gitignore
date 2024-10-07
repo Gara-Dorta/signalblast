@@ -137,3 +137,6 @@ data/
 
 # Pickle data files
 *.pickle
+
+# Auto generated package version file from hatch-vcs
+_version.py

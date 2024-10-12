@@ -12,6 +12,7 @@ from signalblast.commands import (
     BanSubscriber,
     Broadcast,
     DisplayHelp,
+    LastMsgUserUuid,
     LiftBanSubscriber,
     MessageFromAdmin,
     MessageToAdmin,
@@ -76,6 +77,7 @@ async def initialise_bot(  # noqa: PLR0913 Too many arguments in function defini
     bot.register(UnsetPing(bot=bot), contacts=False, groups=True)
     bot.register(MessageToAdmin(bot=bot))
     bot.register(MessageFromAdmin(bot=bot))
+    bot.register(LastMsgUserUuid(bot=bot))
     return bot
 
 

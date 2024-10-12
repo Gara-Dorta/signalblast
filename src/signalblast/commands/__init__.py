@@ -2,6 +2,7 @@ from signalblast.commands.add_admin import AddAdmin  # noqa: F401
 from signalblast.commands.ban_subscriber import BanSubscriber  # noqa: F401
 from signalblast.commands.broadcast import Broadcast  # noqa: F401
 from signalblast.commands.display_help import DisplayHelp  # noqa: F401
+from signalblast.commands.last_msg_user_uuid import LastMsgUserUuid  # noqa: F401
 from signalblast.commands.lift_ban_subscriber import LiftBanSubscriber  # noqa: F401
 from signalblast.commands.message_from_admin import MessageFromAdmin  # noqa: F401
 from signalblast.commands.message_to_admin import MessageToAdmin  # noqa: F401

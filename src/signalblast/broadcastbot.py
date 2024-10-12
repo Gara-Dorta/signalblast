@@ -37,6 +37,7 @@ class BroadcasBot:
         self.logger: Logger
         self.expiration_time: int
         self.welcome_message: str
+        self.last_msg_user_uuid: str | None
 
     async def send(  # noqa: PLR0913 Too many arguments in function definition
         self,

@@ -42,6 +42,7 @@ class _AdminCommandStrings(_IterableDataClass):
     lift_ban_subscriber = "!lift ban"
     set_ping = "!set ping"
     unset_ping = "!unset ping"
+    last_msg_user_uuid = "!last msg user uuid"
 
 
 AdminCommandStrings = _AdminCommandStrings()
@@ -56,6 +57,7 @@ class _AdminCommandArgs(_IterableDataClass):
     lift_ban_subscriber = "<user id>"
     set_ping = "<time>"
     unset_ping = ""
+    last_msg_user_uuid = ""
 
 
 AdminCommandArgs = _AdminCommandArgs()
@@ -79,6 +81,7 @@ class _CommandRegex(_IterableDataClass):
     set_ping = re.compile(_begings_with(AdminCommandStrings.set_ping))
     unset_ping = re.compile(_begings_with(AdminCommandStrings.unset_ping))
     help = re.compile(_begings_with(PublicCommandStrings.help))
+    last_msg_user_uuid = re.compile(_begings_with(AdminCommandStrings.last_msg_user_uuid))
 
 
 CommandRegex = _CommandRegex()

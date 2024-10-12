@@ -91,6 +91,8 @@ class Broadcast(Command):
             attachments_deleted = True
 
             await bot.reply_with_warn_on_failure(ctx, f"Message sent to {num_broadcasts - 1} people")
+
+            bot.last_msg_user_uuid = subscriber_uuid
         except Exception:
             bot.logger.exception("")
             try:

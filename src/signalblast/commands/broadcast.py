@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import random
 from re import Pattern
 
 from signalbot import Command
@@ -79,7 +80,9 @@ class Broadcast(Command):
 
             for i, subscriber in enumerate(bot.subscribers):
                 send_tasks[i] = asyncio.create_task(bot.send(subscriber, message, base64_attachments=attachments))
-                await asyncio.sleep(2)  # Avoid rate limiting by waiting a few seconds between messages
+
+                # Avoid rate limiting by waiting a random time between messages
+                await asyncio.sleep(random.uniform(0.5, 1))  # noqa: S311
 
             await asyncio.wait(send_tasks)
 

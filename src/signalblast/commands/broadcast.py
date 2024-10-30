@@ -52,7 +52,7 @@ class Broadcast(Command):
         try:
             subscriber_uuid = ctx.message.source_uuid
             if subscriber_uuid in bot.banned_users:
-                await bot.send(subscriber_uuid, "This number is not allowed to broadcast messages")
+                await bot.send(subscriber_uuid, "This number is not allowed to send messages")
                 bot.logger.info("%s tried to broadcast but they are banned", subscriber_uuid)
                 return
 

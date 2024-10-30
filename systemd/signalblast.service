@@ -1,6 +1,6 @@
 [Service]
 Type=exec
-ExecStart=/home/pi/miniforge3/envs/signalblast/bin/python -m signalblast.main
+ExecStart=/home/pi/signalblast/.venv/bin/python -m signalblast.main
 EnvironmentFile=/home/pi/signalblast/systemd/env_file.env
 Restart=always
 User=pi

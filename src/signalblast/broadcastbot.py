@@ -23,6 +23,7 @@ class BroadcasBot:
     def __init__(self, config: dict) -> None:
         self._bot = SignalBot(config)
         self.ping_job: Job | None = None
+        self.last_msg_user_uuid: str | None = None
 
         # Type hint the other attributes that will get defined in load_data
         self.subscribers: Users
@@ -37,7 +38,6 @@ class BroadcasBot:
         self.logger: Logger
         self.expiration_time: int
         self.welcome_message: str
-        self.last_msg_user_uuid: str | None
 
     async def send(  # noqa: PLR0913 Too many arguments in function definition
         self,

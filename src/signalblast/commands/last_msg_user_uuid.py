@@ -18,7 +18,7 @@ class LastMsgUserUuid(Command):
                 return
 
             msg = f"Last message was sent by\n\t{self.broadcastbot.last_msg_user_uuid}"
-            await self.broadcastbot.send(self.broadcastbot.admin, msg)
+            await self.broadcastbot.send(self.broadcastbot.admin.admin_id, msg)
 
             self.broadcastbot.logger.info(msg)
         except Exception:

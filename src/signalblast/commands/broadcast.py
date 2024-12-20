@@ -104,7 +104,7 @@ class Broadcast(Command):
             send_tasks_checked = True
 
             attachments_filenames = self.broadcastbot.message_handler.empty_list_to_none(
-                ctx.message.attachments_filenames,
+                ctx.message.attachments_local_filenames,
             )
             self.broadcastbot.message_handler.delete_attachments(attachments_filenames, link_previews=None)
             attachments_deleted = True

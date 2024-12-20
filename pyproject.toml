@@ -23,7 +23,7 @@ dev-dependencies = [
 "pre-commit >=3.7.1,<4.0"]
 
 [tool.uv.sources]
-signalbot = { git = "https://github.com/Era-Dorta/signalbot.git", branch = "broadcastbot" }
+signalbot = { git = "https://github.com/filipre/signalbot", tag = "v0.11.1"}
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]

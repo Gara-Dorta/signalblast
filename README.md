@@ -27,6 +27,8 @@ Once the bot is up and running, several commands are available:
 ### Option 2: docker compose
 
 * Install [docker](https://www.docker.com/).
+* Download the [docker-compose.yml](https://github.com/Era-Dorta/signalblast/blob/main/docker-compose.yaml) file.
+* Create a folder called `signalblast_data`
 * Define the relevant environment variables
   ```bash
   export DOCKER_TAG="The version of signalblast to run, can be latest"

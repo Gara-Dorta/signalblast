@@ -17,11 +17,23 @@ Once the bot is up and running, several commands are available:
 
 ## Installation
 
+### Option 1: local python environment
 * Install [docker](https://www.docker.com/).
 * Set up signalbot as specified [here](https://github.com/filipre/signalbot)
 * Create a new virtual environment, [uv](https://docs.astral.sh/uv/) is recommended
 * Install with `pip install signalblast`
 * Run via `python -m signalblast.main`
+
+### Option 2: docker compose
+
+* Install [docker](https://www.docker.com/).
+* Define the relevant environment variables
+  ```bash
+  export DOCKER_TAG="The version of signalblast to run, can be latest"
+  export SIGNALBLAST_PHONE_NUMBER="The phone number of the bot"
+  export SIGNALBLAST_PASSWORD="The password for the admin"
+  ```
+* Run via docker compose: `docker compose up`
 
 ## Development
 
@@ -37,8 +49,11 @@ Once the bot is up and running, several commands are available:
     * From there one, the password is stored encrypted and it can be removed from the env file
 * Optional: install signalbot as an editable dependency `uv add --editable ../signalbot/`
 
+### Docker compose
+
+The `docker/compose_build.sh` and `docker/compose_up.sh` are provide for easier development.
+
 ## Roadmap
 * Fix docker deployment
-  * Fix the `docker-compose.yaml` files and use signalblast version from hatch
   * Build docker images for `arm` and `x86` targets using the github CI
 * Make instructions clearer and add pictures to the readme

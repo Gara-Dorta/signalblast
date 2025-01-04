@@ -50,4 +50,4 @@ jobs:
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
           docker buildx create --name multibuilder
           docker buildx use multibuilder
-          docker buildx build --build-arg SIGNALBLAST_VERSION=${SIGNALBLAST_VERSION} --platform linux/amd64,linux/arm64,linux/arm/v7 -t eradorta/signalblast:${DOCKER_TAG} -t eradorta/signalblast:latest .
+          docker buildx build --build-arg SIGNALBLAST_VERSION=${SIGNALBLAST_VERSION} --platform linux/amd64,linux/arm64 -t eradorta/signalblast:${DOCKER_TAG} -t eradorta/signalblast:latest .

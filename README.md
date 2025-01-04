@@ -56,6 +56,6 @@ Once the bot is up and running, several commands are available:
 The `docker/compose_build.sh` and `docker/compose_up.sh` are provide for easier development.
 
 ## Roadmap
-* Fix docker deployment
-  * Build docker images for `arm` and `x86` targets using the github CI
+
 * Make instructions clearer and add pictures to the readme
+* Add unit testing

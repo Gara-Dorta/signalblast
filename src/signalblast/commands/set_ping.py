@@ -34,6 +34,9 @@ class SetPing(Command):
             error_msg = "Empty group for set ping message"
             raise RuntimeError(error_msg)
 
+        if self.broadcastbot.expiration_time is not None:
+            await self.broadcastbot.set_group_expiration_time(ctx.message.group, self.broadcastbot.expiration_time)
+
         if self.broadcastbot.ping_job is not None:
             self.broadcastbot.scheduler.remove_job(self.broadcastbot.ping_job.id)
             self.broadcastbot.logger.info("Unset old ping job")

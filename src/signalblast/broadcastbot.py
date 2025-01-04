@@ -135,3 +135,6 @@ class BroadcasBot:
 
     async def set_expiration_time(self, reciver: str, expiration_in_seconds: int) -> None:
         await self._bot.update_contact(reciver, expiration_in_seconds=expiration_in_seconds)
+
+    async def set_group_expiration_time(self, group_id: str, expiration_in_seconds: int) -> None:
+        await self._bot.update_group(group_id, expiration_in_seconds=expiration_in_seconds)

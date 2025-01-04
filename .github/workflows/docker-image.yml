@@ -38,14 +38,6 @@ jobs:
       #   with:
       #     username: ${{ secrets.DOCKERHUB_USERNAME }}
       #     password: ${{ secrets.DOCKERHUB_TOKEN }}
-      - name: Set env variables
-        run: |
-          SIGNALBLAST_VERSION=$(uvx hatch version)
-          DOCKER_TAG="${SIGNALBLAST_VERSION//+/-}"
-          echo "the version is $SIGNALBLAST_VERSION"
-          echo "the docker version is $DOCKER_TAG"
-          echo "SIGNALBLAST_VERSION=$SIGNALBLAST_VERSION" >> "$GITHUB_ENV"
-          echo "DOCKER_TAG=$DOCKER_TAG" >> "$GITHUB_ENV"
 
       - name: Build wheel
         run: uv build
@@ -55,6 +47,15 @@ jobs:
           docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
           docker buildx create --name multibuilder
           docker buildx use multibuilder
+
+      - name: Set env variables
+        run: |
+          SIGNALBLAST_VERSION=$(uvx hatch version)
+          DOCKER_TAG="${SIGNALBLAST_VERSION//+/-}"
+          echo "the version is $SIGNALBLAST_VERSION"
+          echo "the docker version is $DOCKER_TAG"
+          echo "SIGNALBLAST_VERSION=$SIGNALBLAST_VERSION" >> "$GITHUB_ENV"
+          echo "DOCKER_TAG=$DOCKER_TAG" >> "$GITHUB_ENV"
 
       - name: Build image
         run: docker buildx build --build-arg SIGNALBLAST_VERSION=${SIGNALBLAST_VERSION} --platform linux/amd64,linux/arm64 -t eradorta/signalblast:${DOCKER_TAG} -t eradorta/signalblast:latest .

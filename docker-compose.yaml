@@ -14,6 +14,7 @@ services:
       interval: 30s  # Check every 30 seconds
       retries: 5  # Try a maximum of 5 times
       timeout: 1s # If the curl commands takes more than 1 second to return, it is considered a failure
+    restart: always
   signalblast:
     image: "eradorta/signalblast:$DOCKER_TAG"
     build:
@@ -30,3 +31,4 @@ services:
     depends_on:
       signal-cli-rest-api:
         condition: service_healthy
+    restart: always

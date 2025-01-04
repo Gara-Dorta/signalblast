@@ -498,7 +498,7 @@ wheels = [
 
 [[package]]
 name = "signalblast"
-version = "0.6.1.dev2+g79410ba.d20241220"
+version = "0.6.1.dev13+g63a5f02.d20250104"
 source = { editable = "." }
 dependencies = [
     { name = "bcrypt" },
@@ -513,7 +513,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "bcrypt", specifier = ">=4.1.3" },
-    { name = "signalbot", git = "https://github.com/filipre/signalbot?tag=v0.11.1" },
+    { name = "signalbot", git = "https://github.com/filipre/signalbot?branch=master" },
 ]
 
 [package.metadata.requires-dev]
@@ -522,7 +522,7 @@ dev = [{ name = "pre-commit", specifier = ">=3.7.1,<4.0" }]
 [[package]]
 name = "signalbot"
 version = "0.11.1"
-source = { git = "https://github.com/filipre/signalbot?tag=v0.11.1#57d571c0af6b08bd6ad71c4754dbfc257dd954a7" }
+source = { git = "https://github.com/filipre/signalbot?branch=master#6986a825bebbe1c1b9f0091a26f43ef67105c536" }
 dependencies = [
     { name = "aiohttp" },
     { name = "apscheduler" },

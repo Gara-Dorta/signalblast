@@ -14,8 +14,7 @@ DOCKER_TAG="${SIGNALBLAST_VERSION//+/-}"
 docker run \
  --rm \
  -v $HOME/.local/share/signal-api/:/home/user/.local/share/signal-api/ \
- --interactive=true \
- --tty=true \
- --entrypoint bash \
  --network host \
+ -e SIGNALBLAST_PHONE_NUMBER='PHONE_NUMBER' \
+ -e SIGNALBLAST_PASSWORD='PASSWORD' \
   eradorta/signalblast:$DOCKER_TAG

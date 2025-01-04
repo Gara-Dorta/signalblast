@@ -14,4 +14,6 @@ docker run \
  --tty=true \
  --entrypoint bash \
  --network host \
+ -e SIGNALBLAST_PHONE_NUMBER='PHONE_NUMBER' \
+ -e SIGNALBLAST_PASSWORD='PASSWORD' \
   eradorta/signalblast:$DOCKER_TAG

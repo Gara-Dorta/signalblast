@@ -19,6 +19,8 @@ services:
     image: "eradorta/signalblast:$DOCKER_TAG"
     build:
       network: "host"
+      args:
+        SIGNALBLAST_VERSION: $SIGNALBLAST_VERSION
     network_mode: "host"
     volumes:
       - "$HOME/.local/share/signal-api/:/home/user/.local/share/signal-api/"

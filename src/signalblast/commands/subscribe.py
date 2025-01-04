@@ -27,11 +27,11 @@ class Subscribe(Command):
                 return
 
             await self.broadcastbot.subscribers.add(subscriber_uuid, ctx.message.source_number)
-            await self.broadcastbot.reply_with_warn_on_failure(ctx, self.broadcastbot.welcome_message)
 
-            # TODO(Era): Enable when the backend supports this # noqa: TD003
-            # if self.broadcastbot.expiration_time is not None:
-            #     await ctx.bot.set_expiration(subscriber_uuid, self.broadcastbot.expiration_time)
+            if self.broadcastbot.expiration_time is not None:
+                await self.broadcastbot.set_expiration_time(subscriber_uuid, self.broadcastbot.expiration_time)
+
+            await self.broadcastbot.reply_with_warn_on_failure(ctx, self.broadcastbot.welcome_message)
 
             self.broadcastbot.logger.info("%s subscribed", subscriber_uuid)
         except Exception:

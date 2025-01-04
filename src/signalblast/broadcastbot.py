@@ -132,3 +132,6 @@ class BroadcasBot:
             return False
 
         return True
+
+    async def set_expiration_time(self, reciver: str, expiration_in_seconds: int) -> None:
+        await self._bot.update_contact(reciver, expiration_in_seconds=expiration_in_seconds)

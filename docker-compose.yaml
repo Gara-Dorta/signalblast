@@ -9,12 +9,6 @@ services:
     environment:
       - MODE=json-rpc
       - AUTO_RECEIVE_SCHEDULE_SEND_READ_RECEIPTS=true
-    healthcheck:
-      test: ["CMD-SHELL", "echo"]
-      interval: 10s
-      retries: 5
-      start_period: 30s
-      timeout: 10s
   signalblast:
     image: "eradorta/signalblast:0.6.1.dev11-g0bac50a.d20250104"
     network_mode: "host"
@@ -22,8 +16,7 @@ services:
       - "$HOME/.local/share/signal-api/:/home/user/.local/share/signal-api/"
       - "./signalblast_data:/home/user/signalblast/signalblast/data"
     environment:
-      - SIGNALBLAST_PHONE_NUMBER="PHONE_NUMBER"
-      - SIGNALBLAST_PASSWORD="PASSWORD"
+      - SIGNALBLAST_PHONE_NUMBER=
+      - SIGNALBLAST_PASSWORD=
     depends_on:
-      signal-cli-rest-api:
-        condition: service_healthy
+      - signal-cli-rest-api

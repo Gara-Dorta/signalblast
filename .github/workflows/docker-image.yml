@@ -35,11 +35,11 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
-      # - name: Login to Docker Hub
-      #   uses: docker/login-action@v1
-      #   with:
-      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
-      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+            username: ${{ secrets.DOCKERHUB_USERNAME }}
+            password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build wheel
         run: uv build
@@ -60,4 +60,4 @@ jobs:
           echo "DOCKER_TAG=$DOCKER_TAG" >> "$GITHUB_ENV"
 
       - name: Build image
-        run: docker buildx build --build-arg SIGNALBLAST_VERSION=${SIGNALBLAST_VERSION} --platform linux/amd64,linux/arm64 -t eradorta/signalblast:${DOCKER_TAG} -t eradorta/signalblast:latest .
+        run: docker buildx build --build-arg SIGNALBLAST_VERSION=${SIGNALBLAST_VERSION} --platform linux/amd64,linux/arm64 -t eradorta/signalblast:${DOCKER_TAG} -t eradorta/signalblast:latest . --push

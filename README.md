@@ -35,6 +35,7 @@ Once the bot is up and running, several commands are available:
   * Via systemd with `systemd/signalblast.service`
     * Run once with the password in the env file.
     * From there one, the password is stored encrypted and it can be removed from the env file
+* Optional: install signalbot as an editable dependency `uv add --editable ../signalbot/`
 
 ## Roadmap
 * Fix docker deployment

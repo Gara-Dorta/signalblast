@@ -22,6 +22,7 @@ from signalblast.commands import (
     UnsetPing,
     Unsubscribe,
 )
+from signalblast.health_check import health_check
 from signalblast.utils import get_code_data_path, get_logger
 
 LOGGING_LEVEL = logging.WARNING
@@ -42,6 +43,8 @@ async def initialise_bot(  # noqa: PLR0913 Too many arguments in function defini
     signal_data_path: Path,
     welcome_message: str | None = None,
     storage: dict[str, str] | None = None,
+    health_check_port: int = 15556,
+    health_check_receiver: str | None = None,
 ) -> BroadcasBot:
     config = {
         "signal_service": signal_service,
@@ -78,6 +81,10 @@ async def initialise_bot(  # noqa: PLR0913 Too many arguments in function defini
     bot.register(MessageToAdmin(bot=bot))
     bot.register(MessageFromAdmin(bot=bot))
     bot.register(LastMsgUserUuid(bot=bot))
+
+    if health_check_receiver is not None:
+        bot.health_check_task = asyncio.create_task(health_check(bot, health_check_receiver, health_check_port))
+
     return bot
 
 
@@ -125,6 +132,20 @@ if __name__ == "__main__":
         help="the initial message that the user receives",
     )
 
+    args_parser.add_argument(
+        "--health_check_port",
+        type=int,
+        default=os.environ.get("SIGNALBLAST_HEALTHCHECK_PORT", "15556"),
+        help="the port that will be listening for health checks requests",
+    )
+
+    args_parser.add_argument(
+        "--health_check_receiver",
+        type=str,
+        default=os.environ.get("SIGNALBLAST_HEALTHCHECK_RECEIVER"),
+        help="the contact or group to send messages for health checks",
+    )
+
     args = args_parser.parse_args()
 
     if args.phone_number is None:
@@ -140,6 +161,8 @@ if __name__ == "__main__":
             admin_pass=args.admin_pass,
             expiration_time=args.expiration_time,
             welcome_message=args.welcome_message,
+            health_check_port=args.health_check_port,
+            health_check_receiver=args.health_check_receiver,
         ),
     )
     bot.start()

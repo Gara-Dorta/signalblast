@@ -13,6 +13,8 @@ from signalblast.users import Users
 from signalblast.utils import get_code_data_path
 
 if TYPE_CHECKING:
+    from asyncio import Task
+
     from apscheduler.job import Job
 
 
@@ -24,6 +26,7 @@ class BroadcasBot:
         self._bot = SignalBot(config)
         self.ping_job: Job | None = None
         self.last_msg_user_uuid: str | None = None
+        self.health_check_task: Task | None = None
 
         # Type hint the other attributes that will get defined in load_data
         self.subscribers: Users

@@ -31,4 +31,4 @@ RUN uv sync
 
 ENTRYPOINT ["uv", "run", "python", "-m", "signalblast.main"]
 
-HEALTHCHECK --interval=8h --retries=3 CMD curl -f http://localhost:15556 || exit 1
+HEALTHCHECK --interval=8h --start-period=15s --retries=3 CMD curl -f http://localhost:15556 || exit 1

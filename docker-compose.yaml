@@ -22,6 +22,7 @@ services:
     environment:
       - SIGNALBLAST_PHONE_NUMBER=$SIGNALBLAST_PHONE_NUMBER
       - SIGNALBLAST_PASSWORD=$SIGNALBLAST_PASSWORD
+      - SIGNALBLAST_HEALTHCHECK_RECEIVER=$SIGNALBLAST_HEALTHCHECK_RECEIVER
     depends_on:
       signal-cli-rest-api:
         condition: service_healthy

@@ -84,13 +84,14 @@ class BroadcasBot:
     def scheduler(self) -> AsyncIOScheduler:
         return self._bot.scheduler
 
-    async def load_data(
+    async def load_data(  # noqa: PLR0913 Too many arguments in function definition
         self,
         logger: Logger,
         admin_pass: str | None,
         expiration_time: int | None,
         signal_data_path: Path,
         welcome_message: str | None = None,
+        instructions_url: str | None = None,
     ) -> None:
         self.subscribers = await Users.load_from_file(self.subscribers_data_path)
         self.banned_users = await Users.load_from_file(self.banned_users_data_path)
@@ -98,16 +99,25 @@ class BroadcasBot:
         self.admin = await Admin.load_from_file(admin_pass)
         self.message_handler = MessageHandler(signal_data_path / "attachments")
 
-        self.help_message = self.message_handler.compose_help_message(is_help=True)
-        self.wrong_command_message = self.message_handler.compose_help_message(is_help=False)
-        self.admin_help_message = self.message_handler.compose_help_message(add_admin_commands=True)
+        self.help_message = self.message_handler.compose_help_message(instructions_url=instructions_url)
+        self.wrong_command_message = self.message_handler.compose_help_message(
+            is_help=False,
+            instructions_url=instructions_url,
+        )
+        self.admin_help_message = self.message_handler.compose_help_message(
+            add_admin_commands=True,
+            instructions_url=instructions_url,
+        )
         self.admin_wrong_command_message = self.message_handler.compose_help_message(
             add_admin_commands=True,
             is_help=False,
+            instructions_url=instructions_url,
         )
         self.welcome_message = self.message_handler.compose_welcome_message(welcome_message)
 
-        self.must_subscribe_message = self.message_handler.compose_must_subscribe_message()
+        self.must_subscribe_message = self.message_handler.compose_must_subscribe_message(
+            instructions_url=instructions_url,
+        )
 
         self.expiration_time = expiration_time
 

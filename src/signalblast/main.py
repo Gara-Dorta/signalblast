@@ -45,6 +45,7 @@ async def initialise_bot(  # noqa: PLR0913 Too many arguments in function defini
     storage: dict[str, str] | None = None,
     health_check_port: int = 15556,
     health_check_receiver: str | None = None,
+    instructions_url: str | None = None,
 ) -> BroadcasBot:
     config = {
         "signal_service": signal_service,
@@ -66,6 +67,7 @@ async def initialise_bot(  # noqa: PLR0913 Too many arguments in function defini
         expiration_time=expiration_time,
         signal_data_path=signal_data_path,
         welcome_message=welcome_message,
+        instructions_url=instructions_url,
     )
 
     bot.register(Subscribe(bot=bot))
@@ -146,6 +148,13 @@ if __name__ == "__main__":
         help="the contact or group to send messages for health checks",
     )
 
+    args_parser.add_argument(
+        "--instructions_url",
+        type=str,
+        default=os.environ.get("SIGNALBLAST_INSTRUCTIONS_URL"),
+        help="URL for the help message",
+    )
+
     args = args_parser.parse_args()
 
     if args.phone_number is None:
@@ -163,6 +172,7 @@ if __name__ == "__main__":
             welcome_message=args.welcome_message,
             health_check_port=args.health_check_port,
             health_check_receiver=args.health_check_receiver,
+            instructions_url=args.instructions_url,
         ),
     )
     bot.start()

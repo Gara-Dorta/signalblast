@@ -2,7 +2,7 @@ FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
 
 # Git is needed for the signalbot dependency of the source dist
 RUN apt-get update && \
-    apt-get install -y git=1:2.* --no-install-recommends && \
+    apt-get install -y git=1:2.* curl=7.* --no-install-recommends && \
     rm -rf /var/lib/apt/lists/*
 
 RUN useradd --create-home --shell /bin/bash --uid 1000 user

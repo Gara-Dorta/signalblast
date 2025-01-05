@@ -1,4 +1,13 @@
+version: "3"
 services:
+  autoheal:
+    image: willfarrell/autoheal:latest
+    network_mode: none
+    restart: always
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+
   signal-cli-rest-api:
     image: "bbernhard/signal-cli-rest-api:0.90"
     ports:
@@ -9,6 +18,9 @@ services:
       - MODE=json-rpc
       - AUTO_RECEIVE_SCHEDULE_SEND_READ_RECEIPTS=true
     restart: always
+    labels:
+      autoheal: true
+
   signalblast:
     image: "eradorta/signalblast:$DOCKER_TAG"
     build:
@@ -27,3 +39,5 @@ services:
       signal-cli-rest-api:
         condition: service_healthy
     restart: always
+    labels:
+      autoheal: true

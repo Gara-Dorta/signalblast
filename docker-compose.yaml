@@ -1,4 +1,3 @@
-version: "3"
 services:
   autoheal:
     image: willfarrell/autoheal:latest

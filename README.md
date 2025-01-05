@@ -34,6 +34,7 @@ Once the bot is up and running, several commands are available:
   export DOCKER_TAG="The version of signalblast to run, can be latest"
   export SIGNALBLAST_PHONE_NUMBER="The phone number of the bot"
   export SIGNALBLAST_PASSWORD="The password for the admin"
+  export SIGNALBLAST_HEALTHCHECK_RECEIVER="The contact or group to send health check messages"
   ```
 * Run via docker compose: `docker compose up`
 

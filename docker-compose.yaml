@@ -8,12 +8,6 @@ services:
     environment:
       - MODE=json-rpc
       - AUTO_RECEIVE_SCHEDULE_SEND_READ_RECEIPTS=true
-    healthcheck:
-      # Check that the signal-rest-api is working by the health end point
-      test: ["CMD-SHELL", "curl -X GET -H \"Content-Type: application/json\" 'http://127.0.0.1:8080/v1/health'"]
-      interval: 30s  # Check every 30 seconds
-      retries: 5  # Try a maximum of 5 times
-      timeout: 1s # If the curl commands takes more than 1 second to return, it is considered a failure
     restart: always
   signalblast:
     image: "eradorta/signalblast:$DOCKER_TAG"

@@ -343,6 +343,15 @@ wheels = [
 ]
 
 [[package]]
+name = "phonenumbers"
+version = "8.13.54"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/0b/99/afd72b46abb131be71bf9572284fd3ae44cead461f31604cd65b940eb643/phonenumbers-8.13.54.tar.gz", hash = "sha256:4c32e3c941b24e5ce28d2211f624f0fef08462781e3d7e5e85192275cfd6c680", size = 2296742 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/df/de/47e36bbb5fd11b548b647aeb6ee307c358f71288a5777397bda9f14ef5aa/phonenumbers-8.13.54-py2.py3-none-any.whl", hash = "sha256:97624ada7260daafd09538baa6574b14cb9151cf29c5b22d9278abd050957edf", size = 2582315 },
+]
+
+[[package]]
 name = "platformdirs"
 version = "4.3.6"
 source = { registry = "https://pypi.org/simple" }
@@ -498,7 +507,7 @@ wheels = [
 
 [[package]]
 name = "signalblast"
-version = "0.6.1.dev43+gd17c237.d20250105"
+version = "0.7.1"
 source = { editable = "." }
 dependencies = [
     { name = "bcrypt" },
@@ -521,11 +530,12 @@ dev = [{ name = "pre-commit", specifier = ">=3.7.1,<4.0" }]
 
 [[package]]
 name = "signalbot"
-version = "0.11.1"
-source = { git = "https://github.com/filipre/signalbot?branch=master#7b10bb721d2f3ae68eac93678088126f6dbcef15" }
+version = "0.12.0"
+source = { git = "https://github.com/filipre/signalbot?branch=master#2e7c4da783fc83613b399ff9b7cd17447b4e49f7" }
 dependencies = [
     { name = "aiohttp" },
     { name = "apscheduler" },
+    { name = "phonenumbers" },
     { name = "redis" },
     { name = "websockets" },
 ]

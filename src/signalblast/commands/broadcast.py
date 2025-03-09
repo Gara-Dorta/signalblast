@@ -26,13 +26,14 @@ class Broadcast(Command):
         num_broadcasts = 0
         for send_task, subscriber in zip(send_tasks, self.broadcastbot.subscribers, strict=False):
             if send_task is not None:
-                if send_task.exception() is None:
+                try:
+                    send_task.result()
                     num_broadcasts += 1
                     self.subscribers_num_fails.pop(subscriber, None)
                     self.broadcastbot.logger.info("Message successfully sent to %s", subscriber)
-                else:
+                except Exception:
                     self.subscribers_num_fails[subscriber] += 1
-                    self.broadcastbot.logger.warning("Could not send message to %s", subscriber)
+                    self.broadcastbot.logger.exception("Could not send message to %s", subscriber)
 
         subscribers_to_remove = []
         for subscriber, num_fails in self.subscribers_num_fails.items():

@@ -8,7 +8,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
 
   signal-cli-rest-api:
-    image: "bbernhard/signal-cli-rest-api:0.91"
+    image: "bbernhard/signal-cli-rest-api:0.92"
     ports:
       - "8080:8080"
     volumes:

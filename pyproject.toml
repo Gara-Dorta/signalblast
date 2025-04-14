@@ -20,7 +20,9 @@ dependencies = [
 
 [tool.uv]
 dev-dependencies = [
-"pre-commit >=3.7.1,<4.0"]
+  "hatch>=1.13.0,<2",
+  "pre-commit >=3.7.1,<4.0",
+]
 
 [tool.uv.sources]
 signalbot = { git = "https://github.com/filipre/signalbot", branch = "master" }

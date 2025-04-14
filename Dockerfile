@@ -21,7 +21,7 @@ RUN tar -xzf signalblast-$SIGNALBLAST_VERSION.tar.gz
 
 WORKDIR /home/user/signalblast/signalblast-$SIGNALBLAST_VERSION
 
-RUN uv sync
+RUN uv sync --no-dev
 
 ###########################
 # Install from wheel

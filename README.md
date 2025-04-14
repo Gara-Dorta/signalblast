@@ -18,13 +18,13 @@ Once the bot is up and running, several commands are available:
 ## Installation
 
 ### Option 1: local python environment
-* Install [docker](https://www.docker.com/).
 * Set up signalbot as specified [here](https://github.com/filipre/signalbot)
 * Create a new virtual environment, [uv](https://docs.astral.sh/uv/) is recommended
 * Install with `pip install signalblast`
 * Run via `python -m signalblast.main`
 
 ### Option 2: docker compose
+This will pull the project docker images from https://hub.docker.com/r/eradorta/signalblast
 
 * Install [docker](https://www.docker.com/).
 * Download the [docker-compose.yml](https://github.com/Era-Dorta/signalblast/blob/main/docker-compose.yaml) file.

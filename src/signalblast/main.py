@@ -91,7 +91,7 @@ async def initialise_bot(  # noqa: PLR0913 Too many arguments in function defini
 
 
 if __name__ == "__main__":
-    one_week = 60 * 60 * 24 * 7  # Number of seconds in a week
+    four_weeks = 60 * 60 * 24 * 7 * 4  # Number of seconds in 4 weeks
 
     args_parser = argparse.ArgumentParser()
     args_parser.add_argument(
@@ -103,7 +103,7 @@ if __name__ == "__main__":
     args_parser.add_argument(
         "--expiration_time",
         type=int,
-        default=os.environ.get("SIGNALBLAST_EXPIRATION_TIME", one_week),
+        default=os.environ.get("SIGNALBLAST_EXPIRATION_TIME", four_weeks),
         help="the expiration time for the chats in seconds",
     )
     args_parser.add_argument(

@@ -37,6 +37,7 @@ class MessageToAdmin(Command):
             msg_to_admin += message
             attachments = self.broadcastbot.message_handler.empty_list_to_none(ctx.message.base64_attachments)
             await self.broadcastbot.send(self.broadcastbot.admin.admin_id, msg_to_admin, base64_attachments=attachments)
+            await self.broadcastbot.reply_with_warn_on_failure(ctx, "Message sent to the admin")
             self.broadcastbot.logger.info(
                 "Sent message from %s to admin %s",
                 subscriber_uuid,

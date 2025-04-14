@@ -1,6 +1,5 @@
 from collections.abc import Callable
 from logging import Logger
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -84,12 +83,11 @@ class BroadcasBot:
     def scheduler(self) -> AsyncIOScheduler:
         return self._bot.scheduler
 
-    async def load_data(  # noqa: PLR0913 Too many arguments in function definition
+    async def load_data(
         self,
         logger: Logger,
         admin_pass: str | None,
         expiration_time: int | None,
-        signal_data_path: Path,
         welcome_message: str | None = None,
         instructions_url: str | None = None,
     ) -> None:
@@ -97,7 +95,7 @@ class BroadcasBot:
         self.banned_users = await Users.load_from_file(self.banned_users_data_path)
 
         self.admin = await Admin.load_from_file(admin_pass)
-        self.message_handler = MessageHandler(signal_data_path / "attachments")
+        self.message_handler = MessageHandler()
 
         self.help_message = self.message_handler.compose_help_message(instructions_url=instructions_url)
         self.wrong_command_message = self.message_handler.compose_help_message(

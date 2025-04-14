@@ -40,7 +40,6 @@ async def initialise_bot(  # noqa: PLR0913 Too many arguments in function defini
     phone_number: str,
     admin_pass: str,
     expiration_time: int,
-    signal_data_path: Path,
     welcome_message: str | None = None,
     storage: dict[str, str] | None = None,
     health_check_port: int = 15556,
@@ -65,7 +64,6 @@ async def initialise_bot(  # noqa: PLR0913 Too many arguments in function defini
         logger=logger,
         admin_pass=admin_pass,
         expiration_time=expiration_time,
-        signal_data_path=signal_data_path,
         welcome_message=welcome_message,
         instructions_url=instructions_url,
     )
@@ -105,12 +103,6 @@ if __name__ == "__main__":
         type=int,
         default=os.environ.get("SIGNALBLAST_EXPIRATION_TIME", four_weeks),
         help="the expiration time for the chats in seconds",
-    )
-    args_parser.add_argument(
-        "--signal_data_path",
-        type=Path,
-        default=os.environ.get("SIGNAL_DATA_PATH", Path.home() / (".local/share/signal-api/")),
-        help="the path to the folder containig the signal api data",
     )
 
     args_parser.add_argument(
@@ -166,7 +158,6 @@ if __name__ == "__main__":
         initialise_bot(
             signal_service=args.signal_service,
             phone_number=args.phone_number,
-            signal_data_path=args.signal_data_path,
             admin_pass=args.admin_pass,
             expiration_time=args.expiration_time,
             welcome_message=args.welcome_message,

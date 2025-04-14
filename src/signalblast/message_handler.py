@@ -1,12 +1,9 @@
-from pathlib import Path
+from signalbot import Context
 
 from signalblast.commands_strings import AdminCommandArgs, AdminCommandStrings, PublicCommandStrings
 
 
 class MessageHandler:
-    def __init__(self, attachments_folder: Path) -> None:
-        self.attachments_folder = attachments_folder
-
     @staticmethod
     def remove_command_from_message(message: str | None, command: str) -> str | None:
         if message == "" or message is None:
@@ -16,21 +13,15 @@ class MessageHandler:
             return None
         return message
 
-    def empty_list_to_none(self, attachments: list[str] | None) -> list | None:
+    def empty_list_to_none(self, attachments: list[str] | None) -> list[str] | None:
         if attachments == []:
             return None
 
         return attachments
 
-    def delete_attachments(self, attachments: list[str] | None, link_previews: list[str] | None) -> None:
-        if attachments is not None:
-            for attachment in attachments:
-                (self.attachments_folder / attachment).unlink()
-
-        if link_previews is not None:
-            error_msg = "Link previews are not implemented yet"
-            for _ in link_previews:
-                raise NotImplementedError(error_msg)
+    async def delete_attachments(self, ctx: Context) -> None:
+        for attachment_filename in ctx.message.attachments_local_filenames:
+            await ctx.bot.delete_attachment(attachment_filename)
 
     @staticmethod
     def _compose_help_message(*, add_admin_commands: bool) -> str:

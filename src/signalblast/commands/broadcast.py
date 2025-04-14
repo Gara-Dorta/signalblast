@@ -104,10 +104,7 @@ class Broadcast(Command):
             num_broadcasts = await self.check_send_tasks_results(send_tasks)
             send_tasks_checked = True
 
-            attachments_filenames = self.broadcastbot.message_handler.empty_list_to_none(
-                ctx.message.attachments_local_filenames,
-            )
-            self.broadcastbot.message_handler.delete_attachments(attachments_filenames, link_previews=None)
+            await self.broadcastbot.message_handler.delete_attachments(ctx)
             attachments_deleted = True
 
             await self.broadcastbot.reply_with_warn_on_failure(ctx, f"Message sent to {num_broadcasts - 1} people")
@@ -125,10 +122,7 @@ class Broadcast(Command):
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, error_str)
 
                 if attachments_deleted is False:
-                    attachments_filenames = self.broadcastbot.message_handler.empty_list_to_none(
-                        ctx.message.attachments_filenames,
-                    )
-                    self.broadcastbot.message_handler.delete_attachments(attachments_filenames, link_previews=None)
+                    await self.broadcastbot.message_handler.delete_attachments(ctx)
             except Exception:
                 self.broadcastbot.logger.exception("")
 

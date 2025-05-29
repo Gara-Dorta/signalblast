@@ -15,7 +15,6 @@ services:
       - "$HOME/.local/share/signal-api:/home/.local/share/signal-cli"
     environment:
       - MODE=json-rpc
-      - AUTO_RECEIVE_SCHEDULE_SEND_READ_RECEIPTS=true
     restart: always
     labels:
       autoheal: true

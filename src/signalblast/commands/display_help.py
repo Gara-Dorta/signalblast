@@ -25,6 +25,8 @@ class DisplayHelp(Command):
     @triggered(CommandRegex.help)
     async def handle(self, ctx: ChatContext) -> None:
         try:
+            await ctx.receipt(receipt_type="read")
+
             subscriber_uuid = ctx.message.source_uuid
             message = ctx.message.text
 
@@ -33,6 +35,4 @@ class DisplayHelp(Command):
             await self.broadcastbot.reply_with_warn_on_failure(ctx, help_message)
             self.broadcastbot.logger.info("Sent help message to %s", subscriber_uuid)
         except Exception:
-            # if isinstance(e, StopPropagation):
-            #     raise
             self.broadcastbot.logger.exception("")

@@ -134,6 +134,8 @@ class Broadcast(Command):
                 self.broadcastbot.logger.info("Received reaction, sticker or similar from %s", subscriber_uuid)
                 return
 
+            await ctx.receipt(receipt_type="read")
+
             # Only attachment, assume the user wants to forward that
             self.broadcastbot.logger.info("Received a file from %s, broadcasting!", subscriber_uuid)
             await self.broadcast(ctx)
@@ -141,6 +143,8 @@ class Broadcast(Command):
 
         if self.is_valid_command(message, invalid_command=CommandRegex.broadcast):
             return
+
+        await ctx.receipt(receipt_type="read")
 
         # By default broadcast all the messages
         await self.broadcast(ctx)

@@ -14,6 +14,8 @@ class RemoveAdmin(Command):
     @triggered(CommandRegex.remove_admin)
     async def handle(self, ctx: ChatContext) -> None:
         try:
+            await ctx.receipt(receipt_type="read")
+
             subscriber_uuid = ctx.message.source_uuid
             password = self.broadcastbot.message_handler.remove_command_from_message(
                 ctx.message.text,

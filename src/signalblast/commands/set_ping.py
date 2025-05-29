@@ -55,6 +55,8 @@ class SetPing(Command):
     @triggered(CommandRegex.set_ping)
     async def handle(self, ctx: ChatContext) -> None:
         try:
+            await ctx.receipt(receipt_type="read")
+
             await self.process_ping_msg(ctx)
         except Exception:
             self.broadcastbot.logger.exception("")

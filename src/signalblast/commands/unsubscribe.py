@@ -14,6 +14,8 @@ class Unsubscribe(Command):
     @triggered(CommandRegex.unsubscribe)
     async def handle(self, ctx: ChatContext) -> None:
         try:
+            await ctx.receipt(receipt_type="read")
+
             subscriber_uuid = ctx.message.source_uuid
 
             if subscriber_uuid not in self.broadcastbot.subscribers:

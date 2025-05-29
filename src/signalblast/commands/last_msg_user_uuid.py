@@ -14,9 +14,9 @@ class LastMsgUserUuid(Command):
     @triggered(CommandRegex.last_msg_user_uuid)
     async def handle(self, ctx: ChatContext) -> None:
         try:
+            await ctx.receipt(receipt_type="read")
             if not await self.broadcastbot.is_user_admin(ctx, AdminCommandStrings.last_msg_user_uuid):
                 return
-
             msg = f"Last message was sent by\n\t{self.broadcastbot.last_msg_user_uuid}"
             await self.broadcastbot.send(self.broadcastbot.admin.admin_id, msg)
 

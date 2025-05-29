@@ -14,6 +14,8 @@ class MessageToAdmin(Command):
     @triggered(CommandRegex.msg_to_admin)
     async def handle(self, ctx: ChatContext) -> None:
         try:
+            await ctx.receipt(receipt_type="read")
+
             subscriber_uuid = ctx.message.source_uuid
             message = self.broadcastbot.message_handler.remove_command_from_message(
                 ctx.message.text,

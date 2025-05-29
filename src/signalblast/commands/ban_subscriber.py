@@ -14,6 +14,8 @@ class BanSubscriber(Command):
     @triggered(CommandRegex.ban_subscriber)
     async def handle(self, ctx: ChatContext) -> None:
         try:
+            await ctx.receipt(receipt_type="read")
+
             user_id = self.broadcastbot.message_handler.remove_command_from_message(
                 ctx.message.text,
                 AdminCommandStrings.ban_subscriber,

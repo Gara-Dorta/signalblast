@@ -14,6 +14,8 @@ class UnsetPing(Command):
     @triggered(CommandRegex.unset_ping)
     async def handle(self, ctx: ChatContext) -> None:
         try:
+            await ctx.receipt(receipt_type="read")
+
             if not await self.broadcastbot.is_user_admin(ctx, AdminCommandStrings.unset_ping):
                 return
 

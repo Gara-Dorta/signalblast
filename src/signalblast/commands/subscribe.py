@@ -13,6 +13,8 @@ class Subscribe(Command):
 
     async def subscribe(self, ctx: ChatContext, *, verbose: bool = False) -> None:
         try:
+            await ctx.receipt(receipt_type="read")
+
             subscriber_uuid = ctx.message.source_uuid
             if subscriber_uuid in self.broadcastbot.subscribers:
                 if verbose:

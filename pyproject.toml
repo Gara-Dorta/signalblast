@@ -15,7 +15,7 @@ keywords = [
 ]
 dependencies = [
     "bcrypt>=4.1.3",
-    "signalbot>=0.14.0",
+    "signalbot>=0.16.0",
 ]
 
 [tool.uv]

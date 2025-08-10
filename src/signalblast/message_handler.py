@@ -23,6 +23,9 @@ class MessageHandler:
         for attachment_filename in ctx.message.attachments_local_filenames:
             await ctx.bot.delete_attachment(attachment_filename)
 
+        for link_preview in ctx.message.link_previews:
+            await ctx.bot.delete_attachment(link_preview.id)
+
     @staticmethod
     def _compose_help_message(*, add_admin_commands: bool) -> str:
         def _add_commands(message: str) -> str:

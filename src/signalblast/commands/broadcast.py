@@ -80,7 +80,7 @@ class Broadcast(Command):
                 PublicCommandStrings.broadcast,
             )
             attachments = self.broadcastbot.message_handler.empty_list_to_none(ctx.message.base64_attachments)
-            # link_previews = self.broadcastbot.message_handler.empty_list_to_none(ctx.message.data_message.previews)
+            link_preview = ctx.message.link_previews[0] if len(ctx.message.link_previews) > 0 else None
 
             if message is None and attachments is None:
                 return
@@ -93,7 +93,12 @@ class Broadcast(Command):
 
             for i, subscriber in enumerate(self.broadcastbot.subscribers):
                 send_tasks[i] = asyncio.create_task(
-                    self.broadcastbot.send(subscriber, message, base64_attachments=attachments),
+                    self.broadcastbot.send(
+                        subscriber,
+                        message,
+                        base64_attachments=attachments,
+                        link_preview=link_preview,
+                    ),
                 )
 
                 # Avoid rate limiting by waiting a random time between messages

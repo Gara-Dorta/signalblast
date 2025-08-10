@@ -24,8 +24,8 @@ dev-dependencies = [
   "pre-commit >=3.7.1,<4.0",
 ]
 
-[tool.uv.sources]
-signalbot = { path = "../signalbot", editable = true }
+# [tool.uv.sources]
+# signalbot = { path = "../signalbot", editable = true }
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]

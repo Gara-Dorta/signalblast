@@ -41,7 +41,6 @@ async def initialise_bot(  # noqa: PLR0913 Too many arguments in function defini
     admin_pass: str,
     expiration_time: int,
     welcome_message: str | None = None,
-    storage: dict[str, str] | None = None,
     health_check_port: int = 15556,
     health_check_receiver: str | None = None,
     instructions_url: str | None = None,
@@ -49,9 +48,8 @@ async def initialise_bot(  # noqa: PLR0913 Too many arguments in function defini
     config = {
         "signal_service": signal_service,
         "phone_number": phone_number,
+        "storage": {"type": "in-memory"},
     }
-    if storage is not None:
-        config["storage"] = storage
 
     get_code_data_path().mkdir(parents=True, exist_ok=True)
     if LOG_TO_FILE:

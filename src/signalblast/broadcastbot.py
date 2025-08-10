@@ -53,7 +53,6 @@ class BroadcasBot:
         quote_timestamp: str | None = None,
         mentions: list | None = None,
         text_mode: str | None = None,
-        listen: bool = False,  # noqa: FBT001, FBT002
     ) -> str:
         return await self._bot.send(
             receiver=receiver,
@@ -66,7 +65,6 @@ class BroadcasBot:
             quote_timestamp=quote_timestamp,
             mentions=mentions,
             text_mode=text_mode,
-            listen=listen,
         )
 
     def register(

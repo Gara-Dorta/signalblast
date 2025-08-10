@@ -50,7 +50,7 @@ class BroadcasBot:
         quote_author: str | None = None,
         quote_mentions: list | None = None,
         quote_message: str | None = None,
-        quote_timestamp: str | None = None,
+        quote_timestamp: int | None = None,
         mentions: list | None = None,
         text_mode: str | None = None,
     ) -> str:

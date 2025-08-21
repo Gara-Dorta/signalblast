@@ -52,6 +52,7 @@ class BroadcasBot:
         quote_message: str | None = None,
         quote_timestamp: int | None = None,
         mentions: list | None = None,
+        edit_timestamp: int | None = None,
         text_mode: str | None = None,
     ) -> str:
         return await self._bot.send(
@@ -64,6 +65,7 @@ class BroadcasBot:
             quote_message=quote_message,
             quote_timestamp=quote_timestamp,
             mentions=mentions,
+            edit_timestamp=edit_timestamp,
             text_mode=text_mode,
         )
 

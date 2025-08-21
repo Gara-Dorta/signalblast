@@ -4,11 +4,18 @@ import random
 from collections import defaultdict
 from re import Pattern
 
-from signalbot import Command
+from pydantic import BaseModel
+from signalbot import Command, MessageType
 from signalbot import Context as ChatContext
 
 from signalblast.broadcastbot import BroadcasBot
 from signalblast.commands_strings import CommandRegex, PublicCommandStrings
+
+
+class TimestampData(BaseModel):
+    timestamp: int
+    author: str
+    broadcast_timestamps: dict[str, int]  # subscriber uuid, timestamp
 
 
 class Broadcast(Command):
@@ -22,18 +29,17 @@ class Broadcast(Command):
     def is_valid_command(self, message: str, invalid_command: Pattern) -> bool:
         return any(regex != invalid_command and regex.search(message) is not None for regex in CommandRegex)
 
-    async def check_send_tasks_results(self, send_tasks: list[asyncio.Task | None]) -> int:
-        num_broadcasts = 0
+    async def check_send_tasks_results(self, send_tasks: list[asyncio.Task | None], action_str: str) -> dict[str, int]:
+        timestamp_data = {}
         for send_task, subscriber in zip(send_tasks, self.broadcastbot.subscribers, strict=False):
             if send_task is not None:
                 try:
-                    send_task.result()
-                    num_broadcasts += 1
+                    timestamp_data[subscriber] = send_task.result()
                     self.subscribers_num_fails.pop(subscriber, None)
-                    self.broadcastbot.logger.info("Message successfully sent to %s", subscriber)
+                    self.broadcastbot.logger.info("Message successfully %s %s", action_str, subscriber)
                 except Exception:
                     self.subscribers_num_fails[subscriber] += 1
-                    self.broadcastbot.logger.exception("Could not send message to %s", subscriber)
+                    self.broadcastbot.logger.exception("Message not %s %s", action_str, subscriber)
 
         subscribers_to_remove = []
         for subscriber, num_fails in self.subscribers_num_fails.items():
@@ -51,14 +57,16 @@ class Broadcast(Command):
         for subscriber in subscribers_to_remove:
             del self.subscribers_num_fails[subscriber]
 
-        return num_broadcasts
+        return timestamp_data
 
-    async def broadcast(self, ctx: ChatContext) -> None:
-        num_broadcasts = 0
+    async def broadcast(self, ctx: ChatContext) -> None:  # noqa: C901, PLR0915 function is too complex
+        broadcast_timestamps: dict[str, int] = {}
         num_subscribers = -1
         attachments_deleted = False
         send_tasks_checked = False
+        timestamp_data_saved = False
         send_tasks: list[asyncio.Task | None] = []
+        action_str, acting_str = "sent to", "sending"
 
         try:
             subscriber_uuid = ctx.message.source_uuid
@@ -74,7 +82,6 @@ class Broadcast(Command):
 
             num_subscribers = len(self.broadcastbot.subscribers)
 
-            # await ctx.message.mark_read()
             message = self.broadcastbot.message_handler.remove_command_from_message(
                 ctx.message.text,
                 PublicCommandStrings.broadcast,
@@ -91,6 +98,15 @@ class Broadcast(Command):
             # Broadcast message to all subscribers.
             send_tasks: list[asyncio.Task | None] = [None] * num_subscribers
 
+            if ctx.message.type == MessageType.EDIT_MESSAGE:
+                prev_timestamps = ctx.bot.storage.read(
+                    f"broadcast-uuid-{subscriber_uuid}-timestamp-{ctx.message.target_sent_timestamp}",
+                )
+                edit_timestamps = TimestampData.model_validate(prev_timestamps).broadcast_timestamps
+                action_str, acting_str = "edited for", "editing"
+            else:
+                edit_timestamps = {}
+
             for i, subscriber in enumerate(self.broadcastbot.subscribers):
                 send_tasks[i] = asyncio.create_task(
                     self.broadcastbot.send(
@@ -98,6 +114,7 @@ class Broadcast(Command):
                         message,
                         base64_attachments=attachments,
                         link_preview=link_preview,
+                        edit_timestamp=edit_timestamps.get(subscriber),
                     ),
                 )
 
@@ -106,28 +123,55 @@ class Broadcast(Command):
 
             await asyncio.wait(send_tasks)
 
-            num_broadcasts = await self.check_send_tasks_results(send_tasks)
+            broadcast_timestamps = await self.check_send_tasks_results(send_tasks, action_str)
             send_tasks_checked = True
+
+            broadcastdata = TimestampData(
+                author=subscriber_uuid,
+                timestamp=ctx.message.timestamp,
+                broadcast_timestamps=broadcast_timestamps,
+            )
+            ctx.bot.storage.save(
+                f"broadcast-uuid-{subscriber_uuid}-timestamp-{ctx.message.timestamp}",
+                broadcastdata.model_dump(),
+            )
+            timestamp_data_saved = True
 
             await self.broadcastbot.message_handler.delete_attachments(ctx)
             attachments_deleted = True
 
-            await self.broadcastbot.reply_with_warn_on_failure(ctx, f"Message sent to {num_broadcasts - 1} people")
+            await self.broadcastbot.reply_with_warn_on_failure(
+                ctx,
+                f"Message {action_str} {len(broadcast_timestamps) - 1} people",
+            )
 
             self.broadcastbot.last_msg_user_uuid = subscriber_uuid
         except Exception:
             self.broadcastbot.logger.exception("")
             try:
                 if send_tasks_checked is False:
-                    num_broadcasts = await self.check_send_tasks_results(send_tasks)
+                    broadcast_timestamps = await self.check_send_tasks_results(send_tasks)
 
-                error_str = "Something went wrong when sending the message"
-                error_str += f", it was only sent to {num_broadcasts - 1} out of {num_subscribers - 1} people"
+                error_str = f"Something went wrong when {acting_str} the message"
+                error_str += (
+                    f", it was only {action_str} {len(broadcast_timestamps) - 1} out of {num_subscribers - 1} people"
+                )
                 error_str += ", please contact the admin if the problem persists"
                 await self.broadcastbot.reply_with_warn_on_failure(ctx, error_str)
 
                 if attachments_deleted is False:
                     await self.broadcastbot.message_handler.delete_attachments(ctx)
+
+                if timestamp_data_saved is False:
+                    broadcastdata = TimestampData(
+                        author=subscriber_uuid,
+                        timestamp=ctx.message.timestamp,
+                        broadcast_timestamps=broadcast_timestamps,
+                    )
+                    ctx.bot.storage.save(
+                        f"broadcast-uuid-{subscriber_uuid}-timestamp-{ctx.message.timestamp}",
+                        broadcastdata.model_dump(),
+                    )
             except Exception:
                 self.broadcastbot.logger.exception("")
 

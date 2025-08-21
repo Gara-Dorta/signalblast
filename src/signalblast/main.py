@@ -48,7 +48,7 @@ async def initialise_bot(  # noqa: PLR0913 Too many arguments in function defini
     config = {
         "signal_service": signal_service,
         "phone_number": phone_number,
-        "storage": {"type": "sqlite", "sqlite_db": "signalblast.db", "check_same_thread": False},
+        "storage": {"type": "sqlite", "sqlite_db": get_code_data_path() / "signalblast.db", "check_same_thread": False},
     }
 
     get_code_data_path().mkdir(parents=True, exist_ok=True)

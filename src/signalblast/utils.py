@@ -1,15 +1,8 @@
-import functools
-from collections.abc import Callable
 from logging import Formatter, Logger, getLogger
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from re import Pattern
-from typing import TYPE_CHECKING
 
 from pydantic import BaseModel
-
-if TYPE_CHECKING:
-    from signalbot import Context as ChatContext
 
 
 def _get_rotating_handler(log_file: Path) -> RotatingFileHandler:
@@ -36,25 +29,6 @@ def redirect_semaphore_logger(log_file: str) -> None:
 
 def get_code_data_path() -> Path:
     return Path(__file__).parent.absolute() / "data"
-
-
-def triggered(pattern: Pattern) -> Callable:
-    def decorator_triggered(func: Callable) -> Callable:
-        @functools.wraps(func)
-        async def wrapper_triggered(*args, **kwargs) -> Callable:  # noqa: ANN002, ANN003
-            c: ChatContext = args[1]
-            text = c.message.text
-            if not isinstance(text, str):
-                return None
-
-            if pattern.match(text) is None:
-                return None
-
-            return await func(*args, **kwargs)
-
-        return wrapper_triggered
-
-    return decorator_triggered
 
 
 class TimestampData(BaseModel):

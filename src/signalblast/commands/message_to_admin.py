@@ -1,9 +1,8 @@
-from signalbot import Command
+from signalbot import Command, regex_triggered
 from signalbot import Context as ChatContext
 
 from signalblast.broadcastbot import BroadcasBot
 from signalblast.commands_strings import CommandRegex, PublicCommandStrings
-from signalblast.utils import triggered
 
 
 class MessageToAdmin(Command):
@@ -11,7 +10,7 @@ class MessageToAdmin(Command):
         super().__init__()
         self.broadcastbot = bot
 
-    @triggered(CommandRegex.msg_to_admin)
+    @regex_triggered(CommandRegex.msg_to_admin)
     async def handle(self, ctx: ChatContext) -> None:
         try:
             await ctx.receipt(receipt_type="read")

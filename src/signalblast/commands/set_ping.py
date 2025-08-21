@@ -1,9 +1,8 @@
-from signalbot import Command
+from signalbot import Command, regex_triggered
 from signalbot import Context as ChatContext
 
 from signalblast.broadcastbot import BroadcasBot
 from signalblast.commands_strings import AdminCommandStrings, CommandRegex
-from signalblast.utils import triggered
 
 
 class SetPing(Command):
@@ -52,7 +51,7 @@ class SetPing(Command):
         await self.broadcastbot.reply_with_warn_on_failure(ctx, f"Ping set every {ping_time} seconds")
         self.broadcastbot.logger.info("Ping set every %s seconds", ping_time)
 
-    @triggered(CommandRegex.set_ping)
+    @regex_triggered(CommandRegex.set_ping)
     async def handle(self, ctx: ChatContext) -> None:
         try:
             await ctx.receipt(receipt_type="read")

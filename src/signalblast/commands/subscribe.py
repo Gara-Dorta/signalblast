@@ -1,9 +1,8 @@
-from signalbot import Command
+from signalbot import Command, regex_triggered
 from signalbot import Context as ChatContext
 
 from signalblast.broadcastbot import BroadcasBot
 from signalblast.commands_strings import CommandRegex
-from signalblast.utils import triggered
 
 
 class Subscribe(Command):
@@ -43,6 +42,6 @@ class Subscribe(Command):
             except Exception:
                 self.broadcastbot.logger.exception("")
 
-    @triggered(CommandRegex.subscribe)
+    @regex_triggered(CommandRegex.subscribe)
     async def handle(self, ctx: ChatContext) -> None:
         await Subscribe.subscribe(self, ctx, verbose=True)

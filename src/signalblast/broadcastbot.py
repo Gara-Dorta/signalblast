@@ -1,5 +1,7 @@
 from collections.abc import Callable
+from datetime import datetime, timedelta, timezone
 from logging import Logger
+from threading import Lock
 from typing import TYPE_CHECKING
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -9,7 +11,7 @@ from signalbot import Context as ChatContext
 from signalblast.admin import Admin
 from signalblast.message_handler import MessageHandler
 from signalblast.users import Users
-from signalblast.utils import get_code_data_path
+from signalblast.utils import TimestampData, get_code_data_path
 
 if TYPE_CHECKING:
     from asyncio import Task
@@ -40,6 +42,7 @@ class BroadcasBot:
         self.logger: Logger
         self.expiration_time: int
         self.welcome_message: str
+        self.storage_lock: Lock
 
     async def send(  # noqa: PLR0913 Too many arguments in function definition
         self,
@@ -121,6 +124,8 @@ class BroadcasBot:
 
         self.expiration_time = expiration_time
 
+        self.storage_lock = Lock()
+
         self.logger = logger
         self.logger.debug("BotAnswers is initialised")
 
@@ -151,3 +156,18 @@ class BroadcasBot:
 
     async def set_group_expiration_time(self, group_id: str, expiration_in_seconds: int) -> None:
         await self._bot.update_group(group_id, expiration_in_seconds=expiration_in_seconds)
+
+    async def delete_old_timestamps(self) -> None:
+        """Signal only allows editing messges within 24 hours.
+        No point in keeping the information for older messages"""
+        cursor = self._bot.storage._sqlite.execute("SELECT key FROM signalbot")  # noqa: SLF001
+        keys = [row[0] for row in cursor.fetchall()]
+        for key in keys:
+            value = TimestampData.model_validate(self._bot.storage.read(key))
+            if datetime.fromtimestamp(value.timestamp / 1000, tz=timezone.utc) < (
+                datetime.now(tz=timezone.utc) - timedelta(days=1)
+            ):
+                self.storage_lock.acquire()
+                self._bot.storage.delete(key)
+                self.storage_lock.release()
+                self.logger.info("Deleted expired key with timestamp: %s", value.timestamp)

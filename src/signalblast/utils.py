@@ -6,6 +6,8 @@ from pathlib import Path
 from re import Pattern
 from typing import TYPE_CHECKING
 
+from pydantic import BaseModel
+
 if TYPE_CHECKING:
     from signalbot import Context as ChatContext
 
@@ -53,3 +55,9 @@ def triggered(pattern: Pattern) -> Callable:
         return wrapper_triggered
 
     return decorator_triggered
+
+
+class TimestampData(BaseModel):
+    timestamp: int
+    author: str
+    broadcast_timestamps: dict[str, int]  # subscriber uuid, timestamp

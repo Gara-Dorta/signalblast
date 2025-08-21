@@ -4,18 +4,12 @@ import random
 from collections import defaultdict
 from re import Pattern
 
-from pydantic import BaseModel
 from signalbot import Command, MessageType
 from signalbot import Context as ChatContext
 
 from signalblast.broadcastbot import BroadcasBot
 from signalblast.commands_strings import CommandRegex, PublicCommandStrings
-
-
-class TimestampData(BaseModel):
-    timestamp: int
-    author: str
-    broadcast_timestamps: dict[str, int]  # subscriber uuid, timestamp
+from signalblast.utils import TimestampData
 
 
 class Broadcast(Command):
@@ -99,9 +93,11 @@ class Broadcast(Command):
             send_tasks: list[asyncio.Task | None] = [None] * num_subscribers
 
             if ctx.message.type == MessageType.EDIT_MESSAGE:
+                self.broadcastbot.storage_lock.acquire()
                 prev_timestamps = ctx.bot.storage.read(
                     f"broadcast-uuid-{subscriber_uuid}-timestamp-{ctx.message.target_sent_timestamp}",
                 )
+                self.broadcastbot.storage_lock.release()
                 edit_timestamps = TimestampData.model_validate(prev_timestamps).broadcast_timestamps
                 action_str, acting_str = "edited for", "editing"
             else:
@@ -131,10 +127,12 @@ class Broadcast(Command):
                 timestamp=ctx.message.timestamp,
                 broadcast_timestamps=broadcast_timestamps,
             )
+            self.broadcastbot.storage_lock.acquire()
             ctx.bot.storage.save(
                 f"broadcast-uuid-{subscriber_uuid}-timestamp-{ctx.message.timestamp}",
                 broadcastdata.model_dump(),
             )
+            self.broadcastbot.storage_lock.release()
             timestamp_data_saved = True
 
             await self.broadcastbot.message_handler.delete_attachments(ctx)
@@ -168,10 +166,12 @@ class Broadcast(Command):
                         timestamp=ctx.message.timestamp,
                         broadcast_timestamps=broadcast_timestamps,
                     )
+                    self.broadcastbot.storage_lock.acquire()
                     ctx.bot.storage.save(
                         f"broadcast-uuid-{subscriber_uuid}-timestamp-{ctx.message.timestamp}",
                         broadcastdata.model_dump(),
                     )
+                    self.broadcastbot.storage_lock.release()
             except Exception:
                 self.broadcastbot.logger.exception("")
 

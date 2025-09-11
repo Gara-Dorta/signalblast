@@ -111,6 +111,7 @@ class Broadcast(Command):
                         base64_attachments=attachments,
                         link_preview=link_preview,
                         edit_timestamp=edit_timestamps.get(subscriber),
+                        view_once=ctx.message.view_once,
                     ),
                 )
 
@@ -148,7 +149,7 @@ class Broadcast(Command):
             self.broadcastbot.logger.exception("")
             try:
                 if send_tasks_checked is False:
-                    broadcast_timestamps = await self.check_send_tasks_results(send_tasks)
+                    broadcast_timestamps = await self.check_send_tasks_results(send_tasks, action_str)
 
                 error_str = f"Something went wrong when {acting_str} the message"
                 error_str += (

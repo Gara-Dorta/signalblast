@@ -48,6 +48,7 @@ class BroadcasBot:
         self,
         receiver: str,
         text: str,
+        *,
         base64_attachments: list | None = None,
         link_preview: dict | None = None,
         quote_author: str | None = None,
@@ -57,6 +58,7 @@ class BroadcasBot:
         mentions: list | None = None,
         edit_timestamp: int | None = None,
         text_mode: str | None = None,
+        view_once: bool = False,
     ) -> str:
         return await self._bot.send(
             receiver=receiver,
@@ -70,6 +72,7 @@ class BroadcasBot:
             mentions=mentions,
             edit_timestamp=edit_timestamp,
             text_mode=text_mode,
+            view_once=view_once,
         )
 
     def register(

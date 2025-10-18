@@ -1,30 +1,25 @@
-from logging import Formatter, Logger, getLogger
+from logging import WARNING, Formatter, Logger, StreamHandler, getLogger
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from pydantic import BaseModel
 
 
-def _get_rotating_handler(log_file: Path) -> RotatingFileHandler:
-    return RotatingFileHandler(str(log_file), mode="a", maxBytes=5 * 1024 * 1024, backupCount=1, encoding=None, delay=0)
+def create_or_set_logger(name: str | None, logging_level: int = WARNING, log_file: Path | None = None) -> Logger:
+    if log_file is None:
+        # Log to console
+        handler = StreamHandler()
+    else:
+        # Keep two files of max 5MB.
+        handler = RotatingFileHandler(log_file, maxBytes=5 * 1024 * 1024, backupCount=1)
 
-
-def get_logger(name: str | None, log_file: Path, logging_level: int) -> Logger:
-    handler = _get_rotating_handler(log_file)
     formatter = Formatter("%(asctime)s %(name)s [%(levelname)s] - %(funcName)s - %(message)s")
     handler.setFormatter(formatter)
-    log = getLogger(name)
-    log.setLevel(logging_level)
-    log.addHandler(handler)
-    return log
 
-
-def redirect_semaphore_logger(log_file: str) -> None:
-    formatter = Formatter("%(asctime)s %(name)s [%(levelname)s] - %(message)s")
-    handler = _get_rotating_handler(log_file)
-    handler.setFormatter(formatter)
-    semaphore_log = getLogger("semaphore.bot")
-    semaphore_log.addHandler(handler)
+    logger = getLogger(name)
+    logger.setLevel(logging_level)
+    logger.addHandler(handler)
+    return logger
 
 
 def get_code_data_path() -> Path:

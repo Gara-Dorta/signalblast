@@ -1,17 +1,13 @@
 from logging import WARNING, Formatter, Logger, StreamHandler, getLogger
-from logging.handlers import RotatingFileHandler
+from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
 from pydantic import BaseModel
 
 
 def create_or_set_logger(name: str | None, logging_level: int = WARNING, log_file: Path | None = None) -> Logger:
-    if log_file is None:
-        # Log to console
-        handler = StreamHandler()
-    else:
-        # Keep two files of max 5MB.
-        handler = RotatingFileHandler(log_file, maxBytes=5 * 1024 * 1024, backupCount=1)
+    # Log to console or log to file, keeping the log for two weeks, rotate every Monday.
+    handler = StreamHandler() if log_file is None else TimedRotatingFileHandler(log_file, when="W0", backupCount=1)
 
     formatter = Formatter("%(asctime)s %(name)s [%(levelname)s] - %(funcName)s - %(message)s")
     handler.setFormatter(formatter)

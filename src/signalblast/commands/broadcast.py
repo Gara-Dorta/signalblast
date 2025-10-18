@@ -53,7 +53,7 @@ class Broadcast(Command):
 
         return timestamp_data
 
-    async def broadcast(self, ctx: ChatContext) -> None:  # noqa: C901, PLR0915 function is too complex
+    async def broadcast(self, ctx: ChatContext) -> None:  # noqa: C901, PLR0915, PLR0912 function is too complex
         broadcast_timestamps: dict[str, int] = {}
         num_subscribers = -1
         attachments_deleted = False
@@ -83,7 +83,7 @@ class Broadcast(Command):
             attachments = self.broadcastbot.message_handler.empty_list_to_none(ctx.message.base64_attachments)
             link_preview = ctx.message.link_previews[0] if len(ctx.message.link_previews) > 0 else None
 
-            if message is None and attachments is None:
+            if message is None and attachments is None and ctx.message.type != MessageType.DELETE_MESSAGE:
                 return
 
             if message is None:
@@ -92,28 +92,37 @@ class Broadcast(Command):
             # Broadcast message to all subscribers.
             send_tasks: list[asyncio.Task | None] = [None] * num_subscribers
 
-            if ctx.message.type == MessageType.EDIT_MESSAGE:
+            if ctx.message.type in (MessageType.DELETE_MESSAGE, MessageType.EDIT_MESSAGE):
+                if ctx.message.type == MessageType.DELETE_MESSAGE:
+                    action_str, acting_str = "deleted for", "deleting"
+                    original_msg_timestamp = ctx.message.remote_delete_timestamp
+                else:
+                    action_str, acting_str = "edited for", "editing"
+                    original_msg_timestamp = ctx.message.target_sent_timestamp
+
                 self.broadcastbot.storage_lock.acquire()
                 prev_timestamps = ctx.bot.storage.read(
-                    f"broadcast-uuid-{subscriber_uuid}-timestamp-{ctx.message.target_sent_timestamp}",
+                    f"broadcast-uuid-{subscriber_uuid}-timestamp-{original_msg_timestamp}",
                 )
                 self.broadcastbot.storage_lock.release()
-                edit_timestamps = TimestampData.model_validate(prev_timestamps).broadcast_timestamps
-                action_str, acting_str = "edited for", "editing"
+                to_modify_timestamps = TimestampData.model_validate(prev_timestamps).broadcast_timestamps
+
             else:
-                edit_timestamps = {}
+                to_modify_timestamps = {}
 
             for i, subscriber in enumerate(self.broadcastbot.subscribers):
-                send_tasks[i] = asyncio.create_task(
-                    self.broadcastbot.send(
+                if ctx.message.type == MessageType.DELETE_MESSAGE:
+                    subscriber_task = ctx.bot.remote_delete(subscriber, to_modify_timestamps.get(subscriber))
+                else:
+                    subscriber_task = self.broadcastbot.send(
                         subscriber,
                         message,
                         base64_attachments=attachments,
                         link_preview=link_preview,
-                        edit_timestamp=edit_timestamps.get(subscriber),
+                        edit_timestamp=to_modify_timestamps.get(subscriber),
                         view_once=ctx.message.view_once,
-                    ),
-                )
+                    )
+                send_tasks[i] = asyncio.create_task(subscriber_task)
 
                 # Avoid rate limiting by waiting a random time between messages
                 await asyncio.sleep(random.uniform(0.5, 1))  # noqa: S311
@@ -123,17 +132,19 @@ class Broadcast(Command):
             broadcast_timestamps = await self.check_send_tasks_results(send_tasks, action_str)
             send_tasks_checked = True
 
-            broadcastdata = TimestampData(
-                author=subscriber_uuid,
-                timestamp=ctx.message.timestamp,
-                broadcast_timestamps=broadcast_timestamps,
-            )
-            self.broadcastbot.storage_lock.acquire()
-            ctx.bot.storage.save(
-                f"broadcast-uuid-{subscriber_uuid}-timestamp-{ctx.message.timestamp}",
-                broadcastdata.model_dump(),
-            )
-            self.broadcastbot.storage_lock.release()
+            if ctx.message.type != MessageType.DELETE_MESSAGE:
+                broadcastdata = TimestampData(
+                    author=subscriber_uuid,
+                    timestamp=ctx.message.timestamp,
+                    broadcast_timestamps=broadcast_timestamps,
+                )
+
+                self.broadcastbot.storage_lock.acquire()
+                ctx.bot.storage.save(
+                    f"broadcast-uuid-{subscriber_uuid}-timestamp-{ctx.message.timestamp}",
+                    broadcastdata.model_dump(),
+                )
+                self.broadcastbot.storage_lock.release()
             timestamp_data_saved = True
 
             await self.broadcastbot.message_handler.delete_attachments(ctx)
@@ -161,7 +172,7 @@ class Broadcast(Command):
                 if attachments_deleted is False:
                     await self.broadcastbot.message_handler.delete_attachments(ctx)
 
-                if timestamp_data_saved is False:
+                if timestamp_data_saved is False and ctx.message.type != MessageType.DELETE_MESSAGE:
                     broadcastdata = TimestampData(
                         author=subscriber_uuid,
                         timestamp=ctx.message.timestamp,
@@ -179,6 +190,12 @@ class Broadcast(Command):
     async def handle(self, ctx: ChatContext) -> None:
         message = ctx.message.text
         subscriber_uuid = ctx.message.source_uuid
+
+        # Delete a previously broadcasted message
+        if ctx.message.type == MessageType.DELETE_MESSAGE:
+            await self.broadcast(ctx)
+            return
+
         if message is None:
             if ctx.message.base64_attachments == []:
                 self.broadcastbot.logger.info("Received reaction, sticker or similar from %s", subscriber_uuid)

@@ -60,7 +60,7 @@ class Admin:
         admin = Admin()
         with Admin.save_path.open() as f:
             admin.admin_id = f.readline().rstrip()
-            admin._hashed_password = f.readline().encode()  # noqa: SLF001
+            admin._hashed_password = f.readline().encode()
 
         if admin.admin_id == "":
             admin.admin_id = None

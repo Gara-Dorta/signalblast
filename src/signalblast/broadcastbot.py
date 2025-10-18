@@ -79,8 +79,9 @@ class BroadcasBot:
     def register(
         self,
         command: Command,
-        contacts: list[str] | bool | None = True,  # noqa: FBT002
-        groups: list[str] | bool | None = False,  # noqa: FBT002
+        *,
+        contacts: list[str] | bool | None = True,
+        groups: list[str] | bool | None = False,
         f: Callable[[Message], bool] | None = None,
     ) -> None:
         self._bot.register(command=command, contacts=contacts, groups=groups, f=f)

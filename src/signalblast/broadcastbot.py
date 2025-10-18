@@ -28,6 +28,7 @@ class BroadcasBot:
         self.ping_job: Job | None = None
         self.last_msg_user_uuid: str | None = None
         self.health_check_task: Task | None = None
+        self.log_rollover_task: Task | None = None
 
         # Type hint the other attributes that will get defined in load_data
         self.subscribers: Users

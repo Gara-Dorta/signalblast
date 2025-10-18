@@ -22,6 +22,7 @@ from signalblast.commands import (
     Unsubscribe,
 )
 from signalblast.health_check import health_check
+from signalblast.log_rollover import rotate_logs_periodically
 from signalblast.utils import create_or_set_logger, get_code_data_path
 
 LOGGING_LEVEL = logging.INFO
@@ -80,6 +81,8 @@ async def initialise_bot(  # noqa: PLR0913 Too many arguments in function defini
 
     if health_check_receiver is not None:
         bot.health_check_task = asyncio.create_task(health_check(bot, health_check_receiver, health_check_port))
+
+    bot.log_rollover_task = asyncio.create_task(rotate_logs_periodically(bot))
 
     return bot
 

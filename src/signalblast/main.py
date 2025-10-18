@@ -4,7 +4,6 @@ import argparse
 import asyncio
 import logging
 import os
-from pathlib import Path
 
 from signalblast.broadcastbot import BroadcasBot
 from signalblast.commands import (
@@ -28,7 +27,7 @@ from signalblast.utils import create_or_set_logger, get_code_data_path
 LOGGING_LEVEL = logging.INFO
 
 # LOG_FILE_PATH = None # Log to console
-LOG_FILE_PATH = Path("signalblast.log")
+LOG_FILE_PATH = get_code_data_path() / "signalblast.log"
 
 create_or_set_logger("signalbot", logging.WARNING, LOG_FILE_PATH)
 create_or_set_logger("apscheduler", logging.WARNING, LOG_FILE_PATH)

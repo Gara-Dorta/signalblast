@@ -4,4 +4,4 @@ updates:
   - package-ecosystem: "uv"
     directory: "/"
     schedule:
-      interval: "monthly"
+      interval: "semiannually"

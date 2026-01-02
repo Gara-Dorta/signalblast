@@ -24,7 +24,8 @@ class MessageHandler:
             await ctx.bot.delete_attachment(attachment_filename)
 
         for link_preview in ctx.message.link_previews:
-            await ctx.bot.delete_attachment(link_preview.id)
+            if link_preview.id is not None:
+                await ctx.bot.delete_attachment(link_preview.id)
 
     @staticmethod
     def _compose_help_message(*, add_admin_commands: bool) -> str:

@@ -152,8 +152,7 @@ if __name__ == "__main__":
         value_error_msg = "The bot phone number is not set"
         raise ValueError(value_error_msg)
 
-    loop = asyncio.get_event_loop()
-    bot = loop.run_until_complete(
+    bot = asyncio.run(
         initialise_bot(
             signal_service=args.signal_service,
             phone_number=args.phone_number,

@@ -29,6 +29,6 @@ RUN uv sync --no-dev
 # COPY dist/signalblast-$SIGNALBLAST_VERSION-py3-none-any.whl signalblast-$SIGNALBLAST_VERSION-py3-none-any.whl
 # RUN uv venv && uv pip install --no-cache signalblast-$SIGNALBLAST_VERSION-py3-none-any.whl
 
-ENTRYPOINT ["uv", "run", "python", "-m", "signalblast.main"]
+ENTRYPOINT ["uv", "run", "--no-sync", "--locked", "python", "-m", "signalblast.main"]
 
 HEALTHCHECK --interval=8h --start-period=15s --retries=3 CMD curl -f http://localhost:15556 || exit 1

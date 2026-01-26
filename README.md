@@ -44,7 +44,7 @@ This will pull the project docker images from https://hub.docker.com/r/eradorta/
 * Clone the repo
 * Install [uv](https://docs.astral.sh/uv/)
 * Install the repo and the dependencies in a new virtual environment with `uv sync`
-* Install the pre-commit hook `uv run pre-commit install`
+* Install the prek hook `uv run prek install`
 * Run
   * Directly via `uv run python -m signalblast.main`
   * Via systemd with `systemd/signalblast.service`

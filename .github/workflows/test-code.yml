@@ -24,8 +24,8 @@ jobs:
       - name: Install the project and its dependencies
         run: uv sync
 
-      - name: Run pre-commit
-        run: uv run pre-commit run --all
+      - name: Run prek
+        run: uv run prek run --all
 
     # TODO: Enable when unit tests are added
     #   - name: Run Pytest

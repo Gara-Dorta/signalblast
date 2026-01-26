@@ -1,6 +1,5 @@
 repos:
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
+  - repo: builtin
     hooks:
       - id: check-added-large-files
       - id: check-case-conflict
@@ -9,13 +8,16 @@ repos:
       - id: check-yaml
       - id: check-toml
       - id: check-json
-      - id: debug-statements
       - id: end-of-file-fixer
       - id: mixed-line-ending
+      - id: trailing-whitespace
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: debug-statements
       - id: name-tests-test
         args: ["--pytest-test-first"]
-      - id: requirements-txt-fixer
-      - id: trailing-whitespace
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.1

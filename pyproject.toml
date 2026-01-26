@@ -16,17 +16,17 @@ keywords = [
 dependencies = [
     "bcrypt>=5.0.0",
     "pydantic>=2.12.3",
-    "signalbot>=0.20.0",
+    "signalbot",
 ]
 
 [dependency-groups]
 dev = [
     "hatch>=1.15.1",
-    "pre-commit>=4.3.0",
+    "prek>=0.3.0",
 ]
 
-# [tool.uv.sources]
-# signalbot = { path = "../signalbot", editable = true }
+[tool.uv.sources]
+signalbot = { path = "../signalbot", editable = true }
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]

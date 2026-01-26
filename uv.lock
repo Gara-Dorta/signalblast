@@ -1437,7 +1437,7 @@ dev = [
 requires-dist = [
     { name = "bcrypt", specifier = ">=5.0.0" },
     { name = "pydantic", specifier = ">=2.12.3" },
-    { name = "signalbot", editable = "../signalbot" },
+    { name = "signalbot", specifier = ">=0.20.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -1449,7 +1449,7 @@ dev = [
 [[package]]
 name = "signalbot"
 version = "0.21.0"
-source = { editable = "../signalbot" }
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "apscheduler" },
@@ -1458,18 +1458,10 @@ dependencies = [
     { name = "pydantic" },
     { name = "websockets" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiohttp", specifier = ">=3.11.9" },
-    { name = "apscheduler", specifier = ">=3.11.0" },
-    { name = "packaging", specifier = ">=25.0" },
-    { name = "phonenumbers", specifier = ">=8.13.54" },
-    { name = "pydantic", specifier = ">=2.12.3" },
-    { name = "redis", marker = "extra == 'redis'", specifier = ">=5.2.0" },
-    { name = "websockets", specifier = ">=14.1" },
+sdist = { url = "https://files.pythonhosted.org/packages/53/11/4757a803283d28d3fe70cc6be2df94e9c2561822052a4488c95f38c01afe/signalbot-0.21.0.tar.gz", hash = "sha256:06e28bbbe8f73c31d03ff201ac38dfe27488d641cfd553dea56cd24054d524c7", size = 21142, upload-time = "2025-12-20T10:35:23.604Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/47/43/5c99d216ca493be5ae09dd54967564052e2db7c06152f6f47244efc52ca1/signalbot-0.21.0-py3-none-any.whl", hash = "sha256:6dcbc814f502c743c1d31e447727ed2611931522bf193c9445e2841fb16a8018", size = 21441, upload-time = "2025-12-20T10:35:22.409Z" },
 ]
-provides-extras = ["redis"]
 
 [[package]]
 name = "sniffio"

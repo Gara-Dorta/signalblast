@@ -25,7 +25,7 @@ jobs:
         run: uv sync
 
       - name: Run prek
-        run: uv run prek run --all
+        run: uv run prek run --all-files
 
     # TODO: Enable when unit tests are added
     #   - name: Run Pytest

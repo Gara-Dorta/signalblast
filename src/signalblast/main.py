@@ -23,12 +23,12 @@ from signalblast.commands import (
 )
 from signalblast.health_check import health_check
 from signalblast.log_rollover import rotate_logs_periodically
-from signalblast.utils import create_or_set_logger, get_code_data_path
+from signalblast.utils import create_or_set_logger, get_data_path
 
 LOGGING_LEVEL = logging.INFO
 
 # LOG_FILE_PATH = None # Log to console
-LOG_FILE_PATH = get_code_data_path() / "signalblast.log"
+LOG_FILE_PATH = get_data_path() / "signalblast.log"
 
 create_or_set_logger("signalbot", logging.WARNING, LOG_FILE_PATH)
 create_or_set_logger("apscheduler", logging.WARNING, LOG_FILE_PATH)
@@ -47,10 +47,10 @@ async def initialise_bot(  # noqa: PLR0913 Too many arguments in function defini
     config = {
         "signal_service": signal_service,
         "phone_number": phone_number,
-        "storage": {"type": "sqlite", "sqlite_db": get_code_data_path() / "signalblast.db", "check_same_thread": False},
+        "storage": {"type": "sqlite", "sqlite_db": get_data_path() / "signalblast.db", "check_same_thread": False},
     }
 
-    get_code_data_path().mkdir(parents=True, exist_ok=True)
+    get_data_path().mkdir(parents=True, exist_ok=True)
 
     logger = create_or_set_logger("signalblast", LOGGING_LEVEL, LOG_FILE_PATH)
 

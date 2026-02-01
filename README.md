@@ -28,7 +28,7 @@ This will pull the project docker images from https://hub.docker.com/r/eradorta/
 
 * Install [docker](https://www.docker.com/).
 * Download the [docker-compose.yml](https://github.com/Era-Dorta/signalblast/blob/main/docker-compose.yaml) file.
-* Create a folder called `signalblast_data`
+* Create a data folder `mkdir -p $HOME/.local/share/signalblast`
 * Define the relevant environment variables
   ```bash
   export DOCKER_TAG="The version of signalblast to run, can be latest"

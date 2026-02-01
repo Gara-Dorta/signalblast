@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Create the wheel for signalblast
-uv build
+uv build --clear
 
 SIGNALBLAST_VERSION=$(uvx hatch version)
 

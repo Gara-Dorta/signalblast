@@ -20,7 +20,7 @@ repos:
         args: ["--pytest-test-first"]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.1
+    rev: v0.14.14
     hooks:
       - id: ruff
         types_or: [python]
@@ -33,6 +33,6 @@ repos:
       - id: hadolint-docker
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.9.3
+    rev: 0.9.28
     hooks:
       - id: uv-lock

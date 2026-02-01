@@ -1,6 +1,24 @@
 repos:
-  - repo: builtin
+  # - repo: builtin
+  #   rev: v0.0.0 # Dummy rev for builtin hooks
+  #   hooks:
+  #     - id: check-added-large-files
+  #     - id: check-case-conflict
+  #     - id: check-merge-conflict
+  #     - id: check-symlinks
+  #     - id: check-yaml
+  #     - id: check-toml
+  #     - id: check-json
+  #     - id: end-of-file-fixer
+  #     - id: mixed-line-ending
+  #     - id: trailing-whitespace
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
     hooks:
+      - id: debug-statements
+      - id: name-tests-test
+        args: ["--pytest-test-first"]
       - id: check-added-large-files
       - id: check-case-conflict
       - id: check-merge-conflict
@@ -11,13 +29,6 @@ repos:
       - id: end-of-file-fixer
       - id: mixed-line-ending
       - id: trailing-whitespace
-
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
-    hooks:
-      - id: debug-statements
-      - id: name-tests-test
-        args: ["--pytest-test-first"]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.1
@@ -36,3 +47,8 @@ repos:
     rev: 0.9.3
     hooks:
       - id: uv-lock
+
+# Config for https://pre-commit.ci
+ci:
+    autoupdate_schedule: quarterly
+    skip: [hadolint-docker]

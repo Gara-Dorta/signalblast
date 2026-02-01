@@ -2,7 +2,7 @@
 REPO_DIR=$(dirname $(dirname $(realpath $0)))
 
 # Create the wheel for signalblast
-uv build
+uv build --clear
 
 SIGNALBLAST_VERSION=$(uvx hatch version)
 

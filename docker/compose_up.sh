@@ -14,4 +14,9 @@ export SIGNALBLAST_HEALTHCHECK_RECEIVER=""
 export SIGNALBLAST_WELCOME_MESSAGE=""
 export SIGNALBLAST_INSTRUCTIONS_URL=""
 
+if [ -z "$SIGNALBLAST_PHONE_NUMBER" ]; then
+  echo "Error: set the variables in this script!" >&2
+  exit 1
+fi
+
 docker compose up

@@ -28,7 +28,7 @@ services:
     network_mode: "host"
     volumes:
       - "$HOME/.local/share/signal-api/:/home/user/.local/share/signal-api/"
-      - "./signalblast_data:/home/user/signalblast/signalblast-$SIGNALBLAST_VERSION/src/signalblast/data/"
+      - "$HOME/.local/share/signalblast/:/home/user/.local/share/signalblast/"
     environment:
       - SIGNALBLAST_PHONE_NUMBER=$SIGNALBLAST_PHONE_NUMBER
       - SIGNALBLAST_PASSWORD=$SIGNALBLAST_PASSWORD

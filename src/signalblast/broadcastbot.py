@@ -11,7 +11,7 @@ from signalbot import Context as ChatContext
 from signalblast.admin import Admin
 from signalblast.message_handler import MessageHandler
 from signalblast.users import Users
-from signalblast.utils import TimestampData, get_code_data_path
+from signalblast.utils import TimestampData, get_data_path
 
 if TYPE_CHECKING:
     from asyncio import Task
@@ -20,8 +20,8 @@ if TYPE_CHECKING:
 
 
 class BroadcasBot:
-    subscribers_data_path = get_code_data_path() / "subscribers.csv"
-    banned_users_data_path = get_code_data_path() / "banned_users.csv"
+    subscribers_data_path = get_data_path() / "subscribers.csv"
+    banned_users_data_path = get_data_path() / "banned_users.csv"
 
     def __init__(self, config: dict) -> None:
         self._bot = SignalBot(config)

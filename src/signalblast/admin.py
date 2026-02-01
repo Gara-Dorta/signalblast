@@ -1,10 +1,10 @@
 import bcrypt
 
-from signalblast.utils import get_code_data_path
+from signalblast.utils import get_data_path
 
 
 class Admin:
-    save_path = get_code_data_path() / "admin.txt"
+    save_path = get_data_path() / "admin.txt"
 
     def __init__(self) -> None:
         self.admin_id: str = None

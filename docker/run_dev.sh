@@ -9,6 +9,7 @@ echo $REPO_DIR
 docker run \
  --rm \
  -v $HOME/.local/share/signal-api/:/home/user/.local/share/signal-api/ \
+ -v $HOME/.local/share/signalblast/:/home/user/.local/share/signalblast/ \
  -v $REPO_DIR:/home/user/signalblast \
  --interactive=true \
  --tty=true \

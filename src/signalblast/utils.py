@@ -1,3 +1,4 @@
+import os
 from logging import WARNING, Formatter, Logger, StreamHandler, getLogger
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
@@ -18,8 +19,8 @@ def create_or_set_logger(name: str | None, logging_level: int = WARNING, log_fil
     return logger
 
 
-def get_code_data_path() -> Path:
-    return Path(__file__).parent.absolute() / "data"
+def get_data_path() -> Path:
+    return Path(os.getenv("SIGNALBLAST_CONFIG_DIR", Path.home() / ".local/share/signalblast"))
 
 
 class TimestampData(BaseModel):

@@ -14,6 +14,7 @@ DOCKER_TAG="${SIGNALBLAST_VERSION//+/-}"
 docker run \
  --rm \
  -v $HOME/.local/share/signal-api/:/home/user/.local/share/signal-api/ \
+ -v $HOME/.local/share/signalblast/:/home/user/.local/share/signalblast/ \
  --network host \
  -e SIGNALBLAST_PHONE_NUMBER='PHONE_NUMBER' \
  -e SIGNALBLAST_PASSWORD='PASSWORD' \

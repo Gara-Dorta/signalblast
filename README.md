@@ -18,7 +18,7 @@ Once the bot is up and running, several commands are available:
 ## Installation
 
 ### Option 1: local python environment
-* Set up signalbot as specified [here](https://github.com/filipre/signalbot)
+* Set up signalbot as specified [here](https://github.com/signalbot-org/signalbot)
 * Create a new virtual environment, [uv](https://docs.astral.sh/uv/) is recommended
 * Install with `pip install signalblast`
 * Run via `python -m signalblast.main`

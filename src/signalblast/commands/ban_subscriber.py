@@ -29,7 +29,7 @@ class BanSubscriber(Command):
             user_phone_number = self.broadcastbot.subscribers.get_phone_number(user_id)
             await self.broadcastbot.banned_users.add(user_id, user_phone_number)
 
-            await self.broadcastbot.send(user_id, "You have been banned")
+            await ctx.bot.send(user_id, "You have been banned")
             await self.broadcastbot.reply_with_warn_on_failure(ctx, "Successfully banned user")
 
             self.broadcastbot.logger.info("Banned user %s", user_id)

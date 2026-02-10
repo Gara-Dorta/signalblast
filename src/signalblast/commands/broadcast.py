@@ -24,7 +24,12 @@ class Broadcast(Command):
     def is_valid_command(self, message: str, invalid_command: Pattern) -> bool:
         return any(regex != invalid_command and regex.search(message) is not None for regex in CommandRegex)
 
-    async def check_send_tasks_results(self, send_tasks: list[asyncio.Task | None], action_str: str) -> dict[str, int]:
+    async def check_send_tasks_results(
+        self,
+        ctx: ChatContext,
+        send_tasks: list[asyncio.Task | None],
+        action_str: str,
+    ) -> dict[str, int]:
         timestamp_data = {}
         for send_task, subscriber in zip(send_tasks, self.broadcastbot.subscribers, strict=False):
             if send_task is not None:
@@ -47,7 +52,7 @@ class Broadcast(Command):
                 remove_message += "Please update signal, remove old linked devices and try subscribing again."
                 with contextlib.suppress(Exception):
                     # Most likely will fail to send the message but try anyway
-                    await self.broadcastbot.send(subscriber, remove_message)
+                    await ctx.bot.send(subscriber, remove_message)
 
         for subscriber in subscribers_to_remove:
             del self.subscribers_num_fails[subscriber]
@@ -66,12 +71,12 @@ class Broadcast(Command):
         try:
             subscriber_uuid = ctx.message.source_uuid
             if subscriber_uuid in self.broadcastbot.banned_users:
-                await self.broadcastbot.send(subscriber_uuid, "This number is not allowed to send messages")
+                await ctx.bot.send(subscriber_uuid, "This number is not allowed to send messages")
                 self.broadcastbot.logger.info("%s tried to broadcast but they are banned", subscriber_uuid)
                 return
 
             if subscriber_uuid not in self.broadcastbot.subscribers:
-                await self.broadcastbot.send(subscriber_uuid, self.broadcastbot.must_subscribe_message)
+                await ctx.bot.send(subscriber_uuid, self.broadcastbot.must_subscribe_message)
                 self.broadcastbot.logger.info("%s tried to broadcast but they are not subscribed", subscriber_uuid)
                 return
 
@@ -120,7 +125,7 @@ class Broadcast(Command):
                 if ctx.message.type == MessageType.DELETE_MESSAGE:
                     subscriber_fn = ctx.bot.remote_delete(subscriber, to_modify_timestamps.get(subscriber))
                 else:
-                    subscriber_fn = self.broadcastbot.send(
+                    subscriber_fn = ctx.bot.send(
                         subscriber,
                         message,
                         base64_attachments=attachments,
@@ -145,7 +150,7 @@ class Broadcast(Command):
 
             await asyncio.wait(send_tasks)
 
-            broadcast_timestamps = await self.check_send_tasks_results(send_tasks, action_str)
+            broadcast_timestamps = await self.check_send_tasks_results(ctx, send_tasks, action_str)
             send_tasks_checked = True
 
             if ctx.message.type != MessageType.DELETE_MESSAGE:

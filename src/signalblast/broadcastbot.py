@@ -45,37 +45,6 @@ class BroadcasBot:
         self.welcome_message: str
         self.storage_lock: Lock
 
-    async def send(  # noqa: PLR0913 Too many arguments in function definition
-        self,
-        receiver: str,
-        text: str,
-        *,
-        base64_attachments: list | None = None,
-        link_preview: dict | None = None,
-        quote_author: str | None = None,
-        quote_mentions: list | None = None,
-        quote_message: str | None = None,
-        quote_timestamp: int | None = None,
-        mentions: list | None = None,
-        edit_timestamp: int | None = None,
-        text_mode: str | None = None,
-        view_once: bool = False,
-    ) -> int:
-        return await self._bot.send(
-            receiver=receiver,
-            text=text,
-            base64_attachments=base64_attachments,
-            link_preview=link_preview,
-            quote_author=quote_author,
-            quote_mentions=quote_mentions,
-            quote_message=quote_message,
-            quote_timestamp=quote_timestamp,
-            mentions=mentions,
-            edit_timestamp=edit_timestamp,
-            text_mode=text_mode,
-            view_once=view_once,
-        )
-
     def register(
         self,
         command: Command,
@@ -150,7 +119,7 @@ class BroadcasBot:
         if self.admin.admin_id != subscriber_uuid:
             await self.reply_with_warn_on_failure(ctx, "I'm sorry but you are not an admin")
             msg_to_admin = self.message_handler.compose_message_to_admin(f"Tried to {command}", subscriber_uuid)
-            await self.send(self.admin.admin_id, msg_to_admin)
+            await ctx.bot.send(self.admin.admin_id, msg_to_admin)
             self.logger.info("%s tried to %s but admin is %s", subscriber_uuid, command, self.admin.admin_id)
             return False
 

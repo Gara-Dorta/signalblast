@@ -29,7 +29,7 @@ class AddAdmin(Command):
                         "You are no longer an admin!",
                         subscriber_uuid,
                     )
-                    await self.broadcastbot.send(previous_admin, msg_to_admin)
+                    await ctx.bot.send(previous_admin, msg_to_admin)
                 log_message = f"Previous admin was {previous_admin}, new admin is {subscriber_uuid}"
                 self.broadcastbot.logger.info(log_message)
             else:
@@ -39,7 +39,7 @@ class AddAdmin(Command):
                         "Tried to be added as admin",
                         subscriber_uuid,
                     )
-                    await self.broadcastbot.send(previous_admin, msg_to_admin)
+                    await ctx.bot.send(previous_admin, msg_to_admin)
                 self.broadcastbot.logger.warning("%s failed password check for add_admin", subscriber_uuid)
         except Exception:
             self.broadcastbot.logger.exception("")

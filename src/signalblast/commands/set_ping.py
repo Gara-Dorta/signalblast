@@ -10,13 +10,13 @@ class SetPing(Command):
         super().__init__()
         self.broadcastbot = bot
 
-    async def _send_ping(self, receiver: str) -> None:
+    async def _send_ping(self, ctx: ChatContext) -> None:
         try:
-            await self.broadcastbot.send(receiver, "Ping")
+            await ctx.send("Ping")
         except Exception:
             self.broadcastbot.logger.exception("")
             try:
-                await self.broadcastbot.send(receiver, "Failed to send ping")
+                await ctx.send("Failed to send ping")
             except Exception:
                 self.broadcastbot.logger.exception("")
 
@@ -45,7 +45,7 @@ class SetPing(Command):
             self._send_ping,
             "interval",
             seconds=int(ping_time),
-            args=[ctx.message.group],
+            args=[ctx],
         )
 
         await self.broadcastbot.reply_with_warn_on_failure(ctx, f"Ping set every {ping_time} seconds")

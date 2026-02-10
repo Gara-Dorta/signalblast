@@ -2,6 +2,7 @@ import asyncio
 import contextlib
 import random
 from collections import defaultdict
+from collections.abc import Awaitable
 from re import Pattern
 
 from signalbot import Command, MessageType
@@ -89,6 +90,11 @@ class Broadcast(Command):
             if message is None:
                 message = ""
 
+            await ctx.start_typing()
+
+            # The typing indicator dissapears after 15 seconds. Restart it until the broadcast is done.
+            typing_job = self.broadcastbot.scheduler.add_job(ctx.start_typing, "interval", seconds=15)
+
             # Broadcast message to all subscribers.
             send_tasks: list[asyncio.Task | None] = [None] * num_subscribers
 
@@ -112,9 +118,9 @@ class Broadcast(Command):
 
             for i, subscriber in enumerate(self.broadcastbot.subscribers):
                 if ctx.message.type == MessageType.DELETE_MESSAGE:
-                    subscriber_task = ctx.bot.remote_delete(subscriber, to_modify_timestamps.get(subscriber))
+                    subscriber_fn = ctx.bot.remote_delete(subscriber, to_modify_timestamps.get(subscriber))
                 else:
-                    subscriber_task = self.broadcastbot.send(
+                    subscriber_fn = self.broadcastbot.send(
                         subscriber,
                         message,
                         base64_attachments=attachments,
@@ -122,7 +128,17 @@ class Broadcast(Command):
                         edit_timestamp=to_modify_timestamps.get(subscriber),
                         view_once=ctx.message.view_once,
                     )
-                send_tasks[i] = asyncio.create_task(subscriber_task)
+                    if subscriber == subscriber_uuid:
+                        # Typing stops after sending/deleting/editing a message, so start typing right after
+                        async def send_to_self(subscriber_fn: Awaitable[int]) -> int:
+                            timestamp = await subscriber_fn
+                            await asyncio.sleep(0.5)
+                            await ctx.start_typing()
+                            return timestamp
+
+                        subscriber_fn = send_to_self(subscriber_fn)
+
+                send_tasks[i] = asyncio.create_task(subscriber_fn)
 
                 # Avoid rate limiting by waiting a random time between messages
                 await asyncio.sleep(random.uniform(0.5, 1))  # noqa: S311
@@ -150,6 +166,8 @@ class Broadcast(Command):
             await self.broadcastbot.message_handler.delete_attachments(ctx)
             attachments_deleted = True
 
+            typing_job.remove()
+            await ctx.stop_typing()
             await self.broadcastbot.reply_with_warn_on_failure(
                 ctx,
                 f"Message {action_str} {len(broadcast_timestamps) - 1} people",

@@ -60,7 +60,7 @@ class BroadcasBot:
         edit_timestamp: int | None = None,
         text_mode: str | None = None,
         view_once: bool = False,
-    ) -> str:
+    ) -> int:
         return await self._bot.send(
             receiver=receiver,
             text=text,

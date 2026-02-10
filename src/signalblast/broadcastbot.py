@@ -1,12 +1,10 @@
-from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from logging import Logger
 from threading import Lock
 from typing import TYPE_CHECKING
 
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from signalbot import Command, Message, SignalBot
 from signalbot import Context as ChatContext
+from signalbot import SignalBot
 
 from signalblast.admin import Admin
 from signalblast.message_handler import MessageHandler
@@ -24,7 +22,7 @@ class BroadcasBot:
     banned_users_data_path = get_data_path() / "banned_users.csv"
 
     def __init__(self, config: dict) -> None:
-        self._bot = SignalBot(config)
+        self.signal_bot = SignalBot(config)
         self.ping_job: Job | None = None
         self.last_msg_user_uuid: str | None = None
         self.health_check_task: Task | None = None
@@ -45,22 +43,10 @@ class BroadcasBot:
         self.welcome_message: str
         self.storage_lock: Lock
 
-    def register(
-        self,
-        command: Command,
-        *,
-        contacts: list[str] | bool | None = True,
-        groups: list[str] | bool | None = False,
-        f: Callable[[Message], bool] | None = None,
-    ) -> None:
-        self._bot.register(command=command, contacts=contacts, groups=groups, f=f)
+        self.scheduler = self.signal_bot.scheduler
 
     def start(self) -> None:
-        self._bot.start()
-
-    @property
-    def scheduler(self) -> AsyncIOScheduler:
-        return self._bot.scheduler
+        self.signal_bot.start()
 
     async def load_data(
         self,
@@ -126,22 +112,22 @@ class BroadcasBot:
         return True
 
     async def set_expiration_time(self, reciver: str, expiration_in_seconds: int) -> None:
-        await self._bot.update_contact(reciver, expiration_in_seconds=expiration_in_seconds)
+        await self.signal_bot.update_contact(reciver, expiration_in_seconds=expiration_in_seconds)
 
     async def set_group_expiration_time(self, group_id: str, expiration_in_seconds: int) -> None:
-        await self._bot.update_group(group_id, expiration_in_seconds=expiration_in_seconds)
+        await self.signal_bot.update_group(group_id, expiration_in_seconds=expiration_in_seconds)
 
     async def delete_old_timestamps(self) -> None:
         """Signal only allows editing messges within 24 hours.
         No point in keeping the information for older messages"""
-        cursor = self._bot.storage._sqlite.execute("SELECT key FROM signalbot")  # noqa: SLF001
+        cursor = self.signal_bot.storage._sqlite.execute("SELECT key FROM signalbot")  # noqa: SLF001
         keys = [row[0] for row in cursor.fetchall()]
         for key in keys:
-            value = TimestampData.model_validate(self._bot.storage.read(key))
+            value = TimestampData.model_validate(self.signal_bot.storage.read(key))
             if datetime.fromtimestamp(value.timestamp / 1000, tz=timezone.utc) < (
                 datetime.now(tz=timezone.utc) - timedelta(days=1)
             ):
                 self.storage_lock.acquire()
-                self._bot.storage.delete(key)
+                self.signal_bot.storage.delete(key)
                 self.storage_lock.release()
                 self.logger.info("Deleted expired key with timestamp: %s", value.timestamp)

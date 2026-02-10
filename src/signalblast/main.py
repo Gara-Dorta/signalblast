@@ -17,6 +17,7 @@ from signalblast.commands import (
     MessageToAdmin,
     RemoveAdmin,
     SetPing,
+    ShowVersion,
     Subscribe,
     UnsetPing,
     Unsubscribe,
@@ -76,6 +77,7 @@ async def initialise_bot(  # noqa: PLR0913 Too many arguments in function defini
     bot.signal_bot.register(MessageToAdmin(bot=bot))
     bot.signal_bot.register(MessageFromAdmin(bot=bot))
     bot.signal_bot.register(LastMsgUserUuid(bot=bot))
+    bot.signal_bot.register(ShowVersion(bot=bot), groups=False)
 
     bot.scheduler.add_job(bot.delete_old_timestamps, "interval", days=1)
 

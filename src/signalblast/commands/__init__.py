@@ -8,6 +8,7 @@ from signalblast.commands.message_from_admin import MessageFromAdmin  # noqa: F4
 from signalblast.commands.message_to_admin import MessageToAdmin  # noqa: F401
 from signalblast.commands.remove_admin import RemoveAdmin  # noqa: F401
 from signalblast.commands.set_ping import SetPing  # noqa: F401
+from signalblast.commands.show_version import ShowVersion  # noqa: F401
 from signalblast.commands.subscribe import Subscribe  # noqa: F401
 from signalblast.commands.unset_ping import UnsetPing  # noqa: F401
 from signalblast.commands.unsubscribe import Unsubscribe  # noqa: F401

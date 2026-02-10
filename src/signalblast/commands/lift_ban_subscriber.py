@@ -33,7 +33,7 @@ class LiftBanSubscriber(Command):
                 self.broadcastbot.logger.info("Could not lift the ban of %s because the user was not banned", user_id)
                 return
 
-            await self.broadcastbot.send(user_id, "You have banned have been lifted, try subscribing again")
+            await ctx.bot.send(user_id, "You have banned have been lifted, try subscribing again")
             await self.broadcastbot.reply_with_warn_on_failure(ctx, "Successfully lifted the ban on the user")
 
             self.broadcastbot.logger.info("Lifted the ban on user %s", user_id)

@@ -12,7 +12,7 @@ async def health_check(bot: BroadcasBot, receiver: str, port: int) -> None:
 
         try:
             # The health check is to send a ping message to receiver
-            await asyncio.wait_for(bot._bot.send(receiver, "Ping"), timeout=30)  # noqa: SLF001
+            await asyncio.wait_for(bot.signal_bot.send(receiver, "Ping"), timeout=30)
             response = "HTTP/1.0 200 OK\r\n\r\nOK \r\n"
 
             bot.logger.info("Health check message sent")

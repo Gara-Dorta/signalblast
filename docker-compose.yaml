@@ -15,6 +15,7 @@ services:
       - "$HOME/.local/share/signal-api:/home/.local/share/signal-cli"
     environment:
       - MODE=json-rpc
+      - JSON_RPC_TRUST_NEW_IDENTITIES=always
     restart: always
     labels:
       autoheal: true

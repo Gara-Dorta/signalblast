@@ -20,15 +20,25 @@ Once the bot is up and running, several commands are available:
 ### Option 1: local python environment
 * Set up signalbot as specified [here](https://github.com/signalbot-org/signalbot)
 * Create a new virtual environment, [uv](https://docs.astral.sh/uv/) is recommended
-* Install with `pip install signalblast`
-* Run via `python -m signalblast.main`
+* Install with
+  ```bash
+  pip install signalblast
+  ```
+* Run via
+  ```bash
+  python -m signalblast.main
+  ```
 
 ### Option 2: docker compose
 This will pull the project docker images from https://hub.docker.com/r/eradorta/signalblast
 
 * Install [docker](https://www.docker.com/).
+* Configure signal-cli-rest-api as specified [here](https://signalbot-org.github.io/signalbot/latest/getting_started/#setup-signal-cli-rest-api)
 * Download the [docker-compose.yml](https://github.com/Era-Dorta/signalblast/blob/main/docker-compose.yaml) file.
-* Create a data folder `mkdir -p $HOME/.local/share/signalblast`
+* Create a data folder
+  ```bash
+  mkdir -p $HOME/.local/share/signalblast
+  ```
 * Define the relevant environment variables
   ```bash
   export DOCKER_TAG="The version of signalblast to run, can be latest"
@@ -36,7 +46,10 @@ This will pull the project docker images from https://hub.docker.com/r/eradorta/
   export SIGNALBLAST_PASSWORD="The password for the admin"
   export SIGNALBLAST_HEALTHCHECK_RECEIVER="The contact or group to send health check messages"
   ```
-* Run via docker compose: `docker compose up`
+* Run via docker compose:
+  ```bash
+  docker compose up
+  ```
 
 ## Development
 

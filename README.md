@@ -34,17 +34,14 @@ This will pull the project docker images from https://hub.docker.com/r/eradorta/
 
 * Install [docker](https://www.docker.com/).
 * Configure signal-cli-rest-api as specified [here](https://signalbot-org.github.io/signalbot/latest/getting_started/#setup-signal-cli-rest-api)
-* Download the [docker-compose.yml](https://github.com/Era-Dorta/signalblast/blob/main/docker-compose.yaml) file.
+* Download the [docker-compose.yml](https://github.com/Gara-Dorta/signalblast/blob/main/docker-compose.yaml) and [.env.example](https://github.com/Gara-Dorta/signalblast/blob/main/.env.example) files.
 * Create a data folder
   ```bash
   mkdir -p $HOME/.local/share/signalblast
   ```
-* Define the relevant environment variables
+* Create your `.env` file from the example and fill in the values
   ```bash
-  export DOCKER_TAG="The version of signalblast to run, can be latest"
-  export SIGNALBLAST_PHONE_NUMBER="The phone number of the bot"
-  export SIGNALBLAST_PASSWORD="The password for the admin"
-  export SIGNALBLAST_HEALTHCHECK_RECEIVER="The contact or group to send health check messages"
+  cp .env.example .env
   ```
 * Run via docker compose:
   ```bash

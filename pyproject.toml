@@ -2,7 +2,7 @@
 name = "signalblast"
 dynamic = ["version"]
 description = "Broadcast bot for Signal"
-authors = [{name = "Era Dorta"}]
+authors = [{name = "Gara Dorta"}]
 readme = "README.md"
 requires-python = ">=3.14"
 classifiers = [

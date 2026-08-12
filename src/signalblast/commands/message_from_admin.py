@@ -1,26 +1,25 @@
-from signalbot import Command, regex_triggered
-from signalbot import Context as ChatContext
+from signalbot import DataMessageContext, DataMessageHandler, ReceiptType, SendMessage, regex_triggered
 
 from signalblast.broadcastbot import BroadcasBot
 from signalblast.commands_strings import AdminCommandStrings, CommandRegex
 
 
-class MessageFromAdmin(Command):
+class MessageFromAdmin(DataMessageHandler):
     def __init__(self, bot: BroadcasBot) -> None:
         super().__init__()
         self.broadcastbot = bot
 
     @regex_triggered(CommandRegex.msg_from_admin)
-    async def handle(self, ctx: ChatContext) -> None:
+    async def handle_data_message(self, context: DataMessageContext) -> None:
         try:
-            await ctx.receipt(receipt_type="read")
+            await context.send_receipt(ReceiptType.READ)
 
             message = self.broadcastbot.message_handler.remove_command_from_message(
-                ctx.message.text,
+                context.message.text,
                 AdminCommandStrings.msg_from_admin,
             )
 
-            if not await self.broadcastbot.is_user_admin(ctx, AdminCommandStrings.msg_from_admin):
+            if not await self.broadcastbot.is_user_admin(context, AdminCommandStrings.msg_from_admin):
                 return
 
             user_id, message = message.split(" ", 1)
@@ -32,14 +31,14 @@ class MessageFromAdmin(Command):
                     confirmation = None
                 if confirmation != "!force":
                     warn_message = "User is not in subscribers list, use !reply <uuid> !force to message them"
-                    await self.broadcastbot.reply_with_warn_on_failure(ctx, warn_message)
+                    await self.broadcastbot.reply_with_warn_on_failure(context, warn_message)
                     return
 
             message = "Admin: " + message
-            attachments = self.broadcastbot.message_handler.empty_list_to_none(ctx.message.base64_attachments)
+            attachments = self.broadcastbot.message_handler.extract_base64_attachments(context.message.attachments)
 
-            await ctx.bot.send(user_id, message, base64_attachments=attachments)
-            await self.broadcastbot.reply_with_warn_on_failure(ctx, "Message sent")
+            await context.bot.messages.send(SendMessage(text=message, base64_attachments=attachments), user_id)
+            await self.broadcastbot.reply_with_warn_on_failure(context, "Message sent")
             self.broadcastbot.logger.info(
                 "Sent message from admin %s to user %s",
                 self.broadcastbot.admin.admin_id,
@@ -48,6 +47,6 @@ class MessageFromAdmin(Command):
         except Exception:
             self.broadcastbot.logger.exception("")
             try:
-                await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed to send the message to the user!")
+                await self.broadcastbot.reply_with_warn_on_failure(context, "Failed to send the message to the user!")
             except Exception:
                 self.broadcastbot.logger.exception("")

@@ -1,18 +1,17 @@
-from signalbot import Command, regex_triggered
-from signalbot import Context as ChatContext
+from signalbot import DataMessageContext, DataMessageHandler, ReceiptType, regex_triggered
 
 from signalblast.broadcastbot import BroadcasBot
 from signalblast.commands_strings import CommandRegex
 
 
-class Subscribe(Command):
+class Subscribe(DataMessageHandler):
     def __init__(self, bot: BroadcasBot) -> None:
         super().__init__()
         self.broadcastbot = bot
 
-    async def subscribe(self, ctx: ChatContext, *, verbose: bool = False) -> None:
+    async def subscribe(self, ctx: DataMessageContext, *, verbose: bool = False) -> None:
         try:
-            await ctx.receipt(receipt_type="read")
+            await ctx.send_receipt(ReceiptType.READ)
 
             subscriber_uuid = ctx.message.source_uuid
             if subscriber_uuid in self.broadcastbot.subscribers:
@@ -43,5 +42,5 @@ class Subscribe(Command):
                 self.broadcastbot.logger.exception("")
 
     @regex_triggered(CommandRegex.subscribe)
-    async def handle(self, ctx: ChatContext) -> None:
-        await Subscribe.subscribe(self, ctx, verbose=True)
+    async def handle_data_message(self, context: DataMessageContext) -> None:
+        await Subscribe.subscribe(self, context, verbose=True)

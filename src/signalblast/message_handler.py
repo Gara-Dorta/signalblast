@@ -1,4 +1,4 @@
-from signalbot import Context
+from signalbot import Attachment, Context, LinkPreview, Preview
 
 from signalblast.commands_strings import AdminCommandArgs, AdminCommandStrings, PublicCommandStrings
 
@@ -19,13 +19,34 @@ class MessageHandler:
 
         return attachments
 
-    async def delete_attachments(self, ctx: Context) -> None:
-        for attachment_filename in ctx.message.attachments_local_filenames:
-            await ctx.bot.delete_attachment(attachment_filename)
+    def extract_base64_attachments(self, attachments: list[Attachment] | None) -> list[str] | None:
+        if not attachments:
+            return None
+        base64_attachments = [a.base64_content for a in attachments if a.base64_content is not None]
+        return self.empty_list_to_none(base64_attachments)
 
-        for link_preview in ctx.message.link_previews:
-            if link_preview.id is not None:
-                await ctx.bot.delete_attachment(link_preview.id)
+    def extract_link_preview(self, previews: list[Preview] | None) -> LinkPreview | None:
+        if not previews:
+            return None
+        preview = previews[0]
+        if preview.base64_thumbnail is None or preview.title is None or preview.url is None:
+            return None
+        return LinkPreview(
+            description=preview.description or "",
+            title=preview.title,
+            url=preview.url,
+            thumbnail=preview.base64_thumbnail,
+        )
+
+    async def delete_attachments(self, ctx: Context) -> None:
+        if ctx.message.attachments:
+            for attachment in ctx.message.attachments:
+                await ctx.bot.attachments.delete(attachment)
+
+        if ctx.message.previews:
+            for preview in ctx.message.previews:
+                if preview.image is not None:
+                    await ctx.bot.attachments.delete(preview.image)
 
     @staticmethod
     def _compose_help_message(*, add_admin_commands: bool) -> str:

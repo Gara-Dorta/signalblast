@@ -1,26 +1,25 @@
-from signalbot import Command, regex_triggered
-from signalbot import Context as ChatContext
+from signalbot import DataMessageContext, DataMessageHandler, ReceiptType, SendMessage, regex_triggered
 
 from signalblast.broadcastbot import BroadcasBot
 from signalblast.commands_strings import AdminCommandStrings, CommandRegex
 
 
-class BanSubscriber(Command):
+class BanSubscriber(DataMessageHandler):
     def __init__(self, bot: BroadcasBot) -> None:
         super().__init__()
         self.broadcastbot = bot
 
     @regex_triggered(CommandRegex.ban_subscriber)
-    async def handle(self, ctx: ChatContext) -> None:
+    async def handle_data_message(self, context: DataMessageContext) -> None:
         try:
-            await ctx.receipt(receipt_type="read")
+            await context.send_receipt(ReceiptType.READ)
 
             user_id = self.broadcastbot.message_handler.remove_command_from_message(
-                ctx.message.text,
+                context.message.text,
                 AdminCommandStrings.ban_subscriber,
             )
 
-            if not await self.broadcastbot.is_user_admin(ctx, AdminCommandStrings.ban_subscriber):
+            if not await self.broadcastbot.is_user_admin(context, AdminCommandStrings.ban_subscriber):
                 return
 
             if user_id in self.broadcastbot.subscribers:
@@ -29,13 +28,13 @@ class BanSubscriber(Command):
             user_phone_number = self.broadcastbot.subscribers.get_phone_number(user_id)
             await self.broadcastbot.banned_users.add(user_id, user_phone_number)
 
-            await ctx.bot.send(user_id, "You have been banned")
-            await self.broadcastbot.reply_with_warn_on_failure(ctx, "Successfully banned user")
+            await context.bot.messages.send(SendMessage(text="You have been banned"), user_id)
+            await self.broadcastbot.reply_with_warn_on_failure(context, "Successfully banned user")
 
             self.broadcastbot.logger.info("Banned user %s", user_id)
         except Exception:
             self.broadcastbot.logger.exception("")
             try:
-                await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed to ban user")
+                await self.broadcastbot.reply_with_warn_on_failure(context, "Failed to ban user")
             except Exception:
                 self.broadcastbot.logger.exception("")

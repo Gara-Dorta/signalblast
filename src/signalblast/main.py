@@ -63,6 +63,7 @@ async def initialise_bot(  # noqa: PLR0913 Too many arguments in function defini
         welcome_message=welcome_message,
         instructions_url=instructions_url,
     )
+    bot.restore_ping()
 
     bot.signal_bot.register(Subscribe(bot=bot), groups=False)
     bot.signal_bot.register(Unsubscribe(bot=bot), groups=False)

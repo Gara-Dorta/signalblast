@@ -51,6 +51,16 @@ This will pull the project docker images from https://hub.docker.com/r/eradorta/
   docker compose up
   ```
 
+### Migrating from CSV (pre-v2)
+
+Older versions of signalblast stored subscribers, banned users and the admin in `subscribers.csv`, `banned_users.csv` and `admin.txt` inside the data folder. These have been replaced with a sqlite database (`signalblast.db`, in the same data folder).
+
+If you're upgrading from a version that still has these files, migrate them once with:
+```bash
+uv run python -m signalblast.migrate_csv_to_db
+```
+This only adds data to the database; it never modifies or deletes the original CSV/txt files. Run it, confirm the bot works as expected, then you can delete `subscribers.csv`, `banned_users.csv` and `admin.txt` manually.
+
 ## Development
 
 * Set up docker and signalbot as specified in the [installation](#installation) section.

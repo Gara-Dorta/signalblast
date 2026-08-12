@@ -54,7 +54,7 @@ class Admin:
     @staticmethod
     async def _load(storage: SignalblastStorage) -> Admin:
         admin = Admin(storage)
-        admin.admin_id, admin._hashed_password = storage.get_admin()  # noqa: SLF001
+        admin.admin_id, admin._hashed_password = storage.get_admin()
         return admin
 
     @staticmethod
@@ -62,7 +62,7 @@ class Admin:
         if storage.get_admin() is None:
             return await Admin.create(storage, admin_password)
 
-        admin = await Admin._load(storage)  # noqa: SLF001
+        admin = await Admin._load(storage)
         # Overwrite the password in storage, if no password was given assume we want to keep the stored one
         if admin_password is not None:
             await admin.set_hashed_password(admin_password)

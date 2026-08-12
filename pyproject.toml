@@ -23,6 +23,8 @@ dependencies = [
 dev = [
     "hatch>=1.18.0",
     "prek>=0.4.13",
+    "pytest>=8.4.2",
+    "pytest-cov>=7.0.0",
     "ruff==0.14.14",
 ]
 
@@ -51,3 +53,7 @@ ignore = [
   "FIX", # TODO, FIXME and other messages
   "ERA001", # Commented out code
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"src/signalblast/migrate_csv_to_db.py" = ["T201"] # CLI script reports progress via print
+"tests/*" = ["S101", "INP001"] # assert is how pytest checks; tests dir has no __init__.py

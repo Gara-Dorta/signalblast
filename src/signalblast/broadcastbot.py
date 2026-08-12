@@ -7,7 +7,7 @@ from signalbot import Context, DataMessageContext, SendMessage, SignalBot, Updat
 
 from signalblast.admin import Admin
 from signalblast.message_handler import MessageHandler
-from signalblast.users import Users
+from signalblast.storage import SignalblastStorage, UserTable
 from signalblast.utils import TimestampData, get_data_path
 
 if TYPE_CHECKING:
@@ -17,19 +17,19 @@ if TYPE_CHECKING:
 
 
 class BroadcasBot:
-    subscribers_data_path = get_data_path() / "subscribers.csv"
-    banned_users_data_path = get_data_path() / "banned_users.csv"
-
     def __init__(self, config: dict) -> None:
         self.signal_bot = SignalBot(config)
+        self.signal_bot.storage._sqlite.close()  # noqa: SLF001
+        self.db = SignalblastStorage(get_data_path() / "signalblast.db", check_same_thread=False)
+        self.signal_bot.storage = self.db
+
         self.ping_job: Job | None = None
-        self.last_msg_user_uuid: str | None = None
         self.health_check_task: Task | None = None
         self.log_rollover_task: Task | None = None
 
         # Type hint the other attributes that will get defined in load_data
-        self.subscribers: Users
-        self.banned_users: Users
+        self.subscribers: UserTable
+        self.banned_users: UserTable
         self.admin: Admin
         self.message_handler: MessageHandler
         self.help_message: str
@@ -55,10 +55,10 @@ class BroadcasBot:
         welcome_message: str | None = None,
         instructions_url: str | None = None,
     ) -> None:
-        self.subscribers = await Users.load_from_file(self.subscribers_data_path)
-        self.banned_users = await Users.load_from_file(self.banned_users_data_path)
+        self.subscribers = UserTable(self.db, "subscribers")
+        self.banned_users = UserTable(self.db, "banned_users")
 
-        self.admin = await Admin.load_from_file(admin_pass)
+        self.admin = await Admin.load(self.db, admin_pass)
         self.message_handler = MessageHandler()
 
         self.help_message = self.message_handler.compose_help_message(instructions_url=instructions_url)
@@ -87,6 +87,41 @@ class BroadcasBot:
 
         self.logger = logger
         self.logger.debug("BotAnswers is initialised")
+
+    @property
+    def last_msg_user_uuid(self) -> str | None:
+        return self.db.get_last_broadcast_uuid()
+
+    @last_msg_user_uuid.setter
+    def last_msg_user_uuid(self, subscriber_uuid: str) -> None:
+        self.db.set_last_broadcast_uuid(subscriber_uuid)
+
+    async def _send_ping(self, group_id: str) -> None:
+        try:
+            await self.signal_bot.messages.send(SendMessage(text="Ping"), group_id)
+        except Exception:
+            self.logger.exception("")
+            try:
+                await self.signal_bot.messages.send(SendMessage(text="Failed to send ping"), group_id)
+            except Exception:
+                self.logger.exception("")
+
+    def schedule_ping(self, group_id: str, interval_seconds: int) -> None:
+        self.ping_job = self.scheduler.add_job(self._send_ping, "interval", seconds=interval_seconds, args=[group_id])
+        self.db.set_ping(group_id, interval_seconds)
+
+    def restore_ping(self) -> None:
+        ping = self.db.get_ping()
+        if ping is None:
+            return
+        group_id, interval_seconds = ping
+        self.ping_job = self.scheduler.add_job(self._send_ping, "interval", seconds=interval_seconds, args=[group_id])
+
+    def clear_ping(self) -> None:
+        if self.ping_job is not None:
+            self.scheduler.remove_job(self.ping_job.id)
+            self.ping_job = None
+        self.db.clear_ping()
 
     async def reply_with_warn_on_failure(self, ctx: DataMessageContext, message: str) -> bool:
         try:

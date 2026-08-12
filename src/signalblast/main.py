@@ -94,58 +94,61 @@ if __name__ == "__main__":
     four_weeks = 60 * 60 * 24 * 7 * 4  # Number of seconds in 4 weeks
 
     args_parser = argparse.ArgumentParser()
+    # `or None`/`or <default>` (rather than `os.environ.get(key, default)`) so that a
+    # variable present but left blank (e.g. an unfilled .env value passed through by
+    # docker compose as an empty string) is treated the same as an unset variable.
     args_parser.add_argument(
         "--admin_pass",
         type=str,
         help="the password to add or remove admins",
-        default=os.environ.get("SIGNALBLAST_PASSWORD"),
+        default=os.environ.get("SIGNALBLAST_PASSWORD") or None,
     )
     args_parser.add_argument(
         "--expiration_time",
         type=int,
-        default=os.environ.get("SIGNALBLAST_EXPIRATION_TIME", four_weeks),
+        default=os.environ.get("SIGNALBLAST_EXPIRATION_TIME") or four_weeks,
         help="the expiration time for the chats in seconds",
     )
 
     args_parser.add_argument(
         "--signal_service",
         type=str,
-        default=os.environ.get("SIGNAL_SERVICE", "localhost:8080"),
+        default=os.environ.get("SIGNAL_SERVICE") or "localhost:8080",
         help="the address of the signal cli rest api",
     )
 
     args_parser.add_argument(
         "--phone_number",
         type=str,
-        default=os.environ.get("SIGNALBLAST_PHONE_NUMBER"),
+        default=os.environ.get("SIGNALBLAST_PHONE_NUMBER") or None,
         help="the phone number of the bot",
     )
 
     args_parser.add_argument(
         "--welcome_message",
         type=str,
-        default=os.environ.get("SIGNALBLAST_WELCOME_MESSAGE"),
+        default=os.environ.get("SIGNALBLAST_WELCOME_MESSAGE") or None,
         help="the initial message that the user receives",
     )
 
     args_parser.add_argument(
         "--health_check_port",
         type=int,
-        default=os.environ.get("SIGNALBLAST_HEALTHCHECK_PORT", "15556"),
+        default=os.environ.get("SIGNALBLAST_HEALTHCHECK_PORT") or "15556",
         help="the port that will be listening for health checks requests",
     )
 
     args_parser.add_argument(
         "--health_check_receiver",
         type=str,
-        default=os.environ.get("SIGNALBLAST_HEALTHCHECK_RECEIVER"),
+        default=os.environ.get("SIGNALBLAST_HEALTHCHECK_RECEIVER") or None,
         help="the contact or group to send messages for health checks",
     )
 
     args_parser.add_argument(
         "--instructions_url",
         type=str,
-        default=os.environ.get("SIGNALBLAST_INSTRUCTIONS_URL"),
+        default=os.environ.get("SIGNALBLAST_INSTRUCTIONS_URL") or None,
         help="URL for the help message",
     )
 

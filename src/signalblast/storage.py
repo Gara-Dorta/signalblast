@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, ClassVar
 
 from signalbot import SQLiteStorage
 
@@ -54,7 +54,7 @@ class SignalblastStorage(SQLiteStorage):
 
     # --- Generic user tables (subscribers / banned_users) ---
 
-    _USER_ORDER_COLUMN = {"subscribers": "created_at", "banned_users": "banned_at"}
+    _USER_ORDER_COLUMN: ClassVar[dict[str, str]] = {"subscribers": "created_at", "banned_users": "banned_at"}
 
     def add_user(self, table: str, uuid: str, phone_number: str | None) -> None:
         self._sqlite.execute(

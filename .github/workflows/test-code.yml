@@ -27,6 +27,5 @@ jobs:
       - name: Run prek
         run: uv run prek run --all-files
 
-    # TODO: Enable when unit tests are added
-    #   - name: Run Pytest
-    #     run: uv run pytest --cov=src --cov-report term ./tests
+      - name: Run Pytest
+        run: uv run pytest --cov=src --cov-report term ./tests

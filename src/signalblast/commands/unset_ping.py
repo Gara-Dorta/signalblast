@@ -21,8 +21,7 @@ class UnsetPing(DataMessageHandler):
                 await context.reply(SendMessage(text="Cannot unset because ping was not set!"))
                 return
 
-            self.broadcastbot.scheduler.remove_job(self.broadcastbot.ping_job.id)
-            self.broadcastbot.ping_job = None
+            self.broadcastbot.clear_ping()
             await context.reply(SendMessage(text="Ping unset!"))
         except Exception:
             self.broadcastbot.logger.exception("")

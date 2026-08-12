@@ -4,7 +4,7 @@ dynamic = ["version"]
 description = "Broadcast bot for Signal"
 authors = [{name = "Era Dorta"}]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.14"
 classifiers = [
   "Programming Language :: Python :: 3",
 ]
@@ -15,14 +15,14 @@ keywords = [
 ]
 dependencies = [
     "bcrypt>=5.0.0",
-    "pydantic>=2.12.3",
-    "signalbot>=0.23.1",
+    "pydantic>=2.13.4",
+    "signalbot>=2.0.0",
 ]
 
 [dependency-groups]
 dev = [
-    "hatch>=1.15.1",
-    "prek>=0.3.0",
+    "hatch>=1.18.0",
+    "prek>=0.4.13",
 ]
 
 # [tool.uv.sources]

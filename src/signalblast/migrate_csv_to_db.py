@@ -13,7 +13,6 @@ from signalblast.storage import SignalblastStorage
 from signalblast.utils import get_data_path
 
 _UUID_COLUMN = "uuid"
-_PHONE_NUMBER_COLUMN = "phone_number"
 
 
 def _migrate_user_csv(storage: SignalblastStorage, csv_path: Path, table: str) -> int:
@@ -24,7 +23,7 @@ def _migrate_user_csv(storage: SignalblastStorage, csv_path: Path, table: str) -
     migrated = 0
     with csv_path.open() as f:
         for row in csv.DictReader(f):
-            storage.add_user(table, row[_UUID_COLUMN], row[_PHONE_NUMBER_COLUMN] or None)
+            storage.add_user(table, row[_UUID_COLUMN])
             migrated += 1
 
     print(f"Migrated {migrated} row(s) from {csv_path.name} into the '{table}' table.")

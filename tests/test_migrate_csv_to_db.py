@@ -13,25 +13,24 @@ def data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return tmp_path
 
 
-def _write_users_csv(path: Path, rows: list[tuple[str, str | None]]) -> None:
+def _write_users_csv(path: Path, uuids: list[str]) -> None:
+    # The legacy CSV format also has a phone_number column; migration ignores it.
     with path.open("w") as f:
         writer = csv.DictWriter(f, fieldnames=["uuid", "phone_number"])
         writer.writeheader()
-        for uuid, phone_number in rows:
-            writer.writerow({"uuid": uuid, "phone_number": phone_number})
+        for uuid in uuids:
+            writer.writerow({"uuid": uuid, "phone_number": "+1111"})
 
 
 def test_migrate_subscribers_and_banned_users(data_dir: Path) -> None:
-    _write_users_csv(data_dir / "subscribers.csv", [("uuid-1", "+1111"), ("uuid-2", None)])
-    _write_users_csv(data_dir / "banned_users.csv", [("uuid-3", "+3333")])
+    _write_users_csv(data_dir / "subscribers.csv", ["uuid-1", "uuid-2"])
+    _write_users_csv(data_dir / "banned_users.csv", ["uuid-3"])
 
     migrate()
 
     storage = SignalblastStorage(data_dir / "signalblast.db")
     assert storage.user_exists("subscribers", "uuid-1")
-    assert storage.get_user_phone_number("subscribers", "uuid-1") == "+1111"
     assert storage.user_exists("subscribers", "uuid-2")
-    assert storage.get_user_phone_number("subscribers", "uuid-2") is None
     assert storage.user_exists("banned_users", "uuid-3")
     assert not storage.user_exists("subscribers", "uuid-3")
 
@@ -59,7 +58,7 @@ def test_migrate_admin_with_no_admin_set(data_dir: Path) -> None:
 
 
 def test_migrate_is_idempotent(data_dir: Path) -> None:
-    _write_users_csv(data_dir / "subscribers.csv", [("uuid-1", "+1111")])
+    _write_users_csv(data_dir / "subscribers.csv", ["uuid-1"])
 
     migrate()
     migrate()

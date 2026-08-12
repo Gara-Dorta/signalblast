@@ -3,8 +3,7 @@ from logging import Logger
 from threading import Lock
 from typing import TYPE_CHECKING
 
-from signalbot import Context as ChatContext
-from signalbot import SignalBot
+from signalbot import Context, DataMessageContext, SendMessage, SignalBot, UpdateContact, UpdateGroup
 
 from signalblast.admin import Admin
 from signalblast.message_handler import MessageHandler
@@ -89,13 +88,25 @@ class BroadcasBot:
         self.logger = logger
         self.logger.debug("BotAnswers is initialised")
 
-    async def reply_with_warn_on_failure(self, ctx: ChatContext, message: str) -> bool:
-        if await ctx.reply(message):
+    async def reply_with_warn_on_failure(self, ctx: DataMessageContext, message: str) -> bool:
+        try:
+            await ctx.reply(SendMessage(text=message))
+        except Exception:  # noqa: BLE001
+            self.logger.warning("Could not send message to %s", ctx.message.source_uuid)
+            return False
+        else:
             return True
-        self.logger.warning("Could not send message to %s", ctx.message.source_uuid)
-        return False
 
-    async def is_user_admin(self, ctx: ChatContext, command: str) -> bool:
+    async def send_with_warn_on_failure(self, ctx: Context, message: str) -> bool:
+        try:
+            await ctx.send(SendMessage(text=message))
+        except Exception:  # noqa: BLE001
+            self.logger.warning("Could not send message to %s", ctx.message.source_uuid)
+            return False
+        else:
+            return True
+
+    async def is_user_admin(self, ctx: DataMessageContext, command: str) -> bool:
         subscriber_uuid = ctx.message.source_uuid
         if self.admin.admin_id is None:
             await self.reply_with_warn_on_failure(ctx, "I'm sorry but there are no admins")
@@ -105,17 +116,18 @@ class BroadcasBot:
         if self.admin.admin_id != subscriber_uuid:
             await self.reply_with_warn_on_failure(ctx, "I'm sorry but you are not an admin")
             msg_to_admin = self.message_handler.compose_message_to_admin(f"Tried to {command}", subscriber_uuid)
-            await ctx.bot.send(self.admin.admin_id, msg_to_admin)
+            await ctx.bot.messages.send(SendMessage(text=msg_to_admin), self.admin.admin_id)
             self.logger.info("%s tried to %s but admin is %s", subscriber_uuid, command, self.admin.admin_id)
             return False
 
         return True
 
     async def set_expiration_time(self, reciver: str, expiration_in_seconds: int) -> None:
-        await self.signal_bot.update_contact(reciver, expiration_in_seconds=expiration_in_seconds)
+        await self.signal_bot.contacts.update(UpdateContact(expiration_in_seconds=expiration_in_seconds), reciver)
 
     async def set_group_expiration_time(self, group_id: str, expiration_in_seconds: int) -> None:
-        await self.signal_bot.update_group(group_id, expiration_in_seconds=expiration_in_seconds)
+        update = UpdateGroup(expiration_in_seconds=expiration_in_seconds)
+        await self.signal_bot.groups.actions.update(update, group_id)
 
     async def delete_old_timestamps(self) -> None:
         """Signal only allows editing messges within 24 hours.

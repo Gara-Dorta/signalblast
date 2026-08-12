@@ -1,26 +1,25 @@
-from signalbot import Command, regex_triggered
-from signalbot import Context as ChatContext
+from signalbot import DataMessageContext, DataMessageHandler, ReceiptType, SendMessage, regex_triggered
 
 from signalblast.broadcastbot import BroadcasBot
 from signalblast.commands_strings import AdminCommandStrings, CommandRegex
 
 
-class SetPing(Command):
+class SetPing(DataMessageHandler):
     def __init__(self, bot: BroadcasBot) -> None:
         super().__init__()
         self.broadcastbot = bot
 
-    async def _send_ping(self, ctx: ChatContext) -> None:
+    async def _send_ping(self, ctx: DataMessageContext) -> None:
         try:
-            await ctx.send("Ping")
+            await ctx.send(SendMessage(text="Ping"))
         except Exception:
             self.broadcastbot.logger.exception("")
             try:
-                await ctx.send("Failed to send ping")
+                await ctx.send(SendMessage(text="Failed to send ping"))
             except Exception:
                 self.broadcastbot.logger.exception("")
 
-    async def process_ping_msg(self, ctx: ChatContext) -> None:
+    async def process_ping_msg(self, ctx: DataMessageContext) -> None:
         ping_time = self.broadcastbot.message_handler.remove_command_from_message(
             ctx.message.text,
             AdminCommandStrings.set_ping,
@@ -29,12 +28,15 @@ class SetPing(Command):
         if not await self.broadcastbot.is_user_admin(ctx, AdminCommandStrings.set_ping):
             return
 
-        if ctx.message.group is None:
+        if ctx.message.group_info is None or ctx.message.group_info.group_id is None:
             error_msg = "Empty group for set ping message"
             raise RuntimeError(error_msg)
 
         if self.broadcastbot.expiration_time is not None:
-            await self.broadcastbot.set_group_expiration_time(ctx.message.group, self.broadcastbot.expiration_time)
+            await self.broadcastbot.set_group_expiration_time(
+                ctx.message.group_info.group_id,
+                self.broadcastbot.expiration_time,
+            )
 
         if self.broadcastbot.ping_job is not None:
             self.broadcastbot.scheduler.remove_job(self.broadcastbot.ping_job.id)
@@ -52,14 +54,14 @@ class SetPing(Command):
         self.broadcastbot.logger.info("Ping set every %s seconds", ping_time)
 
     @regex_triggered(CommandRegex.set_ping)
-    async def handle(self, ctx: ChatContext) -> None:
+    async def handle_data_message(self, context: DataMessageContext) -> None:
         try:
-            await ctx.receipt(receipt_type="read")
+            await context.send_receipt(ReceiptType.READ)
 
-            await self.process_ping_msg(ctx)
+            await self.process_ping_msg(context)
         except Exception:
             self.broadcastbot.logger.exception("")
             try:
-                await self.broadcastbot.reply_with_warn_on_failure(ctx, "Failed set ping")
+                await self.broadcastbot.reply_with_warn_on_failure(context, "Failed set ping")
             except Exception:
                 self.broadcastbot.logger.exception("")

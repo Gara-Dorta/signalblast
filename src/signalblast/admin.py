@@ -1,31 +1,32 @@
+from __future__ import annotations
+
 import bcrypt
 
-from signalblast.utils import get_data_path
+from signalblast.storage import SignalblastStorage
 
 
 class Admin:
-    save_path = get_data_path() / "admin.txt"
-
-    def __init__(self) -> None:
-        self.admin_id: str = None
-        self._hashed_password: str = None
+    def __init__(self, storage: SignalblastStorage) -> None:
+        self.storage = storage
+        self.admin_id: str | None = None
+        self._hashed_password: bytes = b""
 
     @classmethod
-    async def create(cls, admin_password: str | None) -> None:
-        self = Admin()
+    async def create(cls, storage: SignalblastStorage, admin_password: str | None) -> Admin:
+        self = Admin(storage)
         self.admin_id = None
         await self.set_hashed_password(admin_password)
         return self
 
-    def get_hashed_password(self) -> str:
+    def get_hashed_password(self) -> bytes:
         return self._hashed_password
 
-    async def set_hashed_password(self, password: str) -> None:
+    async def set_hashed_password(self, password: str | None) -> None:
         if password is None:
             self._hashed_password = b""
         else:
             self._hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
-        await self.save_to_file()
+        await self.save()
 
     async def add(self, admin_id: str, admin_password: str | None) -> bool:
         if admin_password is None:
@@ -33,7 +34,7 @@ class Admin:
 
         if bcrypt.checkpw(admin_password.encode(), self.get_hashed_password()):
             self.admin_id = admin_id
-            await self.save_to_file()
+            await self.save()
             return True
         return False
 
@@ -43,37 +44,26 @@ class Admin:
 
         if bcrypt.checkpw(admin_password.encode(), self.get_hashed_password()):
             self.admin_id = None
-            await self.save_to_file()
+            await self.save()
             return True
         return False
 
-    async def save_to_file(self) -> None:
-        with self.save_path.open("w") as f:
-            if self.admin_id is None:
-                f.write("\n")
-            else:
-                f.write(self.admin_id + "\n")
-            f.write(self.get_hashed_password().decode())
+    async def save(self) -> None:
+        self.storage.set_admin(self.admin_id, self.get_hashed_password())
 
     @staticmethod
-    async def _load_from_file() -> "Admin":
-        admin = Admin()
-        with Admin.save_path.open() as f:
-            admin.admin_id = f.readline().rstrip()
-            admin._hashed_password = f.readline().encode()
-
-        if admin.admin_id == "":
-            admin.admin_id = None
-
+    async def _load(storage: SignalblastStorage) -> Admin:
+        admin = Admin(storage)
+        admin.admin_id, admin._hashed_password = storage.get_admin()  # noqa: SLF001
         return admin
 
     @staticmethod
-    async def load_from_file(admin_password: str | None) -> "Admin":
-        if not Admin.save_path.exists():
-            return await Admin.create(admin_password)
+    async def load(storage: SignalblastStorage, admin_password: str | None) -> Admin:
+        if storage.get_admin() is None:
+            return await Admin.create(storage, admin_password)
 
-        admin = await Admin._load_from_file()
-        # Overwrite the password in the file, if no password was given assume we want to keep the one from the file
+        admin = await Admin._load(storage)  # noqa: SLF001
+        # Overwrite the password in storage, if no password was given assume we want to keep the stored one
         if admin_password is not None:
             await admin.set_hashed_password(admin_password)
         return admin

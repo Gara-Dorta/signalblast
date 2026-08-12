@@ -23,6 +23,7 @@ dependencies = [
 dev = [
     "hatch>=1.18.0",
     "prek>=0.4.13",
+    "ruff==0.14.14",
 ]
 
 # [tool.uv.sources]

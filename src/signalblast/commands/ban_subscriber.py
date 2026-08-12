@@ -25,8 +25,7 @@ class BanSubscriber(DataMessageHandler):
             if user_id in self.broadcastbot.subscribers:
                 await self.broadcastbot.subscribers.remove(user_id)
 
-            user_phone_number = self.broadcastbot.subscribers.get_phone_number(user_id)
-            await self.broadcastbot.banned_users.add(user_id, user_phone_number)
+            await self.broadcastbot.banned_users.add(user_id)
 
             await context.bot.messages.send(SendMessage(text="You have been banned"), user_id)
             await self.broadcastbot.reply_with_warn_on_failure(context, "Successfully banned user")

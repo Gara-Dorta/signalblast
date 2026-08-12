@@ -26,7 +26,7 @@ class Subscribe(DataMessageHandler):
                     self.broadcastbot.logger.info("%s was not allowed to subscribe", subscriber_uuid)
                 return
 
-            await self.broadcastbot.subscribers.add(subscriber_uuid, ctx.message.source_number)
+            await self.broadcastbot.subscribers.add(subscriber_uuid)
 
             if self.broadcastbot.expiration_time is not None:
                 await self.broadcastbot.set_expiration_time(subscriber_uuid, self.broadcastbot.expiration_time)

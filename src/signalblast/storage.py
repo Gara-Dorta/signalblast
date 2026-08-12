@@ -21,13 +21,11 @@ class SignalblastStorage(SQLiteStorage):
         self._sqlite.execute(
             "CREATE TABLE IF NOT EXISTS subscribers ("
             "uuid TEXT PRIMARY KEY, "
-            "phone_number TEXT, "
             "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)",
         )
         self._sqlite.execute(
             "CREATE TABLE IF NOT EXISTS banned_users ("
             "uuid TEXT PRIMARY KEY, "
-            "phone_number TEXT, "
             "banned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)",
         )
         self._sqlite.execute(
@@ -56,12 +54,8 @@ class SignalblastStorage(SQLiteStorage):
 
     _USER_ORDER_COLUMN: ClassVar[dict[str, str]] = {"subscribers": "created_at", "banned_users": "banned_at"}
 
-    def add_user(self, table: str, uuid: str, phone_number: str | None) -> None:
-        self._sqlite.execute(
-            f"INSERT INTO {table} (uuid, phone_number) VALUES (?, ?) "  # noqa: S608
-            "ON CONFLICT(uuid) DO UPDATE SET phone_number=excluded.phone_number",
-            [uuid, phone_number],
-        )
+    def add_user(self, table: str, uuid: str) -> None:
+        self._sqlite.execute(f"INSERT OR IGNORE INTO {table} (uuid) VALUES (?)", [uuid])  # noqa: S608
         self._sqlite.commit()
 
     def remove_user(self, table: str, uuid: str) -> None:
@@ -82,10 +76,6 @@ class SignalblastStorage(SQLiteStorage):
 
     def user_count(self, table: str) -> int:
         return self._sqlite.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]  # noqa: S608
-
-    def get_user_phone_number(self, table: str, uuid: str) -> str | None:
-        row = self._sqlite.execute(f"SELECT phone_number FROM {table} WHERE uuid = ?", [uuid]).fetchone()  # noqa: S608
-        return row[0] if row is not None else None
 
     # --- Admin singleton ---
 
@@ -150,14 +140,11 @@ class UserTable:
         self._storage = storage
         self._table = table
 
-    async def add(self, uuid: str, phone_number: str | None) -> None:
-        self._storage.add_user(self._table, uuid, phone_number)
+    async def add(self, uuid: str) -> None:
+        self._storage.add_user(self._table, uuid)
 
     async def remove(self, uuid: str) -> None:
         self._storage.remove_user(self._table, uuid)
-
-    def get_phone_number(self, uuid: str) -> str | None:
-        return self._storage.get_user_phone_number(self._table, uuid)
 
     def __contains__(self, uuid: str) -> bool:
         return self._storage.user_exists(self._table, uuid)

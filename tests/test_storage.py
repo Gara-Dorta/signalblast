@@ -14,9 +14,8 @@ def test_user_table_add_remove_contains() -> None:
 
     assert "uuid-1" not in table
 
-    asyncio.run(table.add("uuid-1", "+1234"))
+    asyncio.run(table.add("uuid-1"))
     assert "uuid-1" in table
-    assert table.get_phone_number("uuid-1") == "+1234"
     assert len(table) == 1
 
     asyncio.run(table.remove("uuid-1"))
@@ -29,7 +28,7 @@ def test_user_table_iteration_is_ordered() -> None:
     table = UserTable(storage, "subscribers")
 
     for uuid in ("uuid-a", "uuid-b", "uuid-c"):
-        asyncio.run(table.add(uuid, None))
+        asyncio.run(table.add(uuid))
 
     assert list(table) == ["uuid-a", "uuid-b", "uuid-c"]
 
@@ -39,7 +38,7 @@ def test_subscribers_and_banned_users_are_independent_tables() -> None:
     subscribers = UserTable(storage, "subscribers")
     banned_users = UserTable(storage, "banned_users")
 
-    asyncio.run(subscribers.add("uuid-1", "+1234"))
+    asyncio.run(subscribers.add("uuid-1"))
     assert "uuid-1" in subscribers
     assert "uuid-1" not in banned_users
 

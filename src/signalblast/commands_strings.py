@@ -1,28 +1,35 @@
+from __future__ import annotations
+
 import inspect
 import re
-from collections.abc import Iterator
 from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, ClassVar
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
-class _IterableDataClass:
-    _public_attr = None
+class _IterableDataClass[T]:
+    _public_attr: ClassVar[list[Any] | None] = None
 
     @classmethod
-    def _get_public_attributes(cls) -> None:
-        cls._public_attr: list[str] = []
-        for attr, value in inspect.getmembers(cls):
-            if not (attr.startswith("_") or inspect.ismethod(value)):
-                cls._public_attr.append(value)
+    def _get_public_attributes(cls) -> list[Any]:
+        attrs = [
+            value for attr, value in inspect.getmembers(cls) if not (attr.startswith("_") or inspect.ismethod(value))
+        ]
+        cls._public_attr = attrs
+        return attrs
 
-    def __iter__(self) -> Iterator[str]:
-        if self._public_attr is None:
-            self._get_public_attributes()
+    def __iter__(self) -> Iterator[T]:
+        public_attr = self._public_attr
+        if public_attr is None:
+            public_attr = self._get_public_attributes()
 
-        yield from self._public_attr
+        yield from public_attr
 
 
 @dataclass
-class _PublicCommandStrings(_IterableDataClass):
+class _PublicCommandStrings(_IterableDataClass[str]):
     subscribe = "!subscribe"
     unsubscribe = "!unsubscribe"
     broadcast = "!broadcast"
@@ -34,7 +41,7 @@ PublicCommandStrings = _PublicCommandStrings()
 
 
 @dataclass
-class _AdminCommandStrings(_IterableDataClass):
+class _AdminCommandStrings(_IterableDataClass[str]):
     add_admin = "!add admin"
     remove_admin = "!remove admin"
     msg_from_admin = "!reply"
@@ -50,7 +57,7 @@ AdminCommandStrings = _AdminCommandStrings()
 
 
 @dataclass
-class _AdminCommandArgs(_IterableDataClass):
+class _AdminCommandArgs(_IterableDataClass[str]):
     add_admin = "<password>"
     remove_admin = "<password>"
     msg_from_admin = "<user id>"
@@ -70,7 +77,7 @@ def _begings_with(in_str: str) -> str:
 
 
 @dataclass
-class _CommandRegex(_IterableDataClass):
+class _CommandRegex(_IterableDataClass[re.Pattern[str]]):
     subscribe = re.compile(_begings_with(PublicCommandStrings.subscribe))
     unsubscribe = re.compile(_begings_with(PublicCommandStrings.unsubscribe))
     broadcast = re.compile(_begings_with(PublicCommandStrings.broadcast))

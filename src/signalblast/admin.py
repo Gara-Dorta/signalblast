@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import bcrypt
 
-from signalblast.storage import SignalblastStorage
+if TYPE_CHECKING:
+    from signalblast.storage import SignalblastStorage
 
 
 class Admin:
@@ -54,7 +57,11 @@ class Admin:
     @staticmethod
     async def _load(storage: SignalblastStorage) -> Admin:
         admin = Admin(storage)
-        admin.admin_id, admin._hashed_password = storage.get_admin()
+        row = storage.get_admin()
+        if row is None:
+            msg = "Admin._load called but no admin row exists in storage"
+            raise RuntimeError(msg)
+        admin.admin_id, admin._hashed_password = row
         return admin
 
     @staticmethod

@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import logging
 import os
+from dataclasses import dataclass
 
 from signalblast.broadcastbot import BroadcasBot
 from signalblast.commands import (
@@ -35,19 +36,22 @@ create_or_set_logger("signalbot", logging.WARNING, LOG_FILE_PATH)
 create_or_set_logger("apscheduler", logging.WARNING, LOG_FILE_PATH)
 
 
-async def initialise_bot(  # noqa: PLR0913 Too many arguments in function definition
-    signal_service: str,
-    phone_number: str,
-    admin_pass: str,
-    expiration_time: int,
-    welcome_message: str | None = None,
-    health_check_port: int = 15556,
-    health_check_receiver: str | None = None,
-    instructions_url: str | None = None,
-) -> BroadcasBot:
+@dataclass
+class BotSettings:
+    signal_service: str
+    phone_number: str
+    admin_pass: str | None
+    expiration_time: int
+    welcome_message: str | None = None
+    health_check_port: int = 15556
+    health_check_receiver: str | None = None
+    instructions_url: str | None = None
+
+
+async def initialise_bot(settings: BotSettings) -> BroadcasBot:
     config = {
-        "signal_service": signal_service,
-        "phone_number": phone_number,
+        "signal_service": settings.signal_service,
+        "phone_number": settings.phone_number,
         "storage": {"type": "sqlite", "db": get_data_path() / "signalblast.db", "check_same_thread": False},
     }
 
@@ -58,10 +62,10 @@ async def initialise_bot(  # noqa: PLR0913 Too many arguments in function defini
     bot = BroadcasBot(config)
     await bot.load_data(
         logger=logger,
-        admin_pass=admin_pass,
-        expiration_time=expiration_time,
-        welcome_message=welcome_message,
-        instructions_url=instructions_url,
+        admin_pass=settings.admin_pass,
+        expiration_time=settings.expiration_time,
+        welcome_message=settings.welcome_message,
+        instructions_url=settings.instructions_url,
     )
     bot.restore_ping()
 
@@ -82,8 +86,10 @@ async def initialise_bot(  # noqa: PLR0913 Too many arguments in function defini
 
     bot.scheduler.add_job(bot.delete_old_timestamps, "interval", days=1)
 
-    if health_check_receiver is not None:
-        bot.health_check_task = asyncio.create_task(health_check(bot, health_check_receiver, health_check_port))
+    if settings.health_check_receiver is not None:
+        bot.health_check_task = asyncio.create_task(
+            health_check(bot, settings.health_check_receiver, settings.health_check_port),
+        )
 
     bot.log_rollover_task = asyncio.create_task(rotate_logs_periodically(bot))
 
@@ -162,14 +168,16 @@ if __name__ == "__main__":
     asyncio.set_event_loop(loop)
     bot = loop.run_until_complete(
         initialise_bot(
-            signal_service=args.signal_service,
-            phone_number=args.phone_number,
-            admin_pass=args.admin_pass,
-            expiration_time=args.expiration_time,
-            welcome_message=args.welcome_message,
-            health_check_port=args.health_check_port,
-            health_check_receiver=args.health_check_receiver,
-            instructions_url=args.instructions_url,
+            BotSettings(
+                signal_service=args.signal_service,
+                phone_number=args.phone_number,
+                admin_pass=args.admin_pass,
+                expiration_time=args.expiration_time,
+                welcome_message=args.welcome_message,
+                health_check_port=args.health_check_port,
+                health_check_receiver=args.health_check_receiver,
+                instructions_url=args.instructions_url,
+            ),
         ),
     )
     bot.start()

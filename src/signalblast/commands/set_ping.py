@@ -1,7 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from signalbot import DataMessageContext, DataMessageHandler, ReceiptType, regex_triggered
 
-from signalblast.broadcastbot import BroadcasBot
-from signalblast.commands_strings import AdminCommandStrings, CommandRegex
+from signalblast.commands_strings import AdminCommandArgs, AdminCommandStrings, CommandRegex
+
+if TYPE_CHECKING:
+    from signalblast.broadcastbot import BroadcasBot
 
 
 class SetPing(DataMessageHandler):
@@ -16,6 +22,11 @@ class SetPing(DataMessageHandler):
         )
 
         if not await self.broadcastbot.is_user_admin(ctx, AdminCommandStrings.set_ping):
+            return
+
+        if ping_time is None:
+            usage = f"Missing argument, usage: {AdminCommandStrings.set_ping} {AdminCommandArgs.set_ping}"
+            await self.broadcastbot.reply_with_warn_on_failure(ctx, usage)
             return
 
         if ctx.message.group_info is None or ctx.message.group_info.group_id is None:

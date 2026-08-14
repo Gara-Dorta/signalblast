@@ -1,7 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from signalbot import DataMessageContext, DataMessageHandler, ReceiptType, SendMessage, regex_triggered
 
-from signalblast.broadcastbot import BroadcasBot
 from signalblast.commands_strings import CommandRegex, PublicCommandStrings
+
+if TYPE_CHECKING:
+    from signalblast.broadcastbot import BroadcasBot
 
 
 class MessageToAdmin(DataMessageHandler):
@@ -19,6 +25,10 @@ class MessageToAdmin(DataMessageHandler):
                 context.message.text,
                 PublicCommandStrings.msg_to_admin,
             )
+
+            if subscriber_uuid is None or message is None:
+                self.broadcastbot.logger.warning("Received a message-to-admin with no source_uuid or text")
+                return
 
             if self.broadcastbot.admin.admin_id is None:
                 no_admin_msg = "I'm sorry but there are no admins to contact!"

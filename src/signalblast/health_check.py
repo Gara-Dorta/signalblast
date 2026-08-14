@@ -1,6 +1,12 @@
-import asyncio
+from __future__ import annotations
 
-from signalblast.broadcastbot import BroadcasBot
+import asyncio
+from typing import TYPE_CHECKING
+
+from signalbot import SendMessage
+
+if TYPE_CHECKING:
+    from signalblast.broadcastbot import BroadcasBot
 
 
 async def health_check(bot: BroadcasBot, receiver: str, port: int) -> None:
@@ -12,7 +18,7 @@ async def health_check(bot: BroadcasBot, receiver: str, port: int) -> None:
 
         try:
             # The health check is to send a ping message to receiver
-            await asyncio.wait_for(bot.signal_bot.send(receiver, "Ping"), timeout=30)
+            await asyncio.wait_for(bot.signal_bot.messages.send(SendMessage(text="Ping"), receiver), timeout=30)
             response = "HTTP/1.0 200 OK\r\n\r\nOK \r\n"
 
             bot.logger.info("Health check message sent")

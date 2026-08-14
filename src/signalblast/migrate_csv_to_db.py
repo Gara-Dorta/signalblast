@@ -6,11 +6,16 @@ Safe to re-run: subscriber/banned-user rows are inserted with INSERT OR IGNORE, 
 admin row is upserted. The original CSV/txt files are never modified or deleted.
 """
 
+from __future__ import annotations
+
 import csv
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from signalblast.storage import SignalblastStorage
 from signalblast.utils import get_data_path
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 _UUID_COLUMN = "uuid"
 

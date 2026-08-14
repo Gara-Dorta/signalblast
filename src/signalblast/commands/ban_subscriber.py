@@ -1,7 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from signalbot import DataMessageContext, DataMessageHandler, ReceiptType, SendMessage, regex_triggered
 
-from signalblast.broadcastbot import BroadcasBot
-from signalblast.commands_strings import AdminCommandStrings, CommandRegex
+from signalblast.commands_strings import AdminCommandArgs, AdminCommandStrings, CommandRegex
+
+if TYPE_CHECKING:
+    from signalblast.broadcastbot import BroadcasBot
 
 
 class BanSubscriber(DataMessageHandler):
@@ -20,6 +26,13 @@ class BanSubscriber(DataMessageHandler):
             )
 
             if not await self.broadcastbot.is_user_admin(context, AdminCommandStrings.ban_subscriber):
+                return
+
+            if user_id is None:
+                usage = (
+                    f"Missing argument, usage: {AdminCommandStrings.ban_subscriber} {AdminCommandArgs.ban_subscriber}"
+                )
+                await self.broadcastbot.reply_with_warn_on_failure(context, usage)
                 return
 
             if user_id in self.broadcastbot.subscribers:

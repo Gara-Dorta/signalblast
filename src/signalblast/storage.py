@@ -1,9 +1,12 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
-from typing import Any, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from signalbot import SQLiteStorage
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from pathlib import Path
 
 
 class SignalblastStorage(SQLiteStorage):
@@ -13,7 +16,7 @@ class SignalblastStorage(SQLiteStorage):
     file/connection as the inherited generic `signalbot` key/value table.
     """
 
-    def __init__(self, database: Any, **kwargs: Any) -> None:  # noqa: ANN401
+    def __init__(self, database: str | Path, **kwargs: Any) -> None:  # noqa: ANN401 -- forwarded to sqlite3.connect
         super().__init__(database, **kwargs)
         self._create_tables()
 
@@ -51,31 +54,50 @@ class SignalblastStorage(SQLiteStorage):
         self._sqlite.commit()
 
     # --- Generic user tables (subscribers / banned_users) ---
+    #
+    # Queries are literal per-table strings (not f-string-interpolated) so ruff's S608
+    # static SQL-injection check has nothing to flag: `table` is always one of these two
+    # hardcoded keys, never user input.
 
-    _USER_ORDER_COLUMN: ClassVar[dict[str, str]] = {"subscribers": "created_at", "banned_users": "banned_at"}
+    _ADD_USER_QUERIES: ClassVar[dict[str, str]] = {
+        "subscribers": "INSERT OR IGNORE INTO subscribers (uuid) VALUES (?)",
+        "banned_users": "INSERT OR IGNORE INTO banned_users (uuid) VALUES (?)",
+    }
+    _REMOVE_USER_QUERIES: ClassVar[dict[str, str]] = {
+        "subscribers": "DELETE FROM subscribers WHERE uuid = ?",
+        "banned_users": "DELETE FROM banned_users WHERE uuid = ?",
+    }
+    _USER_EXISTS_QUERIES: ClassVar[dict[str, str]] = {
+        "subscribers": "SELECT EXISTS(SELECT 1 FROM subscribers WHERE uuid = ?)",
+        "banned_users": "SELECT EXISTS(SELECT 1 FROM banned_users WHERE uuid = ?)",
+    }
+    _LIST_USER_UUIDS_QUERIES: ClassVar[dict[str, str]] = {
+        "subscribers": "SELECT uuid FROM subscribers ORDER BY created_at",
+        "banned_users": "SELECT uuid FROM banned_users ORDER BY banned_at",
+    }
+    _USER_COUNT_QUERIES: ClassVar[dict[str, str]] = {
+        "subscribers": "SELECT COUNT(*) FROM subscribers",
+        "banned_users": "SELECT COUNT(*) FROM banned_users",
+    }
 
     def add_user(self, table: str, uuid: str) -> None:
-        self._sqlite.execute(f"INSERT OR IGNORE INTO {table} (uuid) VALUES (?)", [uuid])  # noqa: S608
+        self._sqlite.execute(self._ADD_USER_QUERIES[table], [uuid])
         self._sqlite.commit()
 
     def remove_user(self, table: str, uuid: str) -> None:
-        self._sqlite.execute(f"DELETE FROM {table} WHERE uuid = ?", [uuid])  # noqa: S608
+        self._sqlite.execute(self._REMOVE_USER_QUERIES[table], [uuid])
         self._sqlite.commit()
 
     def user_exists(self, table: str, uuid: str) -> bool:
-        row = self._sqlite.execute(
-            f"SELECT EXISTS(SELECT 1 FROM {table} WHERE uuid = ?)",  # noqa: S608
-            [uuid],
-        ).fetchone()
+        row = self._sqlite.execute(self._USER_EXISTS_QUERIES[table], [uuid]).fetchone()
         return bool(row[0])
 
     def list_user_uuids(self, table: str) -> list[str]:
-        order_column = self._USER_ORDER_COLUMN[table]
-        rows = self._sqlite.execute(f"SELECT uuid FROM {table} ORDER BY {order_column}").fetchall()  # noqa: S608
+        rows = self._sqlite.execute(self._LIST_USER_UUIDS_QUERIES[table]).fetchall()
         return [row[0] for row in rows]
 
     def user_count(self, table: str) -> int:
-        return self._sqlite.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]  # noqa: S608
+        return self._sqlite.execute(self._USER_COUNT_QUERIES[table]).fetchone()[0]
 
     # --- Admin singleton ---
 

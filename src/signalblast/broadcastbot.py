@@ -1,9 +1,10 @@
-from datetime import datetime, timedelta, timezone
-from logging import Logger
+from __future__ import annotations
+
+from datetime import UTC, datetime, timedelta
 from threading import Lock
 from typing import TYPE_CHECKING
 
-from signalbot import Context, DataMessageContext, SendMessage, SignalBot, UpdateContact, UpdateGroup
+from signalbot import Context, DataMessageContext, SendMessage, SignalBot, SignalBotError, UpdateContact, UpdateGroup
 
 from signalblast.admin import Admin
 from signalblast.message_handler import MessageHandler
@@ -12,6 +13,7 @@ from signalblast.utils import TimestampData, get_data_path
 
 if TYPE_CHECKING:
     from asyncio import Task
+    from logging import Logger
 
     from apscheduler.job import Job
 
@@ -19,7 +21,6 @@ if TYPE_CHECKING:
 class BroadcasBot:
     def __init__(self, config: dict) -> None:
         self.signal_bot = SignalBot(config)
-        self.signal_bot.storage._sqlite.close()  # noqa: SLF001
         self.db = SignalblastStorage(get_data_path() / "signalblast.db", check_same_thread=False)
         self.signal_bot.storage = self.db
 
@@ -38,7 +39,7 @@ class BroadcasBot:
         self.admin_wrong_command_message: str
         self.must_subscribe_message: str
         self.logger: Logger
-        self.expiration_time: int
+        self.expiration_time: int | None
         self.welcome_message: str
         self.storage_lock: Lock
 
@@ -126,7 +127,7 @@ class BroadcasBot:
     async def reply_with_warn_on_failure(self, ctx: DataMessageContext, message: str) -> bool:
         try:
             await ctx.reply(SendMessage(text=message))
-        except Exception:  # noqa: BLE001
+        except SignalBotError:
             self.logger.warning("Could not send message to %s", ctx.message.source_uuid)
             return False
         else:
@@ -135,7 +136,7 @@ class BroadcasBot:
     async def send_with_warn_on_failure(self, ctx: Context, message: str) -> bool:
         try:
             await ctx.send(SendMessage(text=message))
-        except Exception:  # noqa: BLE001
+        except SignalBotError:
             self.logger.warning("Could not send message to %s", ctx.message.source_uuid)
             return False
         else:
@@ -167,13 +168,11 @@ class BroadcasBot:
     async def delete_old_timestamps(self) -> None:
         """Signal only allows editing messges within 24 hours.
         No point in keeping the information for older messages"""
-        cursor = self.signal_bot.storage._sqlite.execute("SELECT key FROM signalbot")  # noqa: SLF001
+        cursor = self.db._sqlite.execute("SELECT key FROM signalbot")  # noqa: SLF001
         keys = [row[0] for row in cursor.fetchall()]
         for key in keys:
             value = TimestampData.model_validate(self.signal_bot.storage.read(key))
-            if datetime.fromtimestamp(value.timestamp / 1000, tz=timezone.utc) < (
-                datetime.now(tz=timezone.utc) - timedelta(days=1)
-            ):
+            if datetime.fromtimestamp(value.timestamp / 1000, tz=UTC) < (datetime.now(tz=UTC) - timedelta(days=1)):
                 self.storage_lock.acquire()
                 self.signal_bot.storage.delete(key)
                 self.storage_lock.release()

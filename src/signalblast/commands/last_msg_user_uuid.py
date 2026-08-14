@@ -1,7 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from signalbot import DataMessageContext, DataMessageHandler, ReceiptType, SendMessage, regex_triggered
 
-from signalblast.broadcastbot import BroadcasBot
 from signalblast.commands_strings import AdminCommandStrings, CommandRegex
+
+if TYPE_CHECKING:
+    from signalblast.broadcastbot import BroadcasBot
 
 
 class LastMsgUserUuid(DataMessageHandler):
@@ -15,8 +21,11 @@ class LastMsgUserUuid(DataMessageHandler):
             await context.send_receipt(ReceiptType.READ)
             if not await self.broadcastbot.is_user_admin(context, AdminCommandStrings.last_msg_user_uuid):
                 return
+            admin_id = self.broadcastbot.admin.admin_id
+            if admin_id is None:
+                return
             msg = f"Last message was sent by\n\t{self.broadcastbot.last_msg_user_uuid}"
-            await context.bot.messages.send(SendMessage(text=msg), self.broadcastbot.admin.admin_id)
+            await context.bot.messages.send(SendMessage(text=msg), admin_id)
 
             self.broadcastbot.logger.info(msg)
         except Exception:

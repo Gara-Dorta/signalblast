@@ -1,9 +1,15 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from signalbot import DataMessageContext, DataMessageHandler, ReceiptType, regex_triggered
 from signalbot import __version__ as __signalbot_version__
 
 from signalblast import __version__ as __signalblast_version__
-from signalblast.broadcastbot import BroadcasBot
 from signalblast.commands_strings import AdminCommandStrings, CommandRegex
+
+if TYPE_CHECKING:
+    from signalblast.broadcastbot import BroadcasBot
 
 
 class ShowVersion(DataMessageHandler):

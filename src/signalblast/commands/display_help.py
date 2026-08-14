@@ -1,7 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from signalbot import DataMessageContext, DataMessageHandler, ReceiptType, regex_triggered
 
-from signalblast.broadcastbot import BroadcasBot
 from signalblast.commands_strings import CommandRegex, PublicCommandStrings
+
+if TYPE_CHECKING:
+    from signalblast.broadcastbot import BroadcasBot
 
 
 class DisplayHelp(DataMessageHandler):
@@ -27,6 +33,9 @@ class DisplayHelp(DataMessageHandler):
 
             subscriber_uuid = context.message.source_uuid
             message = context.message.text
+            if subscriber_uuid is None or message is None:
+                self.broadcastbot.logger.warning("Received a help message with no source_uuid or text")
+                return
 
             help_message = self._get_help_message(message, subscriber_uuid)
 

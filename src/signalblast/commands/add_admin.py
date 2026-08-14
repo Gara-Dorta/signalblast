@@ -1,7 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from signalbot import DataMessageContext, DataMessageHandler, ReceiptType, SendMessage, regex_triggered
 
-from signalblast.broadcastbot import BroadcasBot
 from signalblast.commands_strings import AdminCommandStrings, CommandRegex
+
+if TYPE_CHECKING:
+    from signalblast.broadcastbot import BroadcasBot
 
 
 class AddAdmin(DataMessageHandler):
@@ -19,6 +25,10 @@ class AddAdmin(DataMessageHandler):
                 context.message.text,
                 AdminCommandStrings.add_admin,
             )
+
+            if subscriber_uuid is None:
+                self.broadcastbot.logger.warning("Received an add-admin message with no source_uuid")
+                return
 
             previous_admin = self.broadcastbot.admin.admin_id
             if await self.broadcastbot.admin.add(subscriber_uuid, password):

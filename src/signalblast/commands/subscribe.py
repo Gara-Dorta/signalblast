@@ -1,7 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from signalbot import DataMessageContext, DataMessageHandler, ReceiptType, regex_triggered
 
-from signalblast.broadcastbot import BroadcasBot
 from signalblast.commands_strings import CommandRegex
+
+if TYPE_CHECKING:
+    from signalblast.broadcastbot import BroadcasBot
 
 
 class Subscribe(DataMessageHandler):
@@ -14,6 +20,10 @@ class Subscribe(DataMessageHandler):
             await ctx.send_receipt(ReceiptType.READ)
 
             subscriber_uuid = ctx.message.source_uuid
+            if subscriber_uuid is None:
+                self.broadcastbot.logger.warning("Received a subscribe message with no source_uuid")
+                return
+
             if subscriber_uuid in self.broadcastbot.subscribers:
                 if verbose:
                     await self.broadcastbot.reply_with_warn_on_failure(ctx, "Already subscribed!")

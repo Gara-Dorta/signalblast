@@ -1,7 +1,13 @@
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from signalbot import DataMessageContext, DataMessageHandler, ReceiptType, SendMessage, regex_triggered
 
-from signalblast.broadcastbot import BroadcasBot
-from signalblast.commands_strings import AdminCommandStrings, CommandRegex
+from signalblast.commands_strings import AdminCommandArgs, AdminCommandStrings, CommandRegex
+
+if TYPE_CHECKING:
+    from signalblast.broadcastbot import BroadcasBot
 
 
 class MessageFromAdmin(DataMessageHandler):
@@ -20,6 +26,14 @@ class MessageFromAdmin(DataMessageHandler):
             )
 
             if not await self.broadcastbot.is_user_admin(context, AdminCommandStrings.msg_from_admin):
+                return
+
+            if message is None or " " not in message:
+                usage = (
+                    f"Missing argument, usage: "
+                    f"{AdminCommandStrings.msg_from_admin} {AdminCommandArgs.msg_from_admin} <message>"
+                )
+                await self.broadcastbot.reply_with_warn_on_failure(context, usage)
                 return
 
             user_id, message = message.split(" ", 1)

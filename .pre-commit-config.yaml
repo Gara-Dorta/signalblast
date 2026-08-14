@@ -18,6 +18,7 @@ repos:
       - id: debug-statements
       - id: name-tests-test
         args: ["--pytest-test-first"]
+        exclude: ^tests/chat_support\.py$
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.14.14

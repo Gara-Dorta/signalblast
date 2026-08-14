@@ -24,7 +24,9 @@ dev = [
     "hatch>=1.18.0",
     "prek>=0.4.13",
     "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
     "pytest-cov>=7.0.0",
+    "pytest-mock>=3.15.1",
     "ruff==0.14.14",
 ]
 
@@ -42,6 +44,9 @@ raw-options = { fallback_version = "0.0.0" }
 [tool.hatch.build.hooks.vcs]
 version-file = "_version.py"
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
 [tool.ruff]
 src = ["src"]
 line-length = 120
@@ -52,8 +57,13 @@ ignore = [
   "D",   # Docstrings
   "FIX", # TODO, FIXME and other messages
   "ERA001", # Commented out code
+  "CPY001", # Missing copyright notice on top of file
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "src/signalblast/migrate_csv_to_db.py" = ["T201"] # CLI script reports progress via print
-"tests/*" = ["S101", "INP001"] # assert is how pytest checks; tests dir has no __init__.py
+"tests/*" = [
+  "S101", # assert is how pytest checks
+  "INP001", # tests dir has no __init__.py
+  "ARG001", "ARG002", # fixtures/mocker are requested for their side effects, not referenced in the body
+]

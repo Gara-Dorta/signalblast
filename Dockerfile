@@ -9,7 +9,7 @@ RUN apt-get update && \
 # Create non-root user
 ##########################
 RUN useradd --create-home --shell /bin/bash --uid 1000 user
-USER user
+USER 1000
 WORKDIR /home/user
 
 ARG SIGNALBLAST_VERSION
@@ -35,4 +35,4 @@ ENV SIGNALBLAST_CONFIG_DIR=/home/user/.local/share/signalblast
 
 ENTRYPOINT ["uv", "run", "python", "-m", "signalblast.main"]
 
-HEALTHCHECK --interval=8h --start-period=30s --retries=3 CMD curl -f http://localhost:15556 || exit 1
+HEALTHCHECK --interval=8h --start-period=30s --retries=3 CMD ["sh", "-c", "curl -f http://localhost:15556 || exit 1"]

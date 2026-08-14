@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 import csv
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
 from signalblast.migrate_csv_to_db import migrate
 from signalblast.storage import SignalblastStorage
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.fixture

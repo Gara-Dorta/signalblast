@@ -36,11 +36,55 @@ from signalblast.broadcastbot import BroadcasBot
 
 if TYPE_CHECKING:
     from pathlib import Path
+    from typing import Protocol
 
     import pytest
     from pytest_mock import MockerFixture
+    from signalbot._generated import SendMessageV2, SendReactionRequest
+
+    class SendMockLike(Protocol):
+        """Structural stand-in for `SendMock`.
+
+        Pyright special-cases `unittest.mock`: a bare attribute declaration
+        (`x: SomeMock`, no assignment in the class body) whose type derives from
+        `unittest.mock.Mock` is always widened to `Any`, regardless of `SomeMock`'s
+        own typing — confirmed independent of `signalbot` shipping `py.typed`.
+        `send_mock`/`react_mock` on `BroadcastChatTestCase` are only ever assigned
+        by the free `wrapper` function in `mock_broadcast_chat`, not by a method
+        defined in the class body, so pyright can't infer them from an `__init__`
+        assignment either. Declaring them against a plain (non-Mock) Protocol here
+        sidesteps the special-casing so `call_count`/`results()` resolve for real.
+        """
+
+        call_count: int
+
+        def results(self) -> list[SendMessageV2]: ...
+
+    class ReactMockLike(Protocol):
+        call_count: int
+
+        def results(self) -> list[SendReactionRequest]: ...
+
 
 AsyncTestMethod = Callable[..., Awaitable[None]]
+
+
+def _patch_react(mocker: MockerFixture) -> ReactMock:
+    # `MockerFixture.patch` is typed as returning a plain `MagicMock` regardless of
+    # `new_callable`, which would erase `ReactMock`'s type (and e.g. `call_count`)
+    # from `self.react_mock` in tests. Give the call site its real return type here.
+    return mocker.patch(
+        "signalbot._client.reactions.ReactionsClient.react",
+        new_callable=ReactMock,
+    )
+
+
+def _patch_send(mocker: MockerFixture) -> SendMock:
+    return mocker.patch(
+        "signalbot._client.messages.MessagesClient.send",
+        new_callable=SendMock,
+    )
+
 
 # Fixed uuids so tests can seed subscriber/admin/ban state before a chat
 # message is "received" and then reference that exact sender in the message.
@@ -101,14 +145,8 @@ def mock_broadcast_chat(*raw_messages: str) -> Callable[[AsyncTestMethod], Async
             *args: object,
             **kwargs: object,
         ) -> None:
-            self.react_mock = mocker.patch(
-                "signalbot._client.reactions.ReactionsClient.react",
-                new_callable=ReactMock,
-            )
-            self.send_mock = mocker.patch(
-                "signalbot._client.messages.MessagesClient.send",
-                new_callable=SendMock,
-            )
+            self.react_mock = _patch_react(mocker)
+            self.send_mock = _patch_send(mocker)
             receive_mock = mocker.patch(
                 "signalbot._client.messages.MessagesClient.receive",
                 new_callable=ReceiveMock,
@@ -163,6 +201,16 @@ class BroadcastChatTestCase(ChatTestCase):
     path instead of touching the real `SIGNALBLAST_CONFIG_DIR`."""
 
     broadcast_bot: BroadcasBot
+
+    # Narrows `ChatTestCase.send_mock: SendMock`/`react_mock: ReactMock` to the
+    # `*Like` protocols (see the `TYPE_CHECKING` block above) so they resolve to
+    # real types instead of `Any` in tests.
+    if TYPE_CHECKING:
+        # The actual assigned value is always a real `SendMock`/`ReactMock`, which
+        # does satisfy these protocols; pyright's invariance check for mutable
+        # attribute overrides is just being conservative here.
+        send_mock: SendMockLike  # pyright: ignore[reportIncompatibleVariableOverride]
+        react_mock: ReactMockLike  # pyright: ignore[reportIncompatibleVariableOverride]
 
     async def setup_bot(
         self,

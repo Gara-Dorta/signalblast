@@ -176,7 +176,9 @@ class Broadcast(DataMessageHandler, RemoteDeleteHandler):
         content: _BroadcastContent,
         to_modify_timestamps: dict[str, int],
     ) -> None:
-        for subscriber in self.broadcastbot.subscribers:
+        subscribers = list(self.broadcastbot.subscribers)
+        random.shuffle(subscribers)
+        for subscriber in subscribers:
             send_message = SendMessage(
                 text=content.message,
                 base64_attachments=content.attachments,
@@ -323,7 +325,9 @@ class Broadcast(DataMessageHandler, RemoteDeleteHandler):
             self.broadcastbot.storage_lock.release()
             to_modify_timestamps = TimestampData.model_validate(prev_timestamps).broadcast_timestamps
 
-            for subscriber in self.broadcastbot.subscribers:
+            subscribers = list(self.broadcastbot.subscribers)
+            random.shuffle(subscribers)
+            for subscriber in subscribers:
                 timestamp = to_modify_timestamps.get(subscriber)
                 if timestamp is None:
                     # Subscriber wasn't part of the original broadcast (e.g. subscribed

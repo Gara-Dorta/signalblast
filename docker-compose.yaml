@@ -4,7 +4,7 @@ services:
     # Fixed name so that docker/watchdog.sh can restart it
     container_name: signal-cli-rest-api
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     volumes:
       - "$HOME/.local/share/signal-api:/home/.local/share/signal-cli"
     environment:

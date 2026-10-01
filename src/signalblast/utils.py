@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import logging
-import os
+import time
 from logging.handlers import TimedRotatingFileHandler
-from pathlib import Path
+from typing import TYPE_CHECKING
 
-from pydantic import BaseModel
+if TYPE_CHECKING:
+    from pathlib import Path
 
 LOG_FORMAT = "%(asctime)s %(name)s [%(levelname)s] - %(funcName)s - %(message)s"
+SNIPPET_LENGTH = 40
 
 
 def configure_logging(level: str, log_file: Path | None = None) -> None:
@@ -37,11 +39,18 @@ def route_signalbot_logs_to_root() -> None:
     logging.getLogger("signalbot").handlers.clear()
 
 
-def get_data_path() -> Path:
-    return Path(os.getenv("SIGNALBLAST_DATA_DIR", Path.home() / ".local/share/signalblast"))
+def now_ms() -> int:
+    """The current time as a Signal timestamp."""
+    return int(time.time() * 1000)
 
 
-class TimestampData(BaseModel):
-    timestamp: int
-    author: str
-    broadcast_timestamps: dict[str, int]  # subscriber uuid, timestamp
+def people(count: int) -> str:
+    return "1 person" if count == 1 else f"{count} people"
+
+
+def snippet(text: str | None) -> str | None:
+    """A short, single line preview of a message."""
+    if not text:
+        return None
+    text = " ".join(text.split())
+    return text if len(text) <= SNIPPET_LENGTH else text[:SNIPPET_LENGTH] + "…"

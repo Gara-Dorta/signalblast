@@ -1,27 +1,3 @@
-from signalblast.commands.add_admin import AddAdmin
-from signalblast.commands.ban_subscriber import BanSubscriber
-from signalblast.commands.broadcast import Broadcast
-from signalblast.commands.display_help import DisplayHelp
-from signalblast.commands.last_msg_user_uuid import LastMsgUserUuid
-from signalblast.commands.lift_ban_subscriber import LiftBanSubscriber
-from signalblast.commands.message_from_admin import MessageFromAdmin
-from signalblast.commands.message_to_admin import MessageToAdmin
-from signalblast.commands.remove_admin import RemoveAdmin
-from signalblast.commands.show_version import ShowVersion
-from signalblast.commands.subscribe import Subscribe
-from signalblast.commands.unsubscribe import Unsubscribe
+from signalblast.commands.router import CommandRouter
 
-__all__ = [
-    "AddAdmin",
-    "BanSubscriber",
-    "Broadcast",
-    "DisplayHelp",
-    "LastMsgUserUuid",
-    "LiftBanSubscriber",
-    "MessageFromAdmin",
-    "MessageToAdmin",
-    "RemoveAdmin",
-    "ShowVersion",
-    "Subscribe",
-    "Unsubscribe",
-]
+__all__ = ["CommandRouter"]

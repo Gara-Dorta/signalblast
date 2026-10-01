@@ -1,8 +1,6 @@
 #!/bin/bash
 
-# Create the wheel for signalblast
-uv build --clear
-
+# The wheel is built inside the image, the version is passed in as git is not available there
 SIGNALBLAST_VERSION=$(uvx hatch version)
 
 # Replace the + for a -, as + is not a valid docker tag

@@ -20,13 +20,19 @@ repos:
         args: ["--pytest-test-first"]
         exclude: ^tests/chat_support\.py$
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.14.14
+  # Use the ruff version pinned in pyproject.toml
+  - repo: local
     hooks:
       - id: ruff
+        name: ruff
+        entry: uv run ruff check --fix --show-fixes
+        language: system
         types_or: [python]
-        args: ["--fix", "--show-fixes"]
       - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types_or: [python]
 
   - repo: https://github.com/hadolint/hadolint
     rev: v2.14.0

@@ -103,6 +103,7 @@ celerybeat.pid
 
 # Environments
 .env
+systemd/env_file.env
 .venv
 env/
 venv/

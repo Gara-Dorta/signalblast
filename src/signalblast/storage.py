@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from signalbot import SQLiteStorage, StorageBackend, StorageError, StorageOperation
+from signalbot import SQLiteStorage
 
 from signalblast.utils import TimestampData
 
@@ -68,14 +68,14 @@ class SignalblastStorage(SQLiteStorage):
 
     # --- Broadcast timestamps ---
 
-    def read_broadcast_timestamps(self, author: str, timestamp: int) -> TimestampData:
+    def read_broadcast_timestamps(self, author: str, timestamp: int) -> TimestampData | None:
+        """Returns None if `author` sent no broadcast at `timestamp` (e.g. it was a command or it has expired)."""
         row = self._sqlite.execute(
             "SELECT broadcast_timestamps FROM broadcast_timestamps WHERE author = ? AND timestamp = ?",
             [author, timestamp],
         ).fetchone()
         if row is None:
-            error = KeyError(f"No broadcast from {author} at {timestamp}")
-            raise StorageError(StorageBackend.SQLITE, StorageOperation.LOAD, error)
+            return None
         return TimestampData(author=author, timestamp=timestamp, broadcast_timestamps=json.loads(row[0]))
 
     def save_broadcast_timestamps(self, data: TimestampData) -> None:

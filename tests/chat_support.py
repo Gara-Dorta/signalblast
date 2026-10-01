@@ -94,10 +94,9 @@ ADMIN_UUID = "33333333-3333-3333-3333-333333333333"
 STRANGER_UUID = "44444444-4444-4444-4444-444444444444"
 
 
-def new_private_message(text: str, *, source_uuid: str) -> str:
-    """Build a raw signal-cli envelope for a direct (non-group) message, as sent
-    by a subscriber talking to the bot one-on-one."""
-    timestamp = int(time.time() * 1000)
+def _private_envelope(*, source_uuid: str, timestamp: int, **envelope_body: object) -> str:
+    """Wrap `envelope_body` (e.g. a `dataMessage` or `editMessage`) in a raw signal-cli
+    envelope for a direct (non-group) message from `source_uuid`."""
     envelope = {
         "account": ChatTestCase.phone_number,
         "envelope": {
@@ -109,15 +108,41 @@ def new_private_message(text: str, *, source_uuid: str) -> str:
             "timestamp": timestamp,
             "serverReceivedTimestamp": timestamp,
             "serverDeliveredTimestamp": timestamp,
-            "dataMessage": {
-                "message": text,
-                "timestamp": timestamp,
-                "expiresInSeconds": 0,
-                "viewOnce": False,
-            },
+            **envelope_body,
         },
     }
     return json.dumps(envelope)
+
+
+def _data_message(text: str | None, timestamp: int, **extra: object) -> dict[str, object]:
+    return {"message": text, "timestamp": timestamp, "expiresInSeconds": 0, "viewOnce": False, **extra}
+
+
+def new_private_message(text: str, *, source_uuid: str) -> str:
+    """Build a raw signal-cli envelope for a direct (non-group) message, as sent
+    by a subscriber talking to the bot one-on-one."""
+    timestamp = int(time.time() * 1000)
+    return _private_envelope(source_uuid=source_uuid, timestamp=timestamp, dataMessage=_data_message(text, timestamp))
+
+
+def new_private_edit(text: str, *, source_uuid: str, target_sent_timestamp: int) -> str:
+    """Build a raw signal-cli envelope for an edit of an earlier direct message."""
+    timestamp = int(time.time() * 1000)
+    return _private_envelope(
+        source_uuid=source_uuid,
+        timestamp=timestamp,
+        editMessage={"targetSentTimestamp": target_sent_timestamp, "dataMessage": _data_message(text, timestamp)},
+    )
+
+
+def new_private_remote_delete(*, source_uuid: str, target_sent_timestamp: int) -> str:
+    """Build a raw signal-cli envelope for a delete-for-everyone of an earlier direct message."""
+    timestamp = int(time.time() * 1000)
+    return _private_envelope(
+        source_uuid=source_uuid,
+        timestamp=timestamp,
+        dataMessage=_data_message(None, timestamp, remoteDelete={"timestamp": target_sent_timestamp}),
+    )
 
 
 def new_group_message(text: str, *, source_uuid: str) -> str:

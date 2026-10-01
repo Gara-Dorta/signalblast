@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from threading import Lock
 from typing import TYPE_CHECKING
 
 from signalbot import Context, DataMessageContext, SendMessage, SignalBot, SignalBotError, UpdateContact, UpdateGroup
@@ -41,7 +40,6 @@ class BroadcasBot:
         self.logger: Logger
         self.expiration_time: int | None
         self.welcome_message: str
-        self.storage_lock: Lock
 
         self.scheduler = self.signal_bot.scheduler
 
@@ -83,8 +81,6 @@ class BroadcasBot:
         )
 
         self.expiration_time = expiration_time
-
-        self.storage_lock = Lock()
 
         self.logger = logger
         self.logger.debug("BotAnswers is initialised")
@@ -169,7 +165,5 @@ class BroadcasBot:
         """Signal only allows editing messges within 24 hours.
         No point in keeping the information for older messages"""
         cutoff = int((datetime.now(tz=UTC) - timedelta(days=1)).timestamp() * 1000)
-        self.storage_lock.acquire()
         num_deleted = self.db.delete_broadcast_timestamps_before(cutoff)
-        self.storage_lock.release()
         self.logger.info("Deleted %s expired broadcast timestamps", num_deleted)

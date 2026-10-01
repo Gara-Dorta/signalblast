@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING
 
-from signalbot import Context, DataMessageContext, SendMessage, SignalBot, SignalBotError, UpdateContact, UpdateGroup
+from signalbot import Context, DataMessageContext, SendMessage, SignalBot, SignalBotError, UpdateContact
 
 from signalblast.admin import Admin
 from signalblast.message_handler import MessageHandler
@@ -14,8 +14,6 @@ if TYPE_CHECKING:
     from asyncio import Task
     from logging import Logger
 
-    from apscheduler.job import Job
-
 
 class BroadcasBot:
     def __init__(self, config: dict) -> None:
@@ -23,7 +21,6 @@ class BroadcasBot:
         self.db = SignalblastStorage(get_data_path() / "signalblast.db", check_same_thread=False)
         self.signal_bot.storage = self.db
 
-        self.ping_job: Job | None = None
         self.health_check_task: Task | None = None
         self.log_rollover_task: Task | None = None
 
@@ -93,33 +90,6 @@ class BroadcasBot:
     def last_msg_user_uuid(self, subscriber_uuid: str) -> None:
         self.db.set_last_broadcast_uuid(subscriber_uuid)
 
-    async def _send_ping(self, group_id: str) -> None:
-        try:
-            await self.signal_bot.messages.send(SendMessage(text="Ping"), group_id)
-        except Exception:
-            self.logger.exception("")
-            try:
-                await self.signal_bot.messages.send(SendMessage(text="Failed to send ping"), group_id)
-            except Exception:
-                self.logger.exception("")
-
-    def schedule_ping(self, group_id: str, interval_seconds: int) -> None:
-        self.ping_job = self.scheduler.add_job(self._send_ping, "interval", seconds=interval_seconds, args=[group_id])
-        self.db.set_ping(group_id, interval_seconds)
-
-    def restore_ping(self) -> None:
-        ping = self.db.get_ping()
-        if ping is None:
-            return
-        group_id, interval_seconds = ping
-        self.ping_job = self.scheduler.add_job(self._send_ping, "interval", seconds=interval_seconds, args=[group_id])
-
-    def clear_ping(self) -> None:
-        if self.ping_job is not None:
-            self.scheduler.remove_job(self.ping_job.id)
-            self.ping_job = None
-        self.db.clear_ping()
-
     async def reply_with_warn_on_failure(self, ctx: DataMessageContext, message: str) -> bool:
         try:
             await ctx.reply(SendMessage(text=message))
@@ -156,10 +126,6 @@ class BroadcasBot:
 
     async def set_expiration_time(self, reciver: str, expiration_in_seconds: int) -> None:
         await self.signal_bot.contacts.update(UpdateContact(expiration_in_seconds=expiration_in_seconds), reciver)
-
-    async def set_group_expiration_time(self, group_id: str, expiration_in_seconds: int) -> None:
-        update = UpdateGroup(expiration_in_seconds=expiration_in_seconds)
-        await self.signal_bot.groups.actions.update(update, group_id)
 
     async def delete_old_timestamps(self) -> None:
         """Signal only allows editing messges within 24 hours.

@@ -14,8 +14,8 @@ if TYPE_CHECKING:
 
 class SignalblastStorage(SQLiteStorage):
     """Extends signalbot's key/value `SQLiteStorage` with the relational tables
-    signalblast needs: subscribers, banned users, the admin singleton, the active
-    ping job, the last broadcast sender, and the per-subscriber timestamps of each
+    signalblast needs: subscribers, banned users, the admin singleton, the last
+    broadcast sender, and the per-subscriber timestamps of each
     broadcast. signalbot's generic key/value interface (and its `signalbot` table)
     is unused.
     """
@@ -50,13 +50,6 @@ class SignalblastStorage(SQLiteStorage):
             "admin_id TEXT, "
             "hashed_password BLOB NOT NULL, "
             "updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)",
-        )
-        self._sqlite.execute(
-            "CREATE TABLE IF NOT EXISTS ping ("
-            "id INTEGER PRIMARY KEY CHECK (id = 1), "
-            "group_id TEXT NOT NULL, "
-            "interval_seconds INTEGER NOT NULL, "
-            "created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)",
         )
         self._sqlite.execute(
             "CREATE TABLE IF NOT EXISTS last_broadcast ("
@@ -153,27 +146,6 @@ class SignalblastStorage(SQLiteStorage):
             "hashed_password=excluded.hashed_password, updated_at=CURRENT_TIMESTAMP",
             [admin_id, hashed_password],
         )
-        self._sqlite.commit()
-
-    # --- Ping singleton ---
-
-    def get_ping(self) -> tuple[str, int] | None:
-        row = self._sqlite.execute("SELECT group_id, interval_seconds FROM ping WHERE id = 1").fetchone()
-        if row is None:
-            return None
-        return row[0], row[1]
-
-    def set_ping(self, group_id: str, interval_seconds: int) -> None:
-        self._sqlite.execute(
-            "INSERT INTO ping (id, group_id, interval_seconds) VALUES (1, ?, ?) "
-            "ON CONFLICT(id) DO UPDATE SET group_id=excluded.group_id, "
-            "interval_seconds=excluded.interval_seconds, created_at=CURRENT_TIMESTAMP",
-            [group_id, interval_seconds],
-        )
-        self._sqlite.commit()
-
-    def clear_ping(self) -> None:
-        self._sqlite.execute("DELETE FROM ping WHERE id = 1")
         self._sqlite.commit()
 
     # --- Last broadcast singleton ---

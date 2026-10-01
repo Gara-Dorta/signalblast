@@ -145,20 +145,9 @@ def new_private_remote_delete(*, source_uuid: str, target_sent_timestamp: int) -
     )
 
 
-def new_group_message(text: str, *, source_uuid: str) -> str:
-    """Build a raw signal-cli envelope for a message sent into the test group,
-    for commands (like `!set ping`) that only fire on group messages."""
-    timestamp = int(time.time() * 1000)
-    return ChatTestCase._sent_message_envelope(  # noqa: SLF001
-        timestamp=timestamp,
-        new_uuid=source_uuid,
-        message=text,
-    )
-
-
 def mock_broadcast_chat(*raw_messages: str) -> Callable[[AsyncTestMethod], AsyncTestMethod]:
     """Like signalbot's `mock_chat`, but takes raw envelope strings (so private
-    messages built with `new_private_message`/`new_group_message` can be used)
+    messages built with `new_private_message` and friends can be used)
     and additionally stubs the read-receipt and typing-indicator endpoints that
     every signalblast command handler touches."""
 

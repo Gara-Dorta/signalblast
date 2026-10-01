@@ -7,10 +7,8 @@ from signalblast.commands.lift_ban_subscriber import LiftBanSubscriber
 from signalblast.commands.message_from_admin import MessageFromAdmin
 from signalblast.commands.message_to_admin import MessageToAdmin
 from signalblast.commands.remove_admin import RemoveAdmin
-from signalblast.commands.set_ping import SetPing
 from signalblast.commands.show_version import ShowVersion
 from signalblast.commands.subscribe import Subscribe
-from signalblast.commands.unset_ping import UnsetPing
 from signalblast.commands.unsubscribe import Unsubscribe
 
 __all__ = [
@@ -23,9 +21,7 @@ __all__ = [
     "MessageFromAdmin",
     "MessageToAdmin",
     "RemoveAdmin",
-    "SetPing",
     "ShowVersion",
     "Subscribe",
-    "UnsetPing",
     "Unsubscribe",
 ]

@@ -17,10 +17,8 @@ from signalblast.commands import (
     MessageFromAdmin,
     MessageToAdmin,
     RemoveAdmin,
-    SetPing,
     ShowVersion,
     Subscribe,
-    UnsetPing,
     Unsubscribe,
 )
 from signalblast.health_check import health_check
@@ -67,7 +65,6 @@ async def initialise_bot(settings: BotSettings) -> BroadcasBot:
         welcome_message=settings.welcome_message,
         instructions_url=settings.instructions_url,
     )
-    bot.restore_ping()
 
     bot.signal_bot.register(Subscribe(bot=bot), groups=False)
     bot.signal_bot.register(Unsubscribe(bot=bot), groups=False)
@@ -77,8 +74,6 @@ async def initialise_bot(settings: BotSettings) -> BroadcasBot:
     bot.signal_bot.register(RemoveAdmin(bot=bot), groups=False)
     bot.signal_bot.register(BanSubscriber(bot=bot), groups=False)
     bot.signal_bot.register(LiftBanSubscriber(bot=bot), groups=False)
-    bot.signal_bot.register(SetPing(bot=bot), contacts=False, groups=True)
-    bot.signal_bot.register(UnsetPing(bot=bot), contacts=False, groups=True)
     bot.signal_bot.register(MessageToAdmin(bot=bot), groups=True)
     bot.signal_bot.register(MessageFromAdmin(bot=bot), groups=True)
     bot.signal_bot.register(LastMsgUserUuid(bot=bot), groups=True)

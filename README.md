@@ -49,7 +49,7 @@ This uses the images from https://hub.docker.com/r/eradorta/signalblast
   ```bash
   mkdir -p $HOME/.local/share/signalblast
   ```
-* Create your `.env` file from the example and fill in the values, see [configuration](#configuration)
+* Create your `.env` file from the example and fill in the values, see [configuration](#configuration). `DOCKER_TAG` and `SIGNAL_CLI_REST_API_VERSION` set the versions of signalblast and signal-cli-rest-api that run.
   ```bash
   cp .env.example .env
   ```

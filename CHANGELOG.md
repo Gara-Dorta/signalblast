@@ -19,6 +19,7 @@ This release moves to signalbot 2 and a sqlite database, and changes how admins 
 * **Data** is stored in a sqlite database, `signalblast.db` in the data folder. The `subscribers.csv`, `banned_users.csv` and `admin.txt` files from older versions are imported automatically on the first start and renamed to `*.migrated`.
 * **Docker**
   * signal-cli-rest-api is only reachable from the host (`127.0.0.1:8080`), and its data folder is no longer mounted into the signalblast container.
+  * signal-cli-rest-api is pinned to 0.101 instead of `latest`, set `SIGNAL_CLI_REST_API_VERSION` in `.env` to change it.
   * Images are only published for releases.
   * The `autoheal` container is replaced by an optional systemd watchdog, see the README.
 

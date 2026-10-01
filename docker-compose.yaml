@@ -1,6 +1,6 @@
 services:
   signal-cli-rest-api:
-    image: "bbernhard/signal-cli-rest-api:0.101"
+    image: "bbernhard/signal-cli-rest-api:${SIGNAL_CLI_REST_API_VERSION:-0.101}"
     # Fixed name so that docker/watchdog.sh can restart it
     container_name: signal-cli-rest-api
     ports:

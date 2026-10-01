@@ -34,6 +34,6 @@ RUN uv venv && \
 ###########################
 ENV SIGNALBLAST_DATA_DIR=/home/user/.local/share/signalblast
 
-ENTRYPOINT ["uv", "run", "python", "-m", "signalblast.main"]
+ENTRYPOINT ["/home/user/.venv/bin/signalblast"]
 
 HEALTHCHECK --interval=8h --timeout=90s --start-period=1m --retries=3 CMD ["sh", "-c", "[ -z \"$SIGNALBLAST_HEALTHCHECK_RECEIVER\" ] || python -c \"import urllib.request; urllib.request.urlopen('http://localhost:${SIGNALBLAST_HEALTHCHECK_PORT:-15556}', timeout=60)\""]

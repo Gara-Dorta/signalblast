@@ -55,17 +55,6 @@ def test_admin_table_roundtrip() -> None:
     assert storage.get_admin() == (None, b"other-hash")
 
 
-def test_ping_roundtrip() -> None:
-    storage = make_storage()
-    assert storage.get_ping() is None
-
-    storage.set_ping("group-1", 60)
-    assert storage.get_ping() == ("group-1", 60)
-
-    storage.clear_ping()
-    assert storage.get_ping() is None
-
-
 def test_last_broadcast_roundtrip() -> None:
     storage = make_storage()
     assert storage.get_last_broadcast_uuid() is None

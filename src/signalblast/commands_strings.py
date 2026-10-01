@@ -47,8 +47,6 @@ class _AdminCommandStrings(_IterableDataClass[str]):
     msg_from_admin = "!reply"
     ban_subscriber = "!ban"
     lift_ban_subscriber = "!lift ban"
-    set_ping = "!set ping"
-    unset_ping = "!unset ping"
     last_msg_user_uuid = "!last msg user uuid"
     show_version = "!version"
 
@@ -63,8 +61,6 @@ class _AdminCommandArgs(_IterableDataClass[str]):
     msg_from_admin = "<user id>"
     ban_subscriber = "<user id>"
     lift_ban_subscriber = "<user id>"
-    set_ping = "<time>"
-    unset_ping = ""
     last_msg_user_uuid = ""
     show_version = ""
 
@@ -87,8 +83,6 @@ class _CommandRegex(_IterableDataClass[re.Pattern[str]]):
     msg_from_admin = re.compile(_begings_with(AdminCommandStrings.msg_from_admin))
     ban_subscriber = re.compile(_begings_with(AdminCommandStrings.ban_subscriber))
     lift_ban_subscriber = re.compile(_begings_with(AdminCommandStrings.lift_ban_subscriber))
-    set_ping = re.compile(_begings_with(AdminCommandStrings.set_ping))
-    unset_ping = re.compile(_begings_with(AdminCommandStrings.unset_ping))
     help = re.compile(_begings_with(PublicCommandStrings.help))
     last_msg_user_uuid = re.compile(_begings_with(AdminCommandStrings.last_msg_user_uuid))
     show_version = re.compile(_begings_with(AdminCommandStrings.show_version))

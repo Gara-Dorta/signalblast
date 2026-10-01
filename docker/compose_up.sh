@@ -1,8 +1,6 @@
 #!/bin/bash
 
-# Uncoment to build the wheel and be able to build the images via docker compose up
-# uv build
-
+# Also used as the version if the image is built via docker compose up
 export SIGNALBLAST_VERSION=$(uvx hatch version)
 
 # Replace the + for a -, as + is not a valid docker tag

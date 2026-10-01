@@ -9,12 +9,13 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
+from signalblast.commands.base import REPLY_TO_USER_PRIORITY, Command, SignalblastHandler
 from signalblast.utils import now_ms, snippet
 
 if TYPE_CHECKING:
-    from signalbot import DataMessageContext, Quote
+    from signalbot import DataMessage, DataMessageContext, Quote
 
     from signalblast.broadcastbot import BroadcastBot
 
@@ -79,63 +80,80 @@ async def _send_about_user(
     return True
 
 
-async def message_admins(bot: BroadcastBot, ctx: DataMessageContext, args: str) -> None:
-    sender = ctx.message.source_uuid
-    if sender is None:
-        return
+class MessageAdmins(Command):
+    trigger = "!admin"
+    args = "<message>"
+    description = "Send a message only to the admins"
 
-    if bot.db.is_banned(sender):
-        await bot.reply(ctx, "You are not allowed to contact the admins")
-        logger.info("A banned user tried to contact the admins")
-        return
+    @override
+    async def run(self, ctx: DataMessageContext, sender: str, args: str) -> None:
+        if self.bot.db.is_banned(sender):
+            await self.bot.reply(ctx, "You are not allowed to contact the admins")
+            logger.info("A banned user tried to contact the admins")
+            return
 
-    attachments = _attachments(ctx)
-    if not args and attachments is None:
-        await bot.reply(ctx, "Write your message after !admin, e.g. !admin I have a question")
-        return
+        attachments = _attachments(ctx)
+        if not args and attachments is None:
+            await self.bot.reply(ctx, "Write your message after !admin, e.g. !admin I have a question")
+            return
 
-    admins = [admin for admin in bot.db.admins() if admin != sender]
-    if not admins:
-        await bot.reply(ctx, "I'm sorry but there are no admins to contact")
-        return
+        admins = [admin for admin in self.bot.db.admins() if admin != sender]
+        if not admins:
+            await self.bot.reply(ctx, "I'm sorry but there are no admins to contact")
+            return
 
-    pseudonym_id = bot.db.pseudonym_for(sender, now_ms())
-    num_sent = 0
-    for admin in admins:
-        num_sent += await _send_about_user(bot, admin, pseudonym_id, f"wrote:\n{args}".rstrip(), attachments)
+        pseudonym_id = self.bot.db.pseudonym_for(sender, now_ms())
+        num_sent = 0
+        for admin in admins:
+            text = f"wrote:\n{args}".rstrip()
+            num_sent += await _send_about_user(self.bot, admin, pseudonym_id, text, attachments)
 
-    if num_sent == 0:
-        await bot.reply(ctx, "I couldn't reach the admins, please try again later")
-        return
+        if num_sent == 0:
+            await self.bot.reply(ctx, "I couldn't reach the admins, please try again later")
+            return
 
-    await bot.reply(ctx, "Message sent to the admins")
-    logger.info("Forwarded a message from user #%s to %s admins", pseudonym_id, num_sent)
+        await self.bot.reply(ctx, "Message sent to the admins")
+        logger.info("Forwarded a message from user #%s to %s admins", pseudonym_id, num_sent)
 
 
-async def reply_to_user(bot: BroadcastBot, ctx: DataMessageContext) -> None:
-    """An admin quoted a message about a user and wrote a reply."""
-    sender = ctx.message.source_uuid
-    quote = ctx.message.quote
-    if sender is None or quote is None:
-        return
+class ReplyToUser(SignalblastHandler):
+    """An admin quoted a message about a user and wrote a reply. Never broadcast, even when it isn't
+    sent (the sender is no longer an admin, or the message has expired)."""
 
-    if not bot.db.is_admin(sender):
-        await bot.reply(ctx, "Not sent: only admins can reply to messages from users")
-        return
+    priority = REPLY_TO_USER_PRIORITY
 
-    user = bot.db.admin_message_sender(sender, quote.id)
-    if user is None:
-        await bot.reply(ctx, "Not sent: this message is older than 7 days, so its sender can no longer be reached")
-        return
+    @override
+    def matches(self, message: DataMessage) -> bool:
+        return quotes_a_user_message(message.quote)
 
-    text = ctx.message.text or ""
-    attachments = _attachments(ctx)
-    if await bot.send(user.uuid, f"Admin: {text}".rstrip(), attachments) is None:
-        await _send_about_user(bot, sender, user.pseudonym_id, "could not receive your reply, please try again")
-        return
+    @override
+    async def handle(self, ctx: DataMessageContext, sender: str) -> None:
+        quote = ctx.message.quote
+        if quote is None:
+            return
 
-    await _send_about_user(bot, sender, user.pseudonym_id, "received your reply")
-    for admin in bot.db.admins():
-        if admin != sender:
-            await _send_about_user(bot, admin, user.pseudonym_id, f"was answered by an admin:\n{text}".rstrip())
-    logger.info("An admin replied to user #%s", user.pseudonym_id)
+        if not self.bot.db.is_admin(sender):
+            await self.bot.reply(ctx, "Not sent: only admins can reply to messages from users")
+            return
+
+        user = self.bot.db.admin_message_sender(sender, quote.id)
+        if user is None:
+            await self.bot.reply(
+                ctx,
+                "Not sent: this message is older than 7 days, so its sender can no longer be reached",
+            )
+            return
+
+        text = ctx.message.text or ""
+        if await self.bot.send(user.uuid, f"Admin: {text}".rstrip(), _attachments(ctx)) is None:
+            await _send_about_user(
+                self.bot, sender, user.pseudonym_id, "could not receive your reply, please try again"
+            )
+            return
+
+        await _send_about_user(self.bot, sender, user.pseudonym_id, "received your reply")
+        for admin in self.bot.db.admins():
+            if admin != sender:
+                answer = f"was answered by an admin:\n{text}".rstrip()
+                await _send_about_user(self.bot, admin, user.pseudonym_id, answer)
+        logger.info("An admin replied to user #%s", user.pseudonym_id)

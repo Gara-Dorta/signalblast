@@ -88,12 +88,14 @@ class BroadcastSender:
         if not isinstance(context.message, EditMessage):
             return {}
 
-        self.broadcastbot.storage_lock.acquire()
         prev_timestamps = self.broadcastbot.db.read_broadcast_timestamps(
             subscriber_uuid,
             context.message.target_sent_timestamp,
         )
-        self.broadcastbot.storage_lock.release()
+        if prev_timestamps is None:
+            # The edited message was not a broadcast (or it has expired), send the new text as a new broadcast
+            self.broadcastbot.logger.info("Edited message is not a known broadcast, sending it as a new one")
+            return {}
         return prev_timestamps.broadcast_timestamps
 
     async def _dispatch_broadcast_tasks(
@@ -134,9 +136,7 @@ class BroadcastSender:
             timestamp=context.message.timestamp,
             broadcast_timestamps=broadcast_timestamps,
         )
-        self.broadcastbot.storage_lock.acquire()
         self.broadcastbot.db.save_broadcast_timestamps(broadcastdata)
-        self.broadcastbot.storage_lock.release()
 
     async def _recover_from_broadcast_failure(self, context: DataMessageContext, state: BroadcastState) -> None:
         try:

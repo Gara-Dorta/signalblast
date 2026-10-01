@@ -1,8 +1,5 @@
 import asyncio
 
-import pytest
-from signalbot import StorageError
-
 from signalblast.admin import Admin
 from signalblast.storage import SignalblastStorage, UserTable
 from signalblast.utils import TimestampData
@@ -123,13 +120,11 @@ def test_broadcast_timestamps_save_read_delete() -> None:
     storage.save_broadcast_timestamps(data)
     assert storage.read_broadcast_timestamps("uuid-1", 1000) == data
 
-    with pytest.raises(StorageError):
-        storage.read_broadcast_timestamps("uuid-1", 999)
+    assert storage.read_broadcast_timestamps("uuid-1", 999) is None
 
     assert storage.delete_broadcast_timestamps_before(1000) == 0
     assert storage.delete_broadcast_timestamps_before(1001) == 1
-    with pytest.raises(StorageError):
-        storage.read_broadcast_timestamps("uuid-1", 1000)
+    assert storage.read_broadcast_timestamps("uuid-1", 1000) is None
 
 
 def test_signalbot_table_is_dropped() -> None:

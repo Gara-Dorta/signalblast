@@ -40,9 +40,11 @@ class BroadcastDeleter:
 
             num_subscribers = len(self.broadcastbot.subscribers)
 
-            self.broadcastbot.storage_lock.acquire()
             prev_timestamps = self.broadcastbot.db.read_broadcast_timestamps(subscriber_uuid, context.message.timestamp)
-            self.broadcastbot.storage_lock.release()
+            if prev_timestamps is None:
+                # The deleted message was not a broadcast (or it has expired), nothing to delete
+                self.broadcastbot.logger.info("Deleted message is not a known broadcast, ignoring it")
+                return
             to_modify_timestamps = prev_timestamps.broadcast_timestamps
 
             subscribers = list(self.broadcastbot.subscribers)

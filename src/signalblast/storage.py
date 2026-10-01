@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING, Any, ClassVar
 
-from signalbot import SQLiteStorage
+from signalbot import SQLiteStorage, StorageBackend, StorageError, StorageOperation
+
+from signalblast.utils import TimestampData
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -12,8 +15,9 @@ if TYPE_CHECKING:
 class SignalblastStorage(SQLiteStorage):
     """Extends signalbot's key/value `SQLiteStorage` with the relational tables
     signalblast needs: subscribers, banned users, the admin singleton, the active
-    ping job, and the last broadcast sender. All tables live in the same sqlite
-    file/connection as the inherited generic `signalbot` key/value table.
+    ping job, the last broadcast sender, and the per-subscriber timestamps of each
+    broadcast. signalbot's generic key/value interface (and its `signalbot` table)
+    is unused.
     """
 
     def __init__(self, database: str | Path, **kwargs: Any) -> None:  # noqa: ANN401 -- forwarded to sqlite3.connect
@@ -21,6 +25,15 @@ class SignalblastStorage(SQLiteStorage):
         self._create_tables()
 
     def _create_tables(self) -> None:
+        # Created unconditionally by `SQLiteStorage.__init__`, but unused: see `broadcast_timestamps`
+        self._sqlite.execute("DROP TABLE IF EXISTS signalbot")
+        self._sqlite.execute(
+            "CREATE TABLE IF NOT EXISTS broadcast_timestamps ("
+            "author TEXT NOT NULL, "
+            "timestamp INTEGER NOT NULL, "
+            "broadcast_timestamps TEXT NOT NULL, "
+            "PRIMARY KEY (author, timestamp))",
+        )
         self._sqlite.execute(
             "CREATE TABLE IF NOT EXISTS subscribers ("
             "uuid TEXT PRIMARY KEY, "
@@ -52,6 +65,32 @@ class SignalblastStorage(SQLiteStorage):
             "updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)",
         )
         self._sqlite.commit()
+
+    # --- Broadcast timestamps ---
+
+    def read_broadcast_timestamps(self, author: str, timestamp: int) -> TimestampData:
+        row = self._sqlite.execute(
+            "SELECT broadcast_timestamps FROM broadcast_timestamps WHERE author = ? AND timestamp = ?",
+            [author, timestamp],
+        ).fetchone()
+        if row is None:
+            error = KeyError(f"No broadcast from {author} at {timestamp}")
+            raise StorageError(StorageBackend.SQLITE, StorageOperation.LOAD, error)
+        return TimestampData(author=author, timestamp=timestamp, broadcast_timestamps=json.loads(row[0]))
+
+    def save_broadcast_timestamps(self, data: TimestampData) -> None:
+        self._sqlite.execute(
+            "INSERT INTO broadcast_timestamps (author, timestamp, broadcast_timestamps) VALUES (?, ?, ?) "
+            "ON CONFLICT(author, timestamp) DO UPDATE SET broadcast_timestamps=excluded.broadcast_timestamps",
+            [data.author, data.timestamp, json.dumps(data.broadcast_timestamps)],
+        )
+        self._sqlite.commit()
+
+    def delete_broadcast_timestamps_before(self, timestamp: int) -> int:
+        """Deletes the broadcasts sent before `timestamp` (in ms). Returns how many were deleted."""
+        cursor = self._sqlite.execute("DELETE FROM broadcast_timestamps WHERE timestamp < ?", [timestamp])
+        self._sqlite.commit()
+        return cursor.rowcount
 
     # --- Generic user tables (subscribers / banned_users) ---
     #

@@ -89,11 +89,12 @@ class BroadcastSender:
             return {}
 
         self.broadcastbot.storage_lock.acquire()
-        prev_timestamps = context.bot.storage.read(
-            f"broadcast-uuid-{subscriber_uuid}-timestamp-{context.message.target_sent_timestamp}",
+        prev_timestamps = self.broadcastbot.db.read_broadcast_timestamps(
+            subscriber_uuid,
+            context.message.target_sent_timestamp,
         )
         self.broadcastbot.storage_lock.release()
-        return TimestampData.model_validate(prev_timestamps).broadcast_timestamps
+        return prev_timestamps.broadcast_timestamps
 
     async def _dispatch_broadcast_tasks(
         self,
@@ -134,10 +135,7 @@ class BroadcastSender:
             broadcast_timestamps=broadcast_timestamps,
         )
         self.broadcastbot.storage_lock.acquire()
-        context.bot.storage.save(
-            f"broadcast-uuid-{subscriber_uuid}-timestamp-{context.message.timestamp}",
-            broadcastdata.model_dump(),
-        )
+        self.broadcastbot.db.save_broadcast_timestamps(broadcastdata)
         self.broadcastbot.storage_lock.release()
 
     async def _recover_from_broadcast_failure(self, context: DataMessageContext, state: BroadcastState) -> None:

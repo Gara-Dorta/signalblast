@@ -17,13 +17,17 @@ def free_port() -> int:
         return sock.getsockname()[1]
 
 
-async def request(port: int) -> str:
+async def open_connection(port: int) -> tuple[asyncio.StreamReader, asyncio.StreamWriter]:
     for _ in range(50):  # Wait for the server to start listening
         try:
-            reader, writer = await asyncio.open_connection("localhost", port)
-            break
+            return await asyncio.open_connection("localhost", port)
         except ConnectionRefusedError:
             await asyncio.sleep(0.01)
+    return await asyncio.open_connection("localhost", port)
+
+
+async def request(port: int) -> str:
+    reader, writer = await open_connection(port)
     writer.write(b"GET / HTTP/1.0\r\n\r\n")
     response = await reader.read()
     writer.close()

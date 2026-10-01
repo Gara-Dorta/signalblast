@@ -78,3 +78,8 @@ ignore = [
   "INP001", # tests dir has no __init__.py
   "ARG001", "ARG002", # fixtures/mocker are requested for their side effects, not referenced in the body
 ]
+
+# TEMPORARY: exclusive handlers aren't released yet. Replace with the released signalbot
+# version in `dependencies` before merging
+[tool.uv.sources]
+signalbot = { path = "../signalbot", editable = true }

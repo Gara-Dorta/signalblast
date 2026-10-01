@@ -99,7 +99,9 @@ def message(
             "text": quote.text,
         }
     if attachment:
-        extra["attachments"] = [{"contentType": "image/png", "id": "attachment-1", "filename": "a.png", "size": 5}]
+        extra["attachments"] = [
+            {"contentType": "image/png", "id": "attachment-1", "filename": "a.png", "size": 5, "isVoiceNote": False},
+        ]
     if group:
         extra["groupInfo"] = {"groupId": ChatTestCase.group_internal_id, "type": "DELIVER", "revision": 1}
     return _envelope(source, timestamp, dataMessage=_data_message(text, timestamp, **extra))
@@ -207,7 +209,7 @@ class Chat:
     def last_to(self, recipient: str) -> Sent:
         return [sent for sent in self.sent if sent.recipient == recipient][-1]
 
-    async def _send(self, request: SendMessageV2) -> SendMessageResponse:
+    async def _send(self, request: SendMessageV2) -> list[SendMessageResponse]:
         [recipient] = request.recipients
         if recipient in self.unreachable:
             raise SignalBotError(recipient)
@@ -215,7 +217,8 @@ class Chat:
         self.sent.append(
             Sent(recipient, request.message, timestamp, request.edit_timestamp, request.base64_attachments),
         )
-        return SendMessageResponse(timestamp=str(timestamp))
+        # One response per recipient
+        return [SendMessageResponse(timestamp=str(timestamp))]
 
     async def _remote_delete(self, request: RemoteDeleteRequest) -> RemoteDeleteResponse:
         self.deleted.append((request.recipient, request.timestamp))

@@ -9,12 +9,12 @@ from signalbot import SentMessage
 if TYPE_CHECKING:
     from signalbot import RemoteDeleteContext
 
-    from signalblast.broadcastbot import BroadcasBot
+    from signalblast.broadcastbot import BroadcastBot
     from signalblast.commands.broadcast.delivery import DeliveryTracker
 
 
 class BroadcastDeleter:
-    def __init__(self, bot: BroadcasBot, tracker: DeliveryTracker) -> None:
+    def __init__(self, bot: BroadcastBot, tracker: DeliveryTracker) -> None:
         self.broadcastbot = bot
         self.tracker = tracker
 

@@ -9,11 +9,11 @@ from signalblast import __version__ as __signalblast_version__
 from signalblast.commands_strings import AdminCommandStrings, CommandRegex
 
 if TYPE_CHECKING:
-    from signalblast.broadcastbot import BroadcasBot
+    from signalblast.broadcastbot import BroadcastBot
 
 
 class ShowVersion(DataMessageHandler):
-    def __init__(self, bot: BroadcasBot) -> None:
+    def __init__(self, bot: BroadcastBot) -> None:
         super().__init__()
         self.broadcastbot = bot
 

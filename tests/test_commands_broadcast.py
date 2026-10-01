@@ -27,8 +27,8 @@ EXPECTED_BROADCAST_SEND_COUNT = 3
 
 class TestBroadcast(BroadcastChatTestCase):
     @pytest.fixture(autouse=True)
-    async def setup_fixture(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        await self.setup_bot(monkeypatch, tmp_path)
+    async def setup_fixture(self, tmp_path: Path) -> None:
+        self.setup_bot(tmp_path)
         self.broadcast_bot.signal_bot.register(Broadcast(bot=self.broadcast_bot), groups=False)
 
     @pytest.fixture
@@ -90,8 +90,8 @@ class TestEditAndDeleteOfNonBroadcasts(BroadcastChatTestCase):
     leave a lock acquired, so the next broadcast froze the whole bot."""
 
     @pytest.fixture(autouse=True)
-    async def setup_fixture(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        await self.setup_bot(monkeypatch, tmp_path)
+    async def setup_fixture(self, tmp_path: Path) -> None:
+        self.setup_bot(tmp_path)
         self.broadcast_bot.signal_bot.register(Broadcast(bot=self.broadcast_bot), groups=False)
         await self.broadcast_bot.subscribers.add(SUBSCRIBER_UUID)
         await self.broadcast_bot.subscribers.add(OTHER_SUBSCRIBER_UUID)

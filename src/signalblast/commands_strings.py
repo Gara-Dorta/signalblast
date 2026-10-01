@@ -68,24 +68,24 @@ class _AdminCommandArgs(_IterableDataClass[str]):
 AdminCommandArgs = _AdminCommandArgs()
 
 
-def _begings_with(in_str: str) -> str:
+def _begins_with(in_str: str) -> str:
     return "^(" + in_str + ")"
 
 
 @dataclass
 class _CommandRegex(_IterableDataClass[re.Pattern[str]]):
-    subscribe = re.compile(_begings_with(PublicCommandStrings.subscribe))
-    unsubscribe = re.compile(_begings_with(PublicCommandStrings.unsubscribe))
-    broadcast = re.compile(_begings_with(PublicCommandStrings.broadcast))
-    add_admin = re.compile(_begings_with(AdminCommandStrings.add_admin))
-    remove_admin = re.compile(_begings_with(AdminCommandStrings.remove_admin))
-    msg_to_admin = re.compile(_begings_with(PublicCommandStrings.msg_to_admin))
-    msg_from_admin = re.compile(_begings_with(AdminCommandStrings.msg_from_admin))
-    ban_subscriber = re.compile(_begings_with(AdminCommandStrings.ban_subscriber))
-    lift_ban_subscriber = re.compile(_begings_with(AdminCommandStrings.lift_ban_subscriber))
-    help = re.compile(_begings_with(PublicCommandStrings.help))
-    last_msg_user_uuid = re.compile(_begings_with(AdminCommandStrings.last_msg_user_uuid))
-    show_version = re.compile(_begings_with(AdminCommandStrings.show_version))
+    subscribe = re.compile(_begins_with(PublicCommandStrings.subscribe))
+    unsubscribe = re.compile(_begins_with(PublicCommandStrings.unsubscribe))
+    broadcast = re.compile(_begins_with(PublicCommandStrings.broadcast))
+    add_admin = re.compile(_begins_with(AdminCommandStrings.add_admin))
+    remove_admin = re.compile(_begins_with(AdminCommandStrings.remove_admin))
+    msg_to_admin = re.compile(_begins_with(PublicCommandStrings.msg_to_admin))
+    msg_from_admin = re.compile(_begins_with(AdminCommandStrings.msg_from_admin))
+    ban_subscriber = re.compile(_begins_with(AdminCommandStrings.ban_subscriber))
+    lift_ban_subscriber = re.compile(_begins_with(AdminCommandStrings.lift_ban_subscriber))
+    help = re.compile(_begins_with(PublicCommandStrings.help))
+    last_msg_user_uuid = re.compile(_begins_with(AdminCommandStrings.last_msg_user_uuid))
+    show_version = re.compile(_begins_with(AdminCommandStrings.show_version))
 
 
 CommandRegex = _CommandRegex()

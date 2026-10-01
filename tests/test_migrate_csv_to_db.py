@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 @pytest.fixture
 def data_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    monkeypatch.setenv("SIGNALBLAST_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("SIGNALBLAST_DATA_DIR", str(tmp_path))
     return tmp_path
 
 

@@ -11,13 +11,13 @@ if TYPE_CHECKING:
 
     from signalbot import Context
 
-    from signalblast.broadcastbot import BroadcasBot
+    from signalblast.broadcastbot import BroadcastBot
 
 
 class DeliveryTracker:
     MAX_FAILED_MSGS = 10
 
-    def __init__(self, bot: BroadcasBot) -> None:
+    def __init__(self, bot: BroadcastBot) -> None:
         self.broadcastbot = bot
         self.subscribers_num_fails: dict[str, int] = defaultdict(lambda: 0)
 

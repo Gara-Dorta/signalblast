@@ -69,7 +69,7 @@ def test_last_broadcast_roundtrip() -> None:
 def test_admin_load_creates_when_missing() -> None:
     storage = make_storage()
 
-    admin = asyncio.run(Admin.load(storage, "secret"))
+    admin = Admin.load(storage, "secret")
 
     assert admin.admin_id is None
     assert storage.get_admin() is not None
@@ -77,7 +77,7 @@ def test_admin_load_creates_when_missing() -> None:
 
 def test_admin_add_and_remove_with_password() -> None:
     storage = make_storage()
-    admin = asyncio.run(Admin.load(storage, "secret"))
+    admin = Admin.load(storage, "secret")
 
     assert asyncio.run(admin.add("uuid-1", "wrong")) is False
     assert admin.admin_id is None
@@ -94,10 +94,10 @@ def test_admin_add_and_remove_with_password() -> None:
 
 def test_admin_persists_across_load_calls() -> None:
     storage = make_storage()
-    admin = asyncio.run(Admin.load(storage, "secret"))
+    admin = Admin.load(storage, "secret")
     asyncio.run(admin.add("uuid-1", "secret"))
 
-    reloaded = asyncio.run(Admin.load(storage, None))
+    reloaded = Admin.load(storage, None)
 
     assert reloaded.admin_id == "uuid-1"
 

@@ -24,8 +24,8 @@ ADMIN_PASSWORD = "correct horse battery staple"  # noqa: S105
 
 class TestBanLiftBan(BroadcastChatTestCase):
     @pytest.fixture(autouse=True)
-    async def setup_fixture(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        await self.setup_bot(monkeypatch, tmp_path, admin_pass=ADMIN_PASSWORD)
+    async def setup_fixture(self, tmp_path: Path) -> None:
+        self.setup_bot(tmp_path, admin_pass=ADMIN_PASSWORD)
         self.broadcast_bot.signal_bot.register(BanSubscriber(bot=self.broadcast_bot), groups=False)
         self.broadcast_bot.signal_bot.register(LiftBanSubscriber(bot=self.broadcast_bot), groups=False)
         await self.make_admin(ADMIN_UUID)

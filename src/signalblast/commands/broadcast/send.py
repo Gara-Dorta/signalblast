@@ -15,12 +15,12 @@ if TYPE_CHECKING:
 
     from signalbot import DataMessageContext
 
-    from signalblast.broadcastbot import BroadcasBot
+    from signalblast.broadcastbot import BroadcastBot
     from signalblast.commands.broadcast.delivery import DeliveryTracker
 
 
 class BroadcastSender:
-    def __init__(self, bot: BroadcasBot, tracker: DeliveryTracker) -> None:
+    def __init__(self, bot: BroadcastBot, tracker: DeliveryTracker) -> None:
         self.broadcastbot = bot
         self.tracker = tracker
 

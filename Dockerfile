@@ -26,7 +26,7 @@ RUN uv venv && \
     uv pip install --no-cache-dir /tmp/signalblast-$SIGNALBLAST_VERSION-py3-none-any.whl
 
 ###########################
-ENV SIGNALBLAST_CONFIG_DIR=/home/user/.local/share/signalblast
+ENV SIGNALBLAST_DATA_DIR=/home/user/.local/share/signalblast
 
 ENTRYPOINT ["uv", "run", "python", "-m", "signalblast.main"]
 

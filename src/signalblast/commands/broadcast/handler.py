@@ -14,11 +14,11 @@ if TYPE_CHECKING:
 
     from signalbot import DataMessageContext, RemoteDeleteContext
 
-    from signalblast.broadcastbot import BroadcasBot
+    from signalblast.broadcastbot import BroadcastBot
 
 
 class Broadcast(DataMessageHandler, RemoteDeleteHandler):
-    def __init__(self, bot: BroadcasBot) -> None:
+    def __init__(self, bot: BroadcastBot) -> None:
         super().__init__()
         self.broadcastbot = bot
         tracker = DeliveryTracker(bot)

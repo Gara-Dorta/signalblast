@@ -1,45 +1,55 @@
 # signalblast
 
-Signalblast is a tool to send encrypted messages anonymously over [Signal](https://www.signal.org/) to a subscriber list. The sender does not know who the subscribers in the list are, nor the subscribers know who the sender is.
+Signalblast is a bot that sends encrypted messages anonymously over [Signal](https://www.signal.org/) to a list of subscribers. Subscribers don't see who else is on the list, and they don't see who sent a broadcast: every message comes from the bot.
 
-A server is required to host the bot, find instructions on how the set it up below.
+A server is required to host the bot, see the [installation](#installation) instructions below.
 
 The idea for this bot came from [Signalboost](https://web.archive.org/web/https://signalboost.info/), which unfortunately is no longer alive.
 
 ## Usage
 
-Once the bot is up and running, several commands are available:
-* `!subscribe` send this to sign up to the list
-* `!broadcast` after subscribing any message preceded by this will be broadcasted to every subscriber
-* `!unsubscribe` to stop receiving messages
-* `!help` to be reminded of which commands are available
-* `!admin` send a message only to the list admin, useful for getting technical support
+Send these commands to the bot in a private chat. Commands are not case sensitive.
+
+* `!subscribe` sign up to the list
+* `!unsubscribe` stop receiving messages
+* `!broadcast <message>` send a message to every subscriber. Any message that isn't a command is broadcast too, so `!broadcast` is only needed for messages that start with `!`
+* `!admin <message>` send a message only to the admins, e.g. to get technical support
+* `!help` show the available commands
+
+Broadcasts can be edited and deleted for everyone in Signal as usual, for up to 24 hours. Messages that start with `!` but aren't a command are never broadcast, the bot replies with the help instead.
+
+### Admin commands
+
+* `!add admin <password>` become an admin, the password is `SIGNALBLAST_PASSWORD`. There can be several admins
+* `!remove admin <password> <admin id>` remove an admin
+* `!list admins` show the ids of the admins
+* `!ban` quote a broadcast, or a message from a user, and send `!ban` to ban its sender. This works for broadcasts from the last 24 hours (so the admin must be subscribed to receive them) and for messages from the last 7 days
+* `!list bans` show the banned users, numbered, with the start of the message they were banned for
+* `!lift ban <number>` lift a ban
+* `!version` show the versions of signalblast, signalbot and signal-cli-rest-api
+
+Messages that users send with `!admin` reach every admin as `User #7 wrote: …`. To reply, quote the message and write the reply, without any command. The other admins get a copy of the reply.
+
+### Privacy
+
+* Subscribers never learn who else is subscribed, or who sent a broadcast.
+* Admins never learn who a subscriber is either: users who write to the admins appear as `User #7`, and bans and replies work by quoting messages. A user keeps the same number while they keep writing, and gets a new one after 7 days without writing to the admins.
+* The server running the bot does know who everyone is. Its database stores who sent each broadcast for 24 hours (to allow edits, deletes and bans), and who sent each message to the admins for 7 days. Subscriber ids only appear in the logs with `SIGNALBLAST_LOG_LEVEL=DEBUG`.
 
 ## Installation
 
-### Option 1: local python environment
-* Set up signalbot as specified [here](https://github.com/signalbot-org/signalbot)
-* Create a new virtual environment, [uv](https://docs.astral.sh/uv/) is recommended
-* Install with
-  ```bash
-  pip install signalblast
-  ```
-* Run via
-  ```bash
-  python -m signalblast.main
-  ```
+### Option 1: docker compose
 
-### Option 2: docker compose
-This will pull the project docker images from https://hub.docker.com/r/eradorta/signalblast
+This uses the images from https://hub.docker.com/r/eradorta/signalblast
 
 * Install [docker](https://www.docker.com/).
-* Configure signal-cli-rest-api as specified [here](https://signalbot-org.github.io/signalbot/latest/getting_started/#setup-signal-cli-rest-api)
-* Download the [docker-compose.yml](https://github.com/Gara-Dorta/signalblast/blob/main/docker-compose.yaml) and [.env.example](https://github.com/Gara-Dorta/signalblast/blob/main/.env.example) files.
+* Set up signal-cli-rest-api for the bot's phone number as specified [here](https://signalbot-org.github.io/signalbot/latest/getting_started/#setup-signal-cli-rest-api).
+* Download the [docker-compose.yaml](https://github.com/Gara-Dorta/signalblast/blob/main/docker-compose.yaml) and [.env.example](https://github.com/Gara-Dorta/signalblast/blob/main/.env.example) files.
 * Create a data folder
   ```bash
   mkdir -p $HOME/.local/share/signalblast
   ```
-* Create your `.env` file from the example and fill in the values
+* Create your `.env` file from the example and fill in the values, see [configuration](#configuration)
   ```bash
   cp .env.example .env
   ```
@@ -48,7 +58,7 @@ This will pull the project docker images from https://hub.docker.com/r/eradorta/
   docker compose up
   ```
 * Optional: restart the containers automatically when signalblast can't send messages.
-  * Set `SIGNALBLAST_HEALTHCHECK_RECEIVER` in your `.env` file, it will receive a "Ping" message every 8 hours. The signalblast container is reported as unhealthy when the message can't be sent.
+  * Set `SIGNALBLAST_HEALTHCHECK_RECEIVER` in your `.env` file, it will receive a "Ping" message every 8 hours. The signalblast container is reported as unhealthy after 3 failed pings in a row, so a problem is detected within a day.
   * Docker doesn't restart unhealthy containers on its own, and the error is often only recoverable by restarting both signal-cli-rest-api and signalblast. Install the [watchdog](https://github.com/Gara-Dorta/signalblast/blob/main/docker/watchdog.sh) as a systemd user timer that does that, it runs as your user (which must be able to run docker):
     ```bash
     curl -fsSL https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/docker/install_watchdog.sh | bash
@@ -59,36 +69,59 @@ This will pull the project docker images from https://hub.docker.com/r/eradorta/
     ```
   * Alternatively, Docker Swarm and Podman (`--health-on-failure=restart`) can restart the signalblast container natively, but they won't restart signal-cli-rest-api.
 
-### Migrating from CSV (pre-v2)
+### Option 2: python environment
 
-Older versions of signalblast stored subscribers, banned users and the admin in `subscribers.csv`, `banned_users.csv` and `admin.txt` inside the data folder. These have been replaced with a sqlite database (`signalblast.db`, in the same data folder).
+* Set up signal-cli-rest-api as specified [here](https://signalbot-org.github.io/signalbot/latest/getting_started/#setup-signal-cli-rest-api).
+* Install signalblast in a new virtual environment, [uv](https://docs.astral.sh/uv/) is recommended
+  ```bash
+  uv tool install signalblast
+  ```
+* Set the [configuration](#configuration) as environment variables or in a `.env` file in the folder you run it from, then run it with
+  ```bash
+  signalblast
+  ```
 
-If you're upgrading from a version that still has these files, migrate them once with:
-```bash
-uv run python -m signalblast.migrate_csv_to_db
-```
-This only adds data to the database; it never modifies or deletes the original CSV/txt files. Run it, confirm the bot works as expected, then you can delete `subscribers.csv`, `banned_users.csv` and `admin.txt` manually.
+## Configuration
+
+signalblast reads its settings from environment variables, or from a `.env` file in the working directory. Empty values are treated as unset.
+
+| Variable | Default | Description |
+|---|---|---|
+| `SIGNALBLAST_PHONE_NUMBER` | required | The phone number of the bot |
+| `SIGNALBLAST_PASSWORD` | | The password to become an admin. It is stored hashed, so it only needs to be set on the first start or to change it. Without it nobody can become an admin |
+| `SIGNALBLAST_SIGNAL_SERVICE` | `localhost:8080` | The address of signal-cli-rest-api |
+| `SIGNALBLAST_DATA_DIR` | `~/.local/share/signalblast` | Where the database is stored |
+| `SIGNALBLAST_WELCOME_MESSAGE` | `Subscription successful!` | The reply to `!subscribe` |
+| `SIGNALBLAST_INSTRUCTIONS_URL` | | A link with instructions, shown in the help |
+| `SIGNALBLAST_EXPIRATION_TIME` | 4 weeks | The disappearing messages timer of the chats with the subscribers in seconds, `0` disables it |
+| `SIGNALBLAST_HEALTHCHECK_RECEIVER` | | The contact or group that receives the health check pings, the health check is disabled without it |
+| `SIGNALBLAST_HEALTHCHECK_PORT` | `15556` | The port of the health check endpoint, on localhost |
+| `SIGNALBLAST_LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING` or `ERROR` |
+| `SIGNALBLAST_LOG_FILE` | | Log to this file, rotated weekly, instead of the console |
+
+## Upgrading
+
+The database is created, and upgraded, automatically on start. Data from versions that stored it in `subscribers.csv`, `banned_users.csv` and `admin.txt` is imported into the database the first time, and the files are renamed to `*.migrated`. You can delete them once the bot works as expected.
+
+See the [changelog](CHANGELOG.md) for the changes to the commands and the configuration.
 
 ## Development
 
-* Set up docker and signalbot as specified in the [installation](#installation) section.
+* Set up signal-cli-rest-api as specified in the [installation](#installation) section.
 * Clone the repo
 * Install [uv](https://docs.astral.sh/uv/)
 * Install the repo and the dependencies in a new virtual environment with `uv sync`
-* Install the prek hook `uv run prek install`
-* Run
-  * Directly via `uv run python -m signalblast.main`
-  * Via systemd as a user service with `systemd/signalblast.service`, see the comments in the file for how to install it
-    * Create `systemd/env_file.env` from `systemd/env_file.env.example`
-    * Run once with the password in the env file.
-    * From there one, the password is stored encrypted and it can be removed from the env file
-* Optional: install signalbot as an editable dependency `uv add --editable ../signalbot/`
+* Install the prek hooks with `uv run prek install`, they run ruff and ty
+* Run the tests with `uv run pytest`
+* Run the bot
+  * Directly via `uv run signalblast`
+  * Via systemd as a user service with `systemd/signalblast.service`, see the comments in the file for how to install it. Create `systemd/env_file.env` from `systemd/env_file.env.example` for the configuration.
+* Optional: install signalbot as an editable dependency with `uv add --editable ../signalbot/`, but don't commit that change
 
 ### Docker compose
 
-The `docker/compose_build.sh` and `docker/compose_up.sh` are provide for easier development.
+`docker/compose_build.sh` and `docker/compose_up.sh` build and run the image from the local code.
 
 ## Roadmap
 
 * Make instructions clearer and add pictures to the readme
-* Add unit testing

@@ -1,0 +1,16 @@
+[Unit]
+Description=Periodically restart the signalblast containers if they are unhealthy
+
+[Timer]
+# Only reads the container health status, the health check interval is set in the Dockerfile
+OnBootSec=5min
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target
+
+
+# User unit installed by docker/install_watchdog.sh
+
+# List the timers and when they will trigger next with
+# systemctl --user list-timers signalblast-watchdog.timer

@@ -47,6 +47,17 @@ This will pull the project docker images from https://hub.docker.com/r/eradorta/
   ```bash
   docker compose up
   ```
+* Optional: restart the containers automatically when signalblast can't send messages.
+  * Set `SIGNALBLAST_HEALTHCHECK_RECEIVER` in your `.env` file, it will receive a "Ping" message every 8 hours. The signalblast container is reported as unhealthy when the message can't be sent.
+  * Docker doesn't restart unhealthy containers on its own, and the error is often only recoverable by restarting both signal-cli-rest-api and signalblast. Install the [watchdog](https://github.com/Gara-Dorta/signalblast/blob/main/docker/watchdog.sh) as a systemd user timer that does that, it runs as your user (which must be able to run docker):
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/docker/install_watchdog.sh | bash
+    ```
+  * Uninstall it with:
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/docker/install_watchdog.sh | bash -s -- --uninstall
+    ```
+  * Alternatively, Docker Swarm and Podman (`--health-on-failure=restart`) can restart the signalblast container natively, but they won't restart signal-cli-rest-api.
 
 ### Migrating from CSV (pre-v2)
 

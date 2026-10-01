@@ -1,14 +1,8 @@
 services:
-  autoheal:
-    image: willfarrell/autoheal:latest
-    network_mode: none
-    restart: always
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - /var/run/docker.sock:/var/run/docker.sock
-
   signal-cli-rest-api:
     image: "bbernhard/signal-cli-rest-api:latest"
+    # Fixed name so that docker/watchdog.sh can restart it
+    container_name: signal-cli-rest-api
     ports:
       - "8080:8080"
     volumes:
@@ -17,11 +11,11 @@ services:
       - MODE=json-rpc
       - JSON_RPC_TRUST_NEW_IDENTITIES=always
     restart: always
-    labels:
-      autoheal: true
 
   signalblast:
     image: "eradorta/signalblast:$DOCKER_TAG"
+    # Fixed name so that docker/watchdog.sh can restart it
+    container_name: signalblast
     build:
       network: "host"
       args:
@@ -43,5 +37,3 @@ services:
       signal-cli-rest-api:
         condition: service_healthy
     restart: always
-    labels:
-      autoheal: true

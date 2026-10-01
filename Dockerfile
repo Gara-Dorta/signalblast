@@ -1,10 +1,5 @@
 FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim
 
-# Install curl for the healthcheck
-RUN apt-get update && \
-    apt-get install -y curl=7.* --no-install-recommends && \
-    rm -rf /var/lib/apt/lists/*
-
 ##########################
 # Create non-root user
 ##########################
@@ -35,4 +30,4 @@ ENV SIGNALBLAST_CONFIG_DIR=/home/user/.local/share/signalblast
 
 ENTRYPOINT ["uv", "run", "python", "-m", "signalblast.main"]
 
-HEALTHCHECK --interval=8h --start-period=30s --retries=3 CMD ["sh", "-c", "curl -f http://localhost:15556 || exit 1"]
+HEALTHCHECK --interval=8h --timeout=90s --start-period=1m --retries=3 CMD ["sh", "-c", "[ -z \"$SIGNALBLAST_HEALTHCHECK_RECEIVER\" ] || python -c \"import urllib.request; urllib.request.urlopen('http://localhost:${SIGNALBLAST_HEALTHCHECK_PORT:-15556}', timeout=60)\""]

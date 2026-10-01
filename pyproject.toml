@@ -58,6 +58,7 @@ ignore = [
   "FIX", # TODO, FIXME and other messages
   "ERA001", # Commented out code
   "CPY001", # Missing copyright notice on top of file
+  "COM812", # Trailing commas, conflicts with the formatter
 ]
 
 [tool.ruff.lint.per-file-ignores]

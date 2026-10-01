@@ -12,7 +12,7 @@ from signalbot import EditMessage, LinkPreview, SendMessage, SentMessage, Signal
 from signalblast.utils import people
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Callable, Coroutine
+    from collections.abc import AsyncGenerator, Callable, Coroutine
 
     from signalbot import Context, DataMessageContext, RemoteDeleteContext
 
@@ -255,7 +255,7 @@ async def _track_failures(bot: BroadcastBot, recipients: list[str], delivered: d
 
 
 @contextlib.asynccontextmanager
-async def _typing(bot: BroadcastBot, ctx: Context) -> AsyncIterator[None]:
+async def _typing(bot: BroadcastBot, ctx: Context) -> AsyncGenerator[None]:
     """Shows the typing indicator to the sender while the broadcast is being sent."""
 
     async def start_typing() -> None:

@@ -683,7 +683,7 @@ requires-dist = [
     { name = "bcrypt", specifier = ">=5.0.0" },
     { name = "pydantic", specifier = ">=2.13.4" },
     { name = "pydantic-settings", specifier = ">=2.11" },
-    { name = "signalbot", specifier = ">=2.0.0" },
+    { name = "signalbot", editable = "../signalbot" },
 ]
 
 [package.metadata.requires-dev]
@@ -700,8 +700,8 @@ dev = [
 
 [[package]]
 name = "signalbot"
-version = "2.0.0"
-source = { registry = "https://pypi.org/simple" }
+version = "2.0.2"
+source = { editable = "../signalbot" }
 dependencies = [
     { name = "aiohttp" },
     { name = "anyio" },
@@ -712,9 +712,42 @@ dependencies = [
     { name = "pyyaml" },
     { name = "websockets" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e3/4e/5041f99f08405423ad491e0f63ac7935519d35b3d24b19733b85d494145d/signalbot-2.0.0.tar.gz", hash = "sha256:b145dce8f660544ee014e291b031d0c759e58bf8b4576eba4496fbe431648d17", size = 61914, upload-time = "2026-08-10T22:13:38.048Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/67/2f/f976374cd935cedd2da11e567212fd69084d17ebdb07ae0c52e82afe1e79/signalbot-2.0.0-py3-none-any.whl", hash = "sha256:f1f136633513882cf05c98a443ce6b55aee9a7f9fc80dab7bfdd681bc977a6f8", size = 133237, upload-time = "2026-08-10T22:13:36.95Z" },
+
+[package.metadata]
+requires-dist = [
+    { name = "aiohttp", specifier = ">=3.11.9" },
+    { name = "anyio", specifier = ">=4.13.0" },
+    { name = "apscheduler", specifier = ">=3.11.0" },
+    { name = "packaging", specifier = ">=25.0" },
+    { name = "phonenumbers", specifier = ">=8.13.54" },
+    { name = "pydantic", specifier = ">=2.12.3" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
+    { name = "redis", marker = "extra == 'redis'", specifier = ">=5.2.0" },
+    { name = "websockets", specifier = ">=14.1" },
+]
+provides-extras = ["redis"]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "datamodel-code-generator", extras = ["ruff"], specifier = ">=0.72.2" },
+    { name = "prek", specifier = ">=0.3.0" },
+    { name = "pytest", specifier = ">=8.4.2" },
+    { name = "pytest-asyncio", specifier = ">=1.2.0" },
+    { name = "pytest-cov", specifier = ">=7.0.0" },
+    { name = "pytest-mock", specifier = ">=3.15.1" },
+    { name = "redis", specifier = ">=5.2.0" },
+    { name = "ty", specifier = ">=0.0.69" },
+]
+docs = [
+    { name = "griffe-pydantic", specifier = ">=1.3.1" },
+    { name = "mike", git = "https://github.com/squidfunk/mike.git" },
+    { name = "mkdocstrings-python", specifier = ">=2.0.5" },
+    { name = "ruff", specifier = ">=0.15.1" },
+    { name = "zensical", specifier = ">=0.0.53" },
+]
+examples = [
+    { name = "anyio", specifier = ">=4.12.1" },
+    { name = "typer", specifier = ">=0.23.2" },
 ]
 
 [[package]]

@@ -1,4 +1,4 @@
-from signalbot import Attachment, Context, LinkPreview, Preview
+from signalbot import Attachment, DataMessageContext, LinkPreview, Preview
 
 from signalblast.commands_strings import AdminCommandArgs, AdminCommandStrings, PublicCommandStrings
 
@@ -38,7 +38,7 @@ class MessageHandler:
             thumbnail=preview.base64_thumbnail,
         )
 
-    async def delete_attachments(self, ctx: Context) -> None:
+    async def delete_attachments(self, ctx: DataMessageContext) -> None:
         if ctx.message.attachments:
             for attachment in ctx.message.attachments:
                 await ctx.bot.attachments.delete(attachment)

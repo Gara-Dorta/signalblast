@@ -9,7 +9,7 @@ from signalbot import Context, DataMessageContext, SendMessage, SignalBot, Signa
 from signalblast.admin import Admin
 from signalblast.message_handler import MessageHandler
 from signalblast.storage import SignalblastStorage, UserTable
-from signalblast.utils import TimestampData, get_data_path
+from signalblast.utils import get_data_path
 
 if TYPE_CHECKING:
     from asyncio import Task
@@ -168,12 +168,8 @@ class BroadcasBot:
     async def delete_old_timestamps(self) -> None:
         """Signal only allows editing messges within 24 hours.
         No point in keeping the information for older messages"""
-        cursor = self.db._sqlite.execute("SELECT key FROM signalbot")  # noqa: SLF001
-        keys = [row[0] for row in cursor.fetchall()]
-        for key in keys:
-            value = TimestampData.model_validate(self.signal_bot.storage.read(key))
-            if datetime.fromtimestamp(value.timestamp / 1000, tz=UTC) < (datetime.now(tz=UTC) - timedelta(days=1)):
-                self.storage_lock.acquire()
-                self.signal_bot.storage.delete(key)
-                self.storage_lock.release()
-                self.logger.info("Deleted expired key with timestamp: %s", value.timestamp)
+        cutoff = int((datetime.now(tz=UTC) - timedelta(days=1)).timestamp() * 1000)
+        self.storage_lock.acquire()
+        num_deleted = self.db.delete_broadcast_timestamps_before(cutoff)
+        self.storage_lock.release()
+        self.logger.info("Deleted %s expired broadcast timestamps", num_deleted)

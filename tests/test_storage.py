@@ -1,7 +1,11 @@
 import asyncio
 
+import pytest
+from signalbot import StorageError
+
 from signalblast.admin import Admin
 from signalblast.storage import SignalblastStorage, UserTable
+from signalblast.utils import TimestampData
 
 
 def make_storage() -> SignalblastStorage:
@@ -110,3 +114,26 @@ def test_admin_persists_across_load_calls() -> None:
     reloaded = asyncio.run(Admin.load(storage, None))
 
     assert reloaded.admin_id == "uuid-1"
+
+
+def test_broadcast_timestamps_save_read_delete() -> None:
+    storage = make_storage()
+    data = TimestampData(author="uuid-1", timestamp=1000, broadcast_timestamps={"uuid-1": 1000, "uuid-2": 1001})
+
+    storage.save_broadcast_timestamps(data)
+    assert storage.read_broadcast_timestamps("uuid-1", 1000) == data
+
+    with pytest.raises(StorageError):
+        storage.read_broadcast_timestamps("uuid-1", 999)
+
+    assert storage.delete_broadcast_timestamps_before(1000) == 0
+    assert storage.delete_broadcast_timestamps_before(1001) == 1
+    with pytest.raises(StorageError):
+        storage.read_broadcast_timestamps("uuid-1", 1000)
+
+
+def test_signalbot_table_is_dropped() -> None:
+    storage = make_storage()
+    tables = {row[0] for row in storage._sqlite.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}  # noqa: SLF001
+    assert "broadcast_timestamps" in tables
+    assert "signalbot" not in tables

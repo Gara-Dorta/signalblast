@@ -6,8 +6,6 @@ from typing import TYPE_CHECKING
 
 from signalbot import SentMessage
 
-from signalblast.utils import TimestampData
-
 if TYPE_CHECKING:
     from signalbot import RemoteDeleteContext
 
@@ -43,11 +41,9 @@ class BroadcastDeleter:
             num_subscribers = len(self.broadcastbot.subscribers)
 
             self.broadcastbot.storage_lock.acquire()
-            prev_timestamps = context.bot.storage.read(
-                f"broadcast-uuid-{subscriber_uuid}-timestamp-{context.message.timestamp}",
-            )
+            prev_timestamps = self.broadcastbot.db.read_broadcast_timestamps(subscriber_uuid, context.message.timestamp)
             self.broadcastbot.storage_lock.release()
-            to_modify_timestamps = TimestampData.model_validate(prev_timestamps).broadcast_timestamps
+            to_modify_timestamps = prev_timestamps.broadcast_timestamps
 
             subscribers = list(self.broadcastbot.subscribers)
             random.shuffle(subscribers)

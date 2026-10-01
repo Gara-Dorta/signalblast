@@ -1,0 +1,32 @@
+# Only pyproject.toml, README.md, LICENSE and src/ are needed to build the image
+
+# Git and editors
+.git
+.github
+.claude
+.vscode
+
+# Environments and secrets
+.venv
+.env
+
+# Caches and build outputs
+**/__pycache__
+**/*.py[cod]
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.coverage
+.coverage.*
+htmlcov
+build
+dist
+*.egg-info
+_version.py
+
+# Not needed in the image
+tests
+docker
+systemd
+data
+src/data

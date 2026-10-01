@@ -2,11 +2,10 @@ name: Test Workflow
 
 on:
   push:
-    branches:
-      - '**'
+    branches: [ "main" ]
   pull_request:
-    branches:
-      - '**'
+  # Allows the release workflow to run the tests before publishing
+  workflow_call:
 
 jobs:
   pytest_commit:

@@ -6,14 +6,26 @@
 #   curl -fsSL https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/docker/install_watchdog.sh | bash
 # Uninstall:
 #   curl -fsSL https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/docker/install_watchdog.sh | bash -s -- --uninstall
-# Install from a branch or tag other than main:
+# The files are downloaded from the latest release by default, install from a branch or tag instead with:
 #   ... | bash -s -- --ref <branch or tag>
+
+# Print the tag of the latest signalblast release, fails if it can't be found
+latest_release_tag() {
+    local response tag
+    response="$(curl -fsSL https://api.github.com/repos/Gara-Dorta/signalblast/releases/latest)" || return 1
+    tag="$(printf '%s\n' "$response" | sed -nE 's/.*"tag_name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p')"
+    # Keep only the first match
+    tag="${tag%%$'\n'*}"
+    [ -n "$tag" ] || return 1
+    printf '%s\n' "$tag"
+}
 
 # Everything is inside a function so that nothing runs if the download is interrupted
 main() {
     set -euo pipefail
 
-    local ref="main"
+    # Defaults to the latest release, it is resolved after parsing the arguments
+    local ref=""
     local uninstall=false
 
     while [ $# -gt 0 ]; do
@@ -31,7 +43,6 @@ main() {
         shift
     done
 
-    local base_url="https://raw.githubusercontent.com/Gara-Dorta/signalblast/$ref"
     local bin_path="$HOME/.local/bin/signalblast-watchdog"
     local unit_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 
@@ -54,6 +65,15 @@ main() {
         echo "$(id -un) can't run docker, add it to the docker group or use rootless docker" >&2
         exit 1
     fi
+
+    if [ -z "$ref" ]; then
+        if ! ref="$(latest_release_tag)"; then
+            echo "Warning: could not find the latest signalblast release, installing from main" >&2
+            ref="main"
+        fi
+    fi
+    echo "Installing the signalblast watchdog from $ref"
+    local base_url="https://raw.githubusercontent.com/Gara-Dorta/signalblast/$ref"
 
     mkdir -p "$(dirname "$bin_path")" "$unit_dir"
     curl -fsSL "$base_url/docker/watchdog.sh" -o "$bin_path"

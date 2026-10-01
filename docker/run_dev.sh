@@ -6,15 +6,14 @@ DOCKER_TAG="${SIGNALBLAST_VERSION//+/-}"
 
 echo $REPO_DIR
 
+# The environment variables are read from the .env file in the repo, see .env.example
 docker run \
  --rm \
- -v $HOME/.local/share/signal-api/:/home/user/.local/share/signal-api/ \
  -v $HOME/.local/share/signalblast/:/home/user/.local/share/signalblast/ \
  -v $REPO_DIR:/home/user/signalblast \
  --interactive=true \
  --tty=true \
  --entrypoint bash \
  --network host \
- -e SIGNALBLAST_PHONE_NUMBER='PHONE_NUMBER' \
- -e SIGNALBLAST_PASSWORD='PASSWORD' \
+ --env-file "${REPO_DIR}/.env" \
   eradorta/signalblast:$DOCKER_TAG

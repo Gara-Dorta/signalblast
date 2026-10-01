@@ -1,10 +1,10 @@
 services:
   signal-cli-rest-api:
-    image: "bbernhard/signal-cli-rest-api:latest"
+    image: "bbernhard/signal-cli-rest-api:0.101"
     # Fixed name so that docker/watchdog.sh can restart it
     container_name: signal-cli-rest-api
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     volumes:
       - "$HOME/.local/share/signal-api:/home/.local/share/signal-cli"
     environment:
@@ -22,7 +22,6 @@ services:
         SIGNALBLAST_VERSION: $SIGNALBLAST_VERSION
     network_mode: "host"
     volumes:
-      - "$HOME/.local/share/signal-api/:/home/user/.local/share/signal-api/"
       - "$HOME/.local/share/signalblast/:/home/user/.local/share/signalblast/"
     environment:
       - SIGNALBLAST_PHONE_NUMBER=$SIGNALBLAST_PHONE_NUMBER

@@ -1,23 +1,32 @@
+[Unit]
+Description=signalblast Signal broadcast bot
+
 [Service]
 Type=exec
-ExecStart=/home/pi/signalblast/.venv/bin/python -m signalblast.main
-EnvironmentFile=/home/pi/signalblast/systemd/env_file.env
+ExecStart=%h/signalblast/.venv/bin/python -m signalblast.main
+EnvironmentFile=%h/signalblast/systemd/env_file.env
 Restart=always
-User=pi
-Group=pi
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
 
 
-# Visualise the journal by running
-# journalctl -u signalblast.service
+# User unit, it expects the repo to be cloned in ~/signalblast and installed with `uv sync`
 
-# The service was added to the system services by running
-# sudo ln -sn /home/pi/signalblast/systemd/signalblast.service /etc/systemd/system/signalblast.service
+# Create the env file from the example and fill in the values
+# cp ~/signalblast/systemd/env_file.env.example ~/signalblast/systemd/env_file.env && chmod 600 ~/signalblast/systemd/env_file.env
+
+# Add the service to the user services with
+# mkdir -p ~/.config/systemd/user && ln -sn ~/signalblast/systemd/signalblast.service ~/.config/systemd/user/signalblast.service
 
 # The service can be added and enabled with (enabling makes it start on boot)
-# sudo systemctl daemon-reload && sudo systemctl enable signalblast.service
+# systemctl --user daemon-reload && systemctl --user enable signalblast.service
 
-# Start the service inmediately for testing with
-# sudo systemctl start signalblast.service
+# Without lingering, user services only run while the user is logged in, enable it with
+# sudo loginctl enable-linger $USER
+
+# Start the service immediately for testing with
+# systemctl --user start signalblast.service
+
+# Visualise the journal by running
+# journalctl --user -u signalblast.service

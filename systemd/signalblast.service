@@ -3,7 +3,7 @@ Description=signalblast Signal broadcast bot
 
 [Service]
 Type=exec
-ExecStart=%h/signalblast/.venv/bin/python -m signalblast.main
+ExecStart=%h/signalblast/.venv/bin/signalblast
 EnvironmentFile=%h/signalblast/systemd/env_file.env
 Restart=always
 

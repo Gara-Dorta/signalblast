@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
+from signalblast.main import main
 from signalblast.settings import FOUR_WEEKS, Settings
 
 if TYPE_CHECKING:
     from pathlib import Path
-
-    import pytest
 
 
 def test_reads_prefixed_environment_variables(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -47,3 +48,11 @@ def test_env_file_shared_with_docker_compose(tmp_path: Path, monkeypatch: pytest
     assert settings.password is not None
     assert settings.password.get_secret_value() == "secret"
     assert "secret" not in repr(settings)
+
+
+def test_main_explains_missing_settings(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.chdir(tmp_path)  # No .env file
+    monkeypatch.delenv("SIGNALBLAST_PHONE_NUMBER", raising=False)
+
+    with pytest.raises(SystemExit, match=r"SIGNALBLAST_\* environment variables\n(.|\n)*phone_number"):
+        main()

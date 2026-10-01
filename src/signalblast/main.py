@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import sys
+
+from pydantic import ValidationError
+
 from signalblast.broadcastbot import BroadcastBot
 from signalblast.commands import CommandRouter
 from signalblast.health_check import HealthCheck
@@ -22,7 +26,10 @@ def create_bot(settings: Settings) -> BroadcastBot:
 
 
 def main() -> None:
-    settings = Settings()  # pyright: ignore[reportCallIssue] -- required fields come from the environment
+    try:
+        settings = Settings()  # pyright: ignore[reportCallIssue] -- required fields come from the environment
+    except ValidationError as e:
+        sys.exit(f"Invalid configuration, see .env.example for the SIGNALBLAST_* environment variables\n{e}")
     configure_logging(settings.log_level, settings.log_file)
     create_bot(settings).start()
 

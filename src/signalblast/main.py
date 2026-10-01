@@ -5,7 +5,7 @@ import sys
 from pydantic import ValidationError
 
 from signalblast.broadcastbot import BroadcastBot
-from signalblast.commands import CommandRouter
+from signalblast.commands import register_handlers
 from signalblast.health_check import HealthCheck
 from signalblast.settings import Settings
 from signalblast.utils import configure_logging
@@ -15,7 +15,7 @@ def create_bot(settings: Settings) -> BroadcastBot:
     bot = BroadcastBot(settings)
 
     # Only private chats, the bot has no group features
-    bot.signal_bot.register(CommandRouter(bot), groups=False)
+    register_handlers(bot)
 
     if settings.healthcheck_receiver is not None:
         bot.signal_bot.register(HealthCheck(settings.healthcheck_receiver, settings.healthcheck_port))

@@ -1,3 +1,37 @@
-from signalblast.commands.router import CommandRouter
+"""One signalbot handler per command, plus the handlers for everything that isn't a command.
 
-__all__ = ["CommandRouter"]
+Every private message is handled by exactly one of them: they are registered as exclusive, and the
+matching one with the highest priority runs (see `base.py`):
+
+1. Edits of a broadcast edit every copy of it.
+2. Commands.
+3. A quote of a message about a user is a reply to that user, it is never broadcast.
+4. Anything else starting with "!" gets the help, so mistyped commands are not broadcast.
+5. Everything else is broadcast.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from signalblast.commands.broadcast import Broadcast, DeleteBroadcast, EditBroadcast
+from signalblast.commands.messaging import ReplyToUser
+from signalblast.commands.registry import COMMANDS, UnknownCommand
+
+if TYPE_CHECKING:
+    from signalblast.broadcastbot import BroadcastBot
+
+
+def register_handlers(bot: BroadcastBot) -> None:
+    for handler in (
+        EditBroadcast(bot),
+        *(command(bot) for command in COMMANDS),
+        ReplyToUser(bot),
+        UnknownCommand(bot),
+        Broadcast(bot),
+        DeleteBroadcast(bot),
+    ):
+        handler.register(bot.signal_bot)
+
+
+__all__ = ["register_handlers"]

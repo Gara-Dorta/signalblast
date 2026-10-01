@@ -5,16 +5,22 @@ import contextlib
 import logging
 import random
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
-from signalbot import EditMessage, LinkPreview, SendMessage, SentMessage, SignalBotError
+from signalbot import EditMessage, LinkPreview, RemoteDeleteHandler, SendMessage, SentMessage, SignalBotError
 
+from signalblast.commands.base import (
+    BROADCAST_PRIORITY,
+    EDIT_BROADCAST_PRIORITY,
+    Command,
+    SignalblastHandler,
+)
 from signalblast.utils import people
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable, Coroutine
 
-    from signalbot import Context, DataMessageContext, RemoteDeleteContext
+    from signalbot import Context, DataMessage, DataMessageContext, RemoteDeleteContext, SignalBot
 
     from signalblast.broadcastbot import BroadcastBot
 
@@ -59,28 +65,85 @@ class BroadcastContent:
         return cls(text or "", attachments or None, link_preview, message.view_once)
 
 
-async def broadcast_command(bot: BroadcastBot, ctx: DataMessageContext, args: str) -> None:
-    await send_broadcast(bot, ctx, args)
+class BroadcastCommand(Command):
+    trigger = "!broadcast"
+    args = "<message>"
+    description = "Send a message to every subscriber, anything that isn't a command is broadcast too"
+
+    @override
+    async def run(self, ctx: DataMessageContext, sender: str, args: str) -> None:
+        await _send_new_broadcast(self.bot, ctx, args)
 
 
-async def send_broadcast(bot: BroadcastBot, ctx: DataMessageContext, text: str | None) -> None:
+class Broadcast(SignalblastHandler):
+    """Every message that no other handler handles is broadcast."""
+
+    priority = BROADCAST_PRIORITY
+
+    @override
+    def matches(self, message: DataMessage) -> bool:
+        return True
+
+    @override
+    async def handle(self, ctx: DataMessageContext, sender: str) -> None:
+        await _send_new_broadcast(self.bot, ctx, ctx.message.text)
+
+
+class EditBroadcast(SignalblastHandler):
+    """The sender edited a broadcast, edit every copy of it. Subscribers who joined after it was sent
+    receive the edit as a new message."""
+
+    priority = EDIT_BROADCAST_PRIORITY
+
+    @override
+    def matches(self, message: DataMessage) -> bool:
+        return (
+            isinstance(message, EditMessage)
+            and message.source_uuid is not None
+            and bool(self.bot.db.first_deliveries(message.source_uuid, message.target_sent_timestamp))
+        )
+
+    @override
+    async def handle(self, ctx: DataMessageContext, sender: str) -> None:
+        message = ctx.message
+        if not isinstance(message, EditMessage):
+            return
+        first_deliveries = self.bot.db.first_deliveries(sender, message.target_sent_timestamp)
+        text = BroadcastCommand.parse(message.text)
+        await _broadcast(
+            self.bot,
+            ctx,
+            message.text if text is None else text,
+            broadcast_ts=message.target_sent_timestamp,
+            first_deliveries=first_deliveries,
+        )
+
+
+class DeleteBroadcast(RemoteDeleteHandler):
+    """The sender deleted their message for everyone, delete every copy of it if it was a broadcast."""
+
+    def __init__(self, bot: BroadcastBot) -> None:
+        super().__init__()
+        self.bot = bot
+
+    def register(self, signal_bot: SignalBot) -> None:
+        signal_bot.register(self, groups=False)
+
+    @override
+    async def handle_remote_delete(self, context: RemoteDeleteContext) -> None:
+        try:
+            await _delete_broadcast(self.bot, context)
+        except Exception:
+            logger.exception("Failed to delete a broadcast")
+
+
+async def _send_new_broadcast(bot: BroadcastBot, ctx: DataMessageContext, text: str | None) -> None:
     """Sends the message in `ctx` to every subscriber, `text` is its text without the `!broadcast` command."""
     message = ctx.message
     # An edit of a message that wasn't broadcast is broadcast as new. Record it under the original message,
     # which is what later edits and deletes of it refer to
     broadcast_ts = message.target_sent_timestamp if isinstance(message, EditMessage) else message.timestamp
     await _broadcast(bot, ctx, text, broadcast_ts=broadcast_ts, first_deliveries={})
-
-
-async def edit_broadcast(
-    bot: BroadcastBot,
-    ctx: DataMessageContext,
-    text: str | None,
-    broadcast_ts: int,
-    first_deliveries: dict[str, int],
-) -> None:
-    """Edits the broadcast sent at `broadcast_ts`. Subscribers who joined later receive it as a new message."""
-    await _broadcast(bot, ctx, text, broadcast_ts=broadcast_ts, first_deliveries=first_deliveries)
 
 
 async def _broadcast(
@@ -140,8 +203,7 @@ async def _broadcast(
     logger.debug("Broadcast by %s", sender)
 
 
-async def delete_broadcast(bot: BroadcastBot, ctx: RemoteDeleteContext) -> None:
-    """The sender deleted their message for everyone, delete every copy of it if it was a broadcast."""
+async def _delete_broadcast(bot: BroadcastBot, ctx: RemoteDeleteContext) -> None:
     sender = ctx.message.source_uuid
     if sender is None:
         return

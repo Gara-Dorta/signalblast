@@ -1,93 +1,59 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 
-from signalblast.commands import admins, bans, broadcast, messaging, subscription
+from signalblast.commands.admins import AddAdmin, ListAdmins, RemoveAdmin, ShowVersion
+from signalblast.commands.bans import Ban, LiftBan, ListBans
+from signalblast.commands.base import UNKNOWN_COMMAND_PRIORITY, Command, SignalblastHandler
+from signalblast.commands.broadcast import BroadcastCommand
+from signalblast.commands.messaging import MessageAdmins
+from signalblast.commands.subscription import Subscribe, Unsubscribe
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
-
-    from signalbot import DataMessageContext
+    from signalbot import DataMessage, DataMessageContext
 
     from signalblast.broadcastbot import BroadcastBot
 
-    Handler = Callable[[BroadcastBot, DataMessageContext, str], Awaitable[None]]
+
+class Help(Command):
+    trigger = "!help"
+    description = "Show this message"
+
+    @override
+    async def run(self, ctx: DataMessageContext, sender: str, args: str) -> None:
+        await self.bot.reply(ctx, help_message(self.bot, is_admin=self.bot.db.is_admin(sender)))
 
 
-@dataclass(frozen=True)
-class Command:
-    trigger: str
-    handler: Handler
-    description: str
-    args: str = ""
-    # Shown in the admin section of the help
-    for_admins: bool = False
-    # Only admins may run it, e.g. `!add admin` is for admins but is how a user becomes one
-    admin_only: bool = False
+class UnknownCommand(SignalblastHandler):
+    """Messages that start with "!" but aren't a command get the help, so mistyped commands are not
+    broadcast."""
 
-    def matches(self, text: str) -> bool:
-        """Case insensitive, and the trigger must be followed by whitespace or the end of the message."""
-        n = len(self.trigger)
-        return text[:n].lower() == self.trigger and (len(text) == n or text[n].isspace())
+    priority = UNKNOWN_COMMAND_PRIORITY
 
-    def usage(self) -> str:
-        return f"{self.trigger} {self.args}".strip()
+    @override
+    def matches(self, message: DataMessage) -> bool:
+        return message.text is not None and message.text.lstrip().startswith("!")
+
+    @override
+    async def handle(self, ctx: DataMessageContext, sender: str) -> None:
+        await self.bot.reply(ctx, help_message(self.bot, is_admin=self.bot.db.is_admin(sender), understood=False))
 
 
-async def show_help(bot: BroadcastBot, ctx: DataMessageContext, _args: str) -> None:
-    sender = ctx.message.source_uuid
-    is_admin = sender is not None and bot.db.is_admin(sender)
-    await bot.reply(ctx, help_message(bot, is_admin=is_admin))
-
-
-COMMANDS = (
-    Command("!subscribe", subscription.subscribe, "Sign up to receive the broadcasts"),
-    Command("!unsubscribe", subscription.unsubscribe, "Stop receiving the broadcasts"),
-    Command(
-        "!broadcast",
-        broadcast.broadcast_command,
-        "Send a message to every subscriber, anything that isn't a command is broadcast too",
-        args="<message>",
-    ),
-    Command("!admin", messaging.message_admins, "Send a message only to the admins", args="<message>"),
-    Command("!help", show_help, "Show this message"),
-    Command("!add admin", admins.add_admin, "Become an admin", args="<password>", for_admins=True),
-    Command(
-        "!remove admin",
-        admins.remove_admin,
-        "Remove an admin, see their ids with !list admins",
-        args="<password> <admin id>",
-        for_admins=True,
-    ),
-    Command("!list admins", admins.list_admins, "Show the ids of the admins", for_admins=True, admin_only=True),
-    Command(
-        "!ban",
-        bans.ban,
-        "Quote a broadcast or a message from a user and send !ban to ban its sender",
-        for_admins=True,
-        admin_only=True,
-    ),
-    Command("!list bans", bans.list_bans, "Show the banned users", for_admins=True, admin_only=True),
-    Command(
-        "!lift ban", bans.lift_ban, "Lift a ban, see !list bans", args="<number>", for_admins=True, admin_only=True
-    ),
-    Command("!version", admins.show_version, "Show the versions of the bot", for_admins=True, admin_only=True),
+# In the order they are shown in the help
+COMMANDS: tuple[type[Command], ...] = (
+    Subscribe,
+    Unsubscribe,
+    BroadcastCommand,
+    MessageAdmins,
+    Help,
+    AddAdmin,
+    RemoveAdmin,
+    ListAdmins,
+    Ban,
+    ListBans,
+    LiftBan,
+    ShowVersion,
 )
-
-# Longest first, so that e.g. "!list admins" isn't parsed as an unknown "!list"
-_BY_LENGTH = sorted(COMMANDS, key=lambda command: len(command.trigger), reverse=True)
-
-
-def parse(text: str | None) -> tuple[Command, str] | None:
-    """Returns the command in `text` and its arguments, None if `text` isn't a command."""
-    if not text:
-        return None
-    text = text.strip()
-    for command in _BY_LENGTH:
-        if command.matches(text):
-            return command, text[len(command.trigger) :].strip()
-    return None
 
 
 def help_message(bot: BroadcastBot, *, is_admin: bool, understood: bool = True) -> str:
@@ -96,7 +62,7 @@ def help_message(bot: BroadcastBot, *, is_admin: bool, understood: bool = True) 
     else:
         message = "I'm sorry, I didn't understand that. These are the commands that you can use:\n"
 
-    def describe(commands: list[Command]) -> str:
+    def describe(commands: list[type[Command]]) -> str:
         return "".join(f"\n{command.usage()}\n\t{command.description}\n" for command in commands)
 
     message += describe([command for command in COMMANDS if not command.for_admins])
@@ -106,7 +72,6 @@ def help_message(bot: BroadcastBot, *, is_admin: bool, understood: bool = True) 
     if not understood:
         message += "\nTo broadcast a message that starts with !, write !broadcast before it.\n"
     if bot.settings.instructions_url is not None:
-        message += (
-            f"\nPlease have a look at the instructions if you haven't already:\n{bot.settings.instructions_url}\n"
-        )
+        message += "\nPlease have a look at the instructions if you haven't already:\n"
+        message += f"{bot.settings.instructions_url}\n"
     return message.rstrip()

@@ -78,7 +78,8 @@ This only adds data to the database; it never modifies or deletes the original C
 * Install the prek hook `uv run prek install`
 * Run
   * Directly via `uv run python -m signalblast.main`
-  * Via systemd with `systemd/signalblast.service`
+  * Via systemd as a user service with `systemd/signalblast.service`, see the comments in the file for how to install it
+    * Create `systemd/env_file.env` from `systemd/env_file.env.example`
     * Run once with the password in the env file.
     * From there one, the password is stored encrypted and it can be removed from the env file
 * Optional: install signalbot as an editable dependency `uv add --editable ../signalbot/`

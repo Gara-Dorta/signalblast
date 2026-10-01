@@ -16,8 +16,12 @@ keywords = [
 dependencies = [
     "bcrypt>=5.0.0",
     "pydantic>=2.13.4",
+    "pydantic-settings>=2.11",
     "signalbot>=2.0.0",
 ]
+
+[project.scripts]
+signalblast = "signalblast.main:main"
 
 [dependency-groups]
 dev = [

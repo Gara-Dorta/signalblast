@@ -15,21 +15,20 @@ class Admin:
         self._hashed_password: bytes = b""
 
     @classmethod
-    async def create(cls, storage: SignalblastStorage, admin_password: str | None) -> Admin:
-        self = Admin(storage)
-        self.admin_id = None
-        await self.set_hashed_password(admin_password)
+    def create(cls, storage: SignalblastStorage, admin_password: str | None) -> Admin:
+        self = cls(storage)
+        self.set_hashed_password(admin_password)
         return self
 
     def get_hashed_password(self) -> bytes:
         return self._hashed_password
 
-    async def set_hashed_password(self, password: str | None) -> None:
+    def set_hashed_password(self, password: str | None) -> None:
         if password is None:
             self._hashed_password = b""
         else:
             self._hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
-        await self.save()
+        self.save()
 
     async def add(self, admin_id: str, admin_password: str | None) -> bool:
         if admin_password is None:
@@ -37,7 +36,7 @@ class Admin:
 
         if bcrypt.checkpw(admin_password.encode(), self.get_hashed_password()):
             self.admin_id = admin_id
-            await self.save()
+            self.save()
             return True
         return False
 
@@ -47,15 +46,15 @@ class Admin:
 
         if bcrypt.checkpw(admin_password.encode(), self.get_hashed_password()):
             self.admin_id = None
-            await self.save()
+            self.save()
             return True
         return False
 
-    async def save(self) -> None:
+    def save(self) -> None:
         self.storage.set_admin(self.admin_id, self.get_hashed_password())
 
     @staticmethod
-    async def _load(storage: SignalblastStorage) -> Admin:
+    def _load(storage: SignalblastStorage) -> Admin:
         admin = Admin(storage)
         row = storage.get_admin()
         if row is None:
@@ -65,12 +64,12 @@ class Admin:
         return admin
 
     @staticmethod
-    async def load(storage: SignalblastStorage, admin_password: str | None) -> Admin:
+    def load(storage: SignalblastStorage, admin_password: str | None) -> Admin:
         if storage.get_admin() is None:
-            return await Admin.create(storage, admin_password)
+            return Admin.create(storage, admin_password)
 
-        admin = await Admin._load(storage)
+        admin = Admin._load(storage)
         # Overwrite the password in storage, if no password was given assume we want to keep the stored one
         if admin_password is not None:
-            await admin.set_hashed_password(admin_password)
+            admin.set_hashed_password(admin_password)
         return admin

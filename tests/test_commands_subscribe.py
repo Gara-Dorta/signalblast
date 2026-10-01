@@ -21,8 +21,8 @@ if TYPE_CHECKING:
 
 class TestSubscribeUnsubscribe(BroadcastChatTestCase):
     @pytest.fixture(autouse=True)
-    async def setup_fixture(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        await self.setup_bot(monkeypatch, tmp_path, welcome_message="Welcome aboard!")
+    async def setup_fixture(self, tmp_path: Path) -> None:
+        self.setup_bot(tmp_path, welcome_message="Welcome aboard!")
         self.broadcast_bot.signal_bot.register(Subscribe(bot=self.broadcast_bot), groups=False)
         self.broadcast_bot.signal_bot.register(Unsubscribe(bot=self.broadcast_bot), groups=False)
 

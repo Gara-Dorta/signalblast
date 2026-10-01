@@ -24,8 +24,8 @@ ADMIN_PASSWORD = "correct horse battery staple"  # noqa: S105
 
 class TestMessageToAdminWithAdmin(BroadcastChatTestCase):
     @pytest.fixture(autouse=True)
-    async def setup_fixture(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        await self.setup_bot(monkeypatch, tmp_path, admin_pass=ADMIN_PASSWORD)
+    async def setup_fixture(self, tmp_path: Path) -> None:
+        self.setup_bot(tmp_path, admin_pass=ADMIN_PASSWORD)
         self.broadcast_bot.signal_bot.register(MessageToAdmin(bot=self.broadcast_bot), groups=True)
         await self.make_admin(ADMIN_UUID)
 
@@ -50,8 +50,8 @@ class TestMessageToAdminWithAdmin(BroadcastChatTestCase):
 
 class TestMessageToAdminWithoutAdmin(BroadcastChatTestCase):
     @pytest.fixture(autouse=True)
-    async def setup_fixture(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        await self.setup_bot(monkeypatch, tmp_path)
+    async def setup_fixture(self, tmp_path: Path) -> None:
+        self.setup_bot(tmp_path)
         self.broadcast_bot.signal_bot.register(MessageToAdmin(bot=self.broadcast_bot), groups=True)
 
     @mock_broadcast_chat(new_private_message("!admin Please help", source_uuid=SUBSCRIBER_UUID))
@@ -62,8 +62,8 @@ class TestMessageToAdminWithoutAdmin(BroadcastChatTestCase):
 
 class TestMessageFromAdmin(BroadcastChatTestCase):
     @pytest.fixture(autouse=True)
-    async def setup_fixture(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        await self.setup_bot(monkeypatch, tmp_path, admin_pass=ADMIN_PASSWORD)
+    async def setup_fixture(self, tmp_path: Path) -> None:
+        self.setup_bot(tmp_path, admin_pass=ADMIN_PASSWORD)
         self.broadcast_bot.signal_bot.register(MessageFromAdmin(bot=self.broadcast_bot), groups=True)
         await self.make_admin(ADMIN_UUID)
 
@@ -96,8 +96,8 @@ class TestMessageFromAdmin(BroadcastChatTestCase):
 
 class TestDisplayHelp(BroadcastChatTestCase):
     @pytest.fixture(autouse=True)
-    async def setup_fixture(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-        await self.setup_bot(monkeypatch, tmp_path, admin_pass=ADMIN_PASSWORD)
+    async def setup_fixture(self, tmp_path: Path) -> None:
+        self.setup_bot(tmp_path, admin_pass=ADMIN_PASSWORD)
         self.broadcast_bot.signal_bot.register(DisplayHelp(bot=self.broadcast_bot), groups=False)
         await self.make_admin(ADMIN_UUID)
 

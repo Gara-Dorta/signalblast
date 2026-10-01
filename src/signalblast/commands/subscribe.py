@@ -7,11 +7,11 @@ from signalbot import DataMessageContext, DataMessageHandler, ReceiptType, regex
 from signalblast.commands_strings import CommandRegex
 
 if TYPE_CHECKING:
-    from signalblast.broadcastbot import BroadcasBot
+    from signalblast.broadcastbot import BroadcastBot
 
 
 class Subscribe(DataMessageHandler):
-    def __init__(self, bot: BroadcasBot) -> None:
+    def __init__(self, bot: BroadcastBot) -> None:
         super().__init__()
         self.broadcastbot = bot
 

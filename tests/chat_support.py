@@ -1,7 +1,7 @@
 """Shared harness for exercising signalblast's command handlers through
 signalbot's `ChatTestCase`/`mock_chat` mock chat infrastructure.
 
-signalblast wraps signalbot's `SignalBot` in `BroadcasBot`, which swaps in its
+signalblast wraps signalbot's `SignalBot` in `BroadcastBot`, which swaps in its
 own sqlite-backed storage and needs `load_data()` to run before handlers can
 be registered. Most public commands (subscribe, broadcast, admin management,
 ...) are registered for direct/contact messages only, whereas `ChatTestCase`'s
@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import functools
 import json
-import logging
 import time
 import uuid
 from collections.abc import Awaitable, Callable
@@ -32,13 +31,13 @@ from signalbot.test_utils.chat_testing import (
     SendMock,
 )
 
-from signalblast.broadcastbot import BroadcasBot
+from signalblast.broadcastbot import BroadcastBot
+from signalblast.settings import Settings
 
 if TYPE_CHECKING:
     from pathlib import Path
     from typing import Protocol
 
-    import pytest
     from pytest_mock import MockerFixture
     from signalbot._generated import SendMessageV2, SendReactionRequest
 
@@ -210,11 +209,11 @@ def mock_broadcast_chat(*raw_messages: str) -> Callable[[AsyncTestMethod], Async
 
 
 class BroadcastChatTestCase(ChatTestCase):
-    """`ChatTestCase` variant that builds signalblast's `BroadcasBot` instead of
+    """`ChatTestCase` variant that builds signalblast's `BroadcastBot` instead of
     a bare `SignalBot`, keeping its sqlite storage confined to a pytest tmp
-    path instead of touching the real `SIGNALBLAST_CONFIG_DIR`."""
+    path instead of touching the real `SIGNALBLAST_DATA_DIR`."""
 
-    broadcast_bot: BroadcasBot
+    broadcast_bot: BroadcastBot
 
     # Narrows `ChatTestCase.send_mock: SendMock`/`react_mock: ReactMock` to the
     # `*Like` protocols (see the `TYPE_CHECKING` block above) so they resolve to
@@ -226,31 +225,30 @@ class BroadcastChatTestCase(ChatTestCase):
         send_mock: SendMockLike  # pyright: ignore[reportIncompatibleVariableOverride]
         react_mock: ReactMockLike  # pyright: ignore[reportIncompatibleVariableOverride]
 
-    async def setup_bot(
+    def setup_bot(
         self,
-        monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
         *,
         admin_pass: str | None = None,
-        expiration_time: int | None = None,
+        expiration_time: int = 0,
         welcome_message: str | None = None,
     ) -> None:
-        monkeypatch.setenv("SIGNALBLAST_CONFIG_DIR", str(tmp_path))
-
-        self.broadcast_bot = BroadcasBot(dict(BroadcastChatTestCase.config))
-        self.signal_bot = self.broadcast_bot.signal_bot
-
-        await self.broadcast_bot.load_data(
-            logger=logging.getLogger("signalblast.tests"),
-            admin_pass=admin_pass,
+        settings = Settings(
+            _env_file=None,  # pyright: ignore[reportCallIssue] -- never read a developer's .env in tests
+            phone_number=ChatTestCase.phone_number,
+            signal_service=ChatTestCase.signal_service,
+            data_dir=tmp_path,
+            password=admin_pass,
             expiration_time=expiration_time,
-            welcome_message=welcome_message,
+            **({"welcome_message": welcome_message} if welcome_message is not None else {}),
         )
+        self.broadcast_bot = BroadcastBot(settings)
+        self.signal_bot = self.broadcast_bot.signal_bot
 
     async def make_admin(self, admin_uuid: str) -> None:
         """Directly install `admin_uuid` as admin, bypassing the password check."""
         self.broadcast_bot.admin.admin_id = admin_uuid
-        await self.broadcast_bot.admin.save()
+        self.broadcast_bot.admin.save()
 
     @staticmethod
     def new_uuid() -> str:

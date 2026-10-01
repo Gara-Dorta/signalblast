@@ -1,26 +1,44 @@
+from __future__ import annotations
+
+import logging
 import os
-from logging import WARNING, Formatter, Logger, StreamHandler, getLogger
 from logging.handlers import TimedRotatingFileHandler
 from pathlib import Path
 
 from pydantic import BaseModel
 
+LOG_FORMAT = "%(asctime)s %(name)s [%(levelname)s] - %(funcName)s - %(message)s"
 
-def create_or_set_logger(name: str | None, logging_level: int = WARNING, log_file: Path | None = None) -> Logger:
-    # Log to console or log to file, keeping the log for two weeks, rotate every Monday.
-    handler = StreamHandler() if log_file is None else TimedRotatingFileHandler(log_file, when="W0", backupCount=1)
 
-    formatter = Formatter("%(asctime)s %(name)s [%(levelname)s] - %(funcName)s - %(message)s")
-    handler.setFormatter(formatter)
+def configure_logging(level: str, log_file: Path | None = None) -> None:
+    """Send every logger to a single handler on the root logger, so the console or the log file
+    (rotated every Monday, keeping the previous week) is written from one place."""
+    handler: logging.Handler
+    if log_file is None:
+        handler = logging.StreamHandler()
+    else:
+        log_file.parent.mkdir(parents=True, exist_ok=True)
+        handler = TimedRotatingFileHandler(log_file, when="W0", backupCount=1)
+    handler.setFormatter(logging.Formatter(LOG_FORMAT))
 
-    logger = getLogger(name)
-    logger.setLevel(logging_level)
-    logger.addHandler(handler)
-    return logger
+    root = logging.getLogger()
+    root.handlers.clear()
+    root.addHandler(handler)
+    root.setLevel(logging.WARNING)
+
+    logging.getLogger("signalblast").setLevel(level)
+    logging.getLogger("signalbot").setLevel(logging.WARNING)
+    logging.getLogger("apscheduler").setLevel(logging.WARNING)
+
+
+def route_signalbot_logs_to_root() -> None:
+    """signalbot attaches its own console handler when a bot is created, drop it so
+    its messages only reach the root handler set up in `configure_logging`."""
+    logging.getLogger("signalbot").handlers.clear()
 
 
 def get_data_path() -> Path:
-    return Path(os.getenv("SIGNALBLAST_CONFIG_DIR", Path.home() / ".local/share/signalblast"))
+    return Path(os.getenv("SIGNALBLAST_DATA_DIR", Path.home() / ".local/share/signalblast"))
 
 
 class TimestampData(BaseModel):

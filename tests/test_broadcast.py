@@ -79,7 +79,8 @@ async def test_edit_reaches_every_copy_and_new_subscribers(chat: Chat) -> None:
     first_copy = chat.last_to(OTHER_SUBSCRIBER)
     chat.bot.db.add_subscriber(THIRD_SUBSCRIBER)
 
-    await chat.send(edit("Hello", source=SUBSCRIBER, target_timestamp=timestamp_of(original)))
+    first_edit = edit("Hello", source=SUBSCRIBER, target_timestamp=timestamp_of(original))
+    await chat.send(first_edit)
 
     edited = chat.last_to(OTHER_SUBSCRIBER)
     assert (edited.text, edited.edit_timestamp) == ("Hello", first_copy.timestamp)
@@ -87,8 +88,8 @@ async def test_edit_reaches_every_copy_and_new_subscribers(chat: Chat) -> None:
     assert (late.text, late.edit_timestamp) == ("Hello", None)
     assert chat.texts_to(SUBSCRIBER)[-1] == "Message edited for 2 people"
 
-    # A second edit edits the late subscriber's copy as well
-    await chat.send(edit("Hello!", source=SUBSCRIBER, target_timestamp=timestamp_of(original)))
+    # Signal targets the second edit at the first one, it edits the late subscriber's copy as well
+    await chat.send(edit("Hello!", source=SUBSCRIBER, target_timestamp=timestamp_of(first_edit)))
     assert chat.last_to(THIRD_SUBSCRIBER).edit_timestamp == late.timestamp
     assert chat.last_to(OTHER_SUBSCRIBER).edit_timestamp == first_copy.timestamp
 
@@ -112,7 +113,8 @@ async def test_edit_of_a_non_broadcast_is_sent_as_a_new_broadcast(chat: Chat) ->
     # Regression: this used to leave a lock acquired, freezing the bot on the next broadcast
     await chat.start(subscribers=(SUBSCRIBER, OTHER_SUBSCRIBER))
 
-    await chat.send(edit("Hello", source=SUBSCRIBER, target_timestamp=1_000))
+    first_edit = edit("Hello", source=SUBSCRIBER, target_timestamp=1_000)
+    await chat.send(first_edit)
     await chat.send(message(FOLLOW_UP, source=SUBSCRIBER))
 
     assert chat.texts_to(OTHER_SUBSCRIBER) == ["Hello", FOLLOW_UP]
@@ -120,7 +122,7 @@ async def test_edit_of_a_non_broadcast_is_sent_as_a_new_broadcast(chat: Chat) ->
 
     # Editing the same message again edits that broadcast instead of sending another one
     first_copy = next(s for s in chat.sent if s.recipient == OTHER_SUBSCRIBER)
-    await chat.send(edit("Hello!", source=SUBSCRIBER, target_timestamp=1_000))
+    await chat.send(edit("Hello!", source=SUBSCRIBER, target_timestamp=timestamp_of(first_edit)))
     assert chat.last_to(OTHER_SUBSCRIBER).edit_timestamp == first_copy.timestamp
 
 

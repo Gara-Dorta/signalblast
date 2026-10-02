@@ -72,7 +72,7 @@ class BroadcastCommand(Command):
 
     @override
     async def run(self, ctx: DataMessageContext, sender: str, args: str) -> None:
-        await _send_new_broadcast(self.bot, ctx, args)
+        await _broadcast(self.bot, ctx, args)
 
 
 class Broadcast(SignalblastHandler):
@@ -86,7 +86,7 @@ class Broadcast(SignalblastHandler):
 
     @override
     async def handle(self, ctx: DataMessageContext, sender: str) -> None:
-        await _send_new_broadcast(self.bot, ctx, ctx.message.text)
+        await _broadcast(self.bot, ctx, ctx.message.text)
 
 
 class EditBroadcast(SignalblastHandler):
@@ -105,18 +105,8 @@ class EditBroadcast(SignalblastHandler):
 
     @override
     async def handle(self, ctx: DataMessageContext, sender: str) -> None:
-        message = ctx.message
-        if not isinstance(message, EditMessage):
-            return
-        first_deliveries = self.bot.db.first_deliveries(sender, message.target_sent_timestamp)
-        text = BroadcastCommand.parse(message.text)
-        await _broadcast(
-            self.bot,
-            ctx,
-            message.text if text is None else text,
-            broadcast_ts=message.target_sent_timestamp,
-            first_deliveries=first_deliveries,
-        )
+        text = BroadcastCommand.parse(ctx.message.text)
+        await _broadcast(self.bot, ctx, ctx.message.text if text is None else text)
 
 
 class DeleteBroadcast(RemoteDeleteHandler):
@@ -137,24 +127,12 @@ class DeleteBroadcast(RemoteDeleteHandler):
             logger.exception("Failed to delete a broadcast")
 
 
-async def _send_new_broadcast(bot: BroadcastBot, ctx: DataMessageContext, text: str | None) -> None:
-    """Sends the message in `ctx` to every subscriber, `text` is its text without the `!broadcast` command."""
+async def _broadcast(bot: BroadcastBot, ctx: DataMessageContext, text: str | None) -> None:
+    """Sends the message in `ctx` to every subscriber, `text` is its text without the `!broadcast` command.
+    If it edits a broadcast, the copies of that broadcast are edited. An edit of a message that wasn't
+    broadcast is broadcast as new."""
     message = ctx.message
-    # An edit of a message that wasn't broadcast is broadcast as new. Record it under the original message,
-    # which is what later edits and deletes of it refer to
-    broadcast_ts = message.target_sent_timestamp if isinstance(message, EditMessage) else message.timestamp
-    await _broadcast(bot, ctx, text, broadcast_ts=broadcast_ts, first_deliveries={})
-
-
-async def _broadcast(
-    bot: BroadcastBot,
-    ctx: DataMessageContext,
-    text: str | None,
-    *,
-    broadcast_ts: int,
-    first_deliveries: dict[str, int],
-) -> None:
-    sender = ctx.message.source_uuid
+    sender = message.source_uuid
     if sender is None or not await _may_broadcast(bot, ctx, sender):
         return
 
@@ -163,6 +141,9 @@ async def _broadcast(
         await bot.reply(ctx, "There is nothing to broadcast, write your message after !broadcast")
         return
 
+    first_deliveries = (
+        bot.db.first_deliveries(sender, message.target_sent_timestamp) if isinstance(message, EditMessage) else {}
+    )
     is_edit = bool(first_deliveries)
     recipients = bot.db.subscribers()
     random.shuffle(recipients)
@@ -173,19 +154,10 @@ async def _broadcast(
             lambda recipient: _send_copy(ctx, sender, recipient, content, first_deliveries.get(recipient)),
         )
 
-    bot.db.save_deliveries(
-        sender,
-        broadcast_ts,
-        {recipient: ts for recipient, ts in delivered.items() if recipient not in first_deliveries},
-        is_edit=False,
-    )
-    if is_edit:
-        bot.db.save_deliveries(
-            sender,
-            broadcast_ts,
-            {recipient: ts for recipient, ts in delivered.items() if recipient in first_deliveries},
-            is_edit=True,
-        )
+    # Later edits and deletes refer to the latest version of the message, which is this one. Saving the
+    # first copies again records them under it
+    bot.db.save_deliveries(sender, message.timestamp, delivered)
+    bot.db.save_deliveries(sender, message.timestamp, first_deliveries)
     await _track_failures(bot, recipients, delivered)
 
     others = [recipient for recipient in recipients if recipient != sender]

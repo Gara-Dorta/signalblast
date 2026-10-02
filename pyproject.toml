@@ -23,7 +23,7 @@ dependencies = [
     "bcrypt>=5.0.0",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.11",
-    "signalbot>=2.0.0",
+    "signalbot>=2.1.0",
 ]
 
 [project.scripts]
@@ -79,7 +79,5 @@ ignore = [
   "ARG001", "ARG002", # fixtures/mocker are requested for their side effects, not referenced in the body
 ]
 
-# TEMPORARY: exclusive handlers aren't released yet. Replace with the released signalbot
-# version in `dependencies` before merging
-[tool.uv.sources]
-signalbot = { path = "../signalbot", editable = true }
+# [tool.uv.sources]
+# signalbot = { path = "../signalbot", editable = true }

@@ -34,7 +34,7 @@ class SignalblastHandler(DataMessageHandler):
         self.bot = bot
 
     def register(self, signal_bot: SignalBot) -> None:
-        signal_bot.register(self, groups=False, f=self._filter, exclusive=True, priority=self.priority)
+        signal_bot.register(self, groups=False, f=self._filter, priority=self.priority)
 
     @abstractmethod
     def matches(self, message: DataMessage) -> bool:

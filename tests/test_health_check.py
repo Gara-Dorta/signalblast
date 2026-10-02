@@ -21,7 +21,8 @@ async def open_connection(port: int) -> tuple[asyncio.StreamReader, asyncio.Stre
     for _ in range(50):  # Wait for the server to start listening
         try:
             return await asyncio.open_connection("localhost", port)
-        except ConnectionRefusedError:
+        # When localhost resolves to both ::1 and 127.0.0.1 a refused connection is a plain OSError
+        except OSError:
             await asyncio.sleep(0.01)
     return await asyncio.open_connection("localhost", port)
 

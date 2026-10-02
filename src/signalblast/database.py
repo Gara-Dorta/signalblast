@@ -137,9 +137,8 @@ class Database:
     def save_deliveries(self, author: str, broadcast_ts: int, deliveries: Mapping[str, int]) -> None:
         """Records the timestamp of the copy of a broadcast that each recipient received.
 
-        `broadcast_ts` is the timestamp of the author's latest version of the message, since Signal
-        targets each edit at the previous one. Edited copies are stored too so that quotes of them can be
-        resolved, while edits and deletes keep targeting each recipient's first copy.
+        `broadcast_ts` is the timestamp of the author's message. Like Signal does, each edit targets the
+        previous version of the message, so every version is stored under its own timestamp.
         """
         with self._conn:
             self._conn.executemany(
@@ -148,13 +147,11 @@ class Database:
                 [(author, broadcast_ts, recipient, ts) for recipient, ts in deliveries.items()],
             )
 
-    def first_deliveries(self, author: str, broadcast_ts: int) -> dict[str, int]:
-        """The timestamp of the first copy that each recipient received of a broadcast, empty if `author`
-        sent no broadcast at `broadcast_ts` (e.g. it was a command or it has expired)."""
-        # The first copy is the oldest, edits of it are sent later
+    def deliveries(self, author: str, broadcast_ts: int) -> dict[str, int]:
+        """The timestamp of the copy that each recipient received of a broadcast, empty if `author` sent
+        no broadcast at `broadcast_ts` (e.g. it was a command or it has expired)."""
         rows = self._conn.execute(
-            "SELECT recipient, MIN(recipient_ts) FROM broadcast_deliveries "
-            "WHERE author = ? AND broadcast_ts = ? GROUP BY recipient",
+            "SELECT recipient, recipient_ts FROM broadcast_deliveries WHERE author = ? AND broadcast_ts = ?",
             [author, broadcast_ts],
         )
         return dict(rows.fetchall())

@@ -79,14 +79,13 @@ def test_deliveries_of_edits() -> None:
     db = make_db()
     db.save_deliveries("author", 1000, {"author": 1001, "uuid-1": 1002})
     db.save_deliveries("someone-else", 1000, {"uuid-1": 1003})
-    # The author's edit at 2000 reaches a late subscriber as a new message and the original recipients as
-    # edits. The first copies are saved again under the edit
+    # The author's edit at 2000 reaches a late subscriber as a new message and the original recipients as edits
     db.save_deliveries("author", 2000, {"author": 2002, "uuid-1": 2003, "uuid-2": 2001})
-    db.save_deliveries("author", 2000, {"author": 1001, "uuid-1": 1002})
 
-    assert db.first_deliveries("author", 2000) == {"author": 1001, "uuid-1": 1002, "uuid-2": 2001}
-    assert db.first_deliveries("author", 1000) == {}
-    assert db.first_deliveries("someone-else", 1000) == {"uuid-1": 1003}
+    assert db.deliveries("author", 2000) == {"author": 2002, "uuid-1": 2003, "uuid-2": 2001}
+    assert db.deliveries("author", 1000) == {"author": 1001, "uuid-1": 1002}
+    assert db.deliveries("author", 999) == {}
+    assert db.deliveries("someone-else", 1000) == {"uuid-1": 1003}
 
     # Quotes of both the first and the edited copies lead to the author
     assert db.broadcast_author("uuid-1", 1002) == "author"
@@ -100,8 +99,8 @@ def test_old_deliveries_are_deleted() -> None:
     db.save_deliveries("author", 3000, {"uuid-1": 3001})
 
     assert db.delete_deliveries_before(2000) == 1
-    assert db.first_deliveries("author", 1000) == {}
-    assert db.first_deliveries("author", 3000) == {"uuid-1": 3001}
+    assert db.deliveries("author", 1000) == {}
+    assert db.deliveries("author", 3000) == {"uuid-1": 3001}
 
 
 def test_pseudonym_is_kept_while_the_user_keeps_writing() -> None:

@@ -88,10 +88,17 @@ async def test_edit_reaches_every_copy_and_new_subscribers(chat: Chat) -> None:
     assert (late.text, late.edit_timestamp) == ("Hello", None)
     assert chat.texts_to(SUBSCRIBER)[-1] == "Message edited for 2 people"
 
-    # Signal targets the second edit at the first one, it edits the late subscriber's copy as well
-    await chat.send(edit("Hello!", source=SUBSCRIBER, target_timestamp=timestamp_of(first_edit)))
+    # Signal targets the second edit at the first one, it edits the late subscriber's copy as well. Like
+    # Signal, each copy edits the previous one
+    second_edit = edit("Hello!", source=SUBSCRIBER, target_timestamp=timestamp_of(first_edit))
+    await chat.send(second_edit)
+    assert chat.last_to(OTHER_SUBSCRIBER).edit_timestamp == edited.timestamp
     assert chat.last_to(THIRD_SUBSCRIBER).edit_timestamp == late.timestamp
-    assert chat.last_to(OTHER_SUBSCRIBER).edit_timestamp == first_copy.timestamp
+
+    # Deleting the edited message deletes the latest copies
+    latest = {(s.recipient, s.timestamp) for s in chat.sent if s.text == "Hello!"}
+    await chat.send(remote_delete(source=SUBSCRIBER, target_timestamp=timestamp_of(second_edit)))
+    assert set(chat.deleted) == latest
 
 
 async def test_delete_removes_every_copy(chat: Chat) -> None:

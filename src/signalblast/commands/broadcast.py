@@ -100,7 +100,7 @@ class EditBroadcast(SignalblastHandler):
         return (
             isinstance(message, EditMessage)
             and message.source_uuid is not None
-            and bool(self.bot.db.first_deliveries(message.source_uuid, message.target_sent_timestamp))
+            and bool(self.bot.db.deliveries(message.source_uuid, message.target_sent_timestamp))
         )
 
     @override
@@ -141,23 +141,19 @@ async def _broadcast(bot: BroadcastBot, ctx: DataMessageContext, text: str | Non
         await bot.reply(ctx, "There is nothing to broadcast, write your message after !broadcast")
         return
 
-    first_deliveries = (
-        bot.db.first_deliveries(sender, message.target_sent_timestamp) if isinstance(message, EditMessage) else {}
-    )
-    is_edit = bool(first_deliveries)
+    # The copies of the version of the message that this one edits
+    edited = bot.db.deliveries(sender, message.target_sent_timestamp) if isinstance(message, EditMessage) else {}
+    is_edit = bool(edited)
     recipients = bot.db.subscribers()
     random.shuffle(recipients)
 
     async with _typing(bot, ctx):
         delivered = await _send_to_each(
             recipients,
-            lambda recipient: _send_copy(ctx, sender, recipient, content, first_deliveries.get(recipient)),
+            lambda recipient: _send_copy(ctx, sender, recipient, content, edited.get(recipient)),
         )
 
-    # Later edits and deletes refer to the latest version of the message, which is this one. Saving the
-    # first copies again records them under it
     bot.db.save_deliveries(sender, message.timestamp, delivered)
-    bot.db.save_deliveries(sender, message.timestamp, first_deliveries)
     await _track_failures(bot, recipients, delivered)
 
     others = [recipient for recipient in recipients if recipient != sender]
@@ -180,20 +176,20 @@ async def _delete_broadcast(bot: BroadcastBot, ctx: RemoteDeleteContext) -> None
     if sender is None:
         return
 
-    first_deliveries = bot.db.first_deliveries(sender, ctx.message.timestamp)
-    if not first_deliveries:
+    deliveries = bot.db.deliveries(sender, ctx.message.timestamp)
+    if not deliveries:
         logger.info("Ignoring the deletion of a message that is not a known broadcast")
         return
     if bot.db.is_banned(sender):
         logger.info("Ignoring the deletion of a broadcast by a banned user")
         return
 
-    recipients = list(first_deliveries)
+    recipients = list(deliveries)
     random.shuffle(recipients)
     deleted = await _send_to_each(
         recipients,
         lambda recipient: ctx.bot.messages.remote_delete(
-            SentMessage(recipient=recipient, timestamp=first_deliveries[recipient])
+            SentMessage(recipient=recipient, timestamp=deliveries[recipient])
         ),
     )
 

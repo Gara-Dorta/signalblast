@@ -134,33 +134,27 @@ class Database:
 
     # --- Broadcast deliveries ---
 
-    def save_deliveries(
-        self,
-        author: str,
-        broadcast_ts: int,
-        deliveries: Mapping[str, int],
-        *,
-        is_edit: bool,
-    ) -> None:
+    def save_deliveries(self, author: str, broadcast_ts: int, deliveries: Mapping[str, int]) -> None:
         """Records the timestamp of the copy of a broadcast that each recipient received.
 
-        `broadcast_ts` is the timestamp of the author's original message, also for edits. Edited copies
-        are stored with `is_edit` so that quotes of them can be resolved, while edits and deletes keep
-        targeting each recipient's first copy.
+        `broadcast_ts` is the timestamp of the author's latest version of the message, since Signal
+        targets each edit at the previous one. Edited copies are stored too so that quotes of them can be
+        resolved, while edits and deletes keep targeting each recipient's first copy.
         """
         with self._conn:
             self._conn.executemany(
                 "INSERT OR REPLACE INTO broadcast_deliveries "
-                "(author, broadcast_ts, recipient, recipient_ts, is_edit) VALUES (?, ?, ?, ?, ?)",
-                [(author, broadcast_ts, recipient, ts, is_edit) for recipient, ts in deliveries.items()],
+                "(author, broadcast_ts, recipient, recipient_ts) VALUES (?, ?, ?, ?)",
+                [(author, broadcast_ts, recipient, ts) for recipient, ts in deliveries.items()],
             )
 
     def first_deliveries(self, author: str, broadcast_ts: int) -> dict[str, int]:
         """The timestamp of the first copy that each recipient received of a broadcast, empty if `author`
         sent no broadcast at `broadcast_ts` (e.g. it was a command or it has expired)."""
+        # The first copy is the oldest, edits of it are sent later
         rows = self._conn.execute(
-            "SELECT recipient, recipient_ts FROM broadcast_deliveries "
-            "WHERE author = ? AND broadcast_ts = ? AND NOT is_edit",
+            "SELECT recipient, MIN(recipient_ts) FROM broadcast_deliveries "
+            "WHERE author = ? AND broadcast_ts = ? GROUP BY recipient",
             [author, broadcast_ts],
         )
         return dict(rows.fetchall())

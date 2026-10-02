@@ -45,7 +45,6 @@ CREATE TABLE broadcast_deliveries (
     broadcast_ts INTEGER NOT NULL,
     recipient TEXT NOT NULL,
     recipient_ts INTEGER NOT NULL,
-    is_edit INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (recipient, recipient_ts)
 );
 CREATE INDEX broadcast_deliveries_by_broadcast ON broadcast_deliveries (author, broadcast_ts);

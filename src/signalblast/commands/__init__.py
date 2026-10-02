@@ -1,6 +1,6 @@
 """One signalbot handler per command, plus the handlers for everything that isn't a command.
 
-Every private message is handled by exactly one of them: they are registered as exclusive, and the
+Every private message is handled by exactly one of them: they are all registered with a priority, and the
 matching one with the highest priority runs (see `base.py`):
 
 1. Edits of a broadcast edit every copy of it.

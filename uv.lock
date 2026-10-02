@@ -683,7 +683,7 @@ requires-dist = [
     { name = "bcrypt", specifier = ">=5.0.0" },
     { name = "pydantic", specifier = ">=2.13.4" },
     { name = "pydantic-settings", specifier = ">=2.11" },
-    { name = "signalbot", editable = "../signalbot" },
+    { name = "signalbot", specifier = ">=2.1.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -700,8 +700,8 @@ dev = [
 
 [[package]]
 name = "signalbot"
-version = "2.0.2"
-source = { editable = "../signalbot" }
+version = "2.1.0"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
     { name = "anyio" },
@@ -712,42 +712,9 @@ dependencies = [
     { name = "pyyaml" },
     { name = "websockets" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "aiohttp", specifier = ">=3.11.9" },
-    { name = "anyio", specifier = ">=4.13.0" },
-    { name = "apscheduler", specifier = ">=3.11.0" },
-    { name = "packaging", specifier = ">=25.0" },
-    { name = "phonenumbers", specifier = ">=8.13.54" },
-    { name = "pydantic", specifier = ">=2.12.3" },
-    { name = "pyyaml", specifier = ">=6.0.3" },
-    { name = "redis", marker = "extra == 'redis'", specifier = ">=5.2.0" },
-    { name = "websockets", specifier = ">=14.1" },
-]
-provides-extras = ["redis"]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "datamodel-code-generator", extras = ["ruff"], specifier = ">=0.72.2" },
-    { name = "prek", specifier = ">=0.3.0" },
-    { name = "pytest", specifier = ">=8.4.2" },
-    { name = "pytest-asyncio", specifier = ">=1.2.0" },
-    { name = "pytest-cov", specifier = ">=7.0.0" },
-    { name = "pytest-mock", specifier = ">=3.15.1" },
-    { name = "redis", specifier = ">=5.2.0" },
-    { name = "ty", specifier = ">=0.0.69" },
-]
-docs = [
-    { name = "griffe-pydantic", specifier = ">=1.3.1" },
-    { name = "mike", git = "https://github.com/squidfunk/mike.git" },
-    { name = "mkdocstrings-python", specifier = ">=2.0.5" },
-    { name = "ruff", specifier = ">=0.15.1" },
-    { name = "zensical", specifier = ">=0.0.53" },
-]
-examples = [
-    { name = "anyio", specifier = ">=4.12.1" },
-    { name = "typer", specifier = ">=0.23.2" },
+sdist = { url = "https://files.pythonhosted.org/packages/b4/3a/0d6fba49339f42b29d211868a252509e04e247f01f9ddea9c50731f1d079/signalbot-2.1.0.tar.gz", hash = "sha256:d62fcd361a4ebfb399d67731db30bc48e03776c079346f978f4e50a99e9f0f64", size = 67216, upload-time = "2026-10-02T22:50:47.966Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/31/b6/ad8252218e26f894023f540f4d7a1305fc439172667539f9f74c919036d0/signalbot-2.1.0-py3-none-any.whl", hash = "sha256:098f7f10dda3aa05001ce18234324015f3661403ab583a04d96b6cc3b844db6b", size = 140789, upload-time = "2026-10-02T22:50:49.145Z" },
 ]
 
 [[package]]

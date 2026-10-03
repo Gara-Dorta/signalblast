@@ -94,6 +94,7 @@ async def _send_copy(  # noqa: PLR0913
     chat: str,
     message_id: int,
     text: str,
+    *,
     quote: MessageCopy | None,
     attachments: list[str] | None = None,
 ) -> bool:
@@ -143,7 +144,7 @@ async def _write_to_admins(
     num_sent = 0
     for admin in admins:
         quote = bot.db.copy_in_chat(replied_to.id, admin) if replied_to is not None else None
-        num_sent += await _send_copy(bot, admin, message_id, f"{header}\n{text}", quote, attachments)
+        num_sent += await _send_copy(bot, admin, message_id, f"{header}\n{text}", quote=quote, attachments=attachments)
 
     if num_sent == 0:
         await bot.reply(ctx, "I couldn't reach the admins, please try again later")
@@ -161,7 +162,7 @@ async def _reply_to_user(
     message_id = _record_received(bot, ctx, admin, user=user)
 
     quote = bot.db.copy_in_chat(replied_to.id, user)
-    if not await _send_copy(bot, user, message_id, f"{FROM_ADMIN} {text}", quote, _attachments(ctx)):
+    if not await _send_copy(bot, user, message_id, f"{FROM_ADMIN} {text}", quote=quote, attachments=_attachments(ctx)):
         await _confirm(bot, ctx, admin, message_id, REPLY_NOT_SENT)
         return
 
@@ -169,7 +170,7 @@ async def _reply_to_user(
     for other in bot.db.admins():
         if other != admin:
             quote = bot.db.copy_in_chat(replied_to.id, other)
-            await _send_copy(bot, other, message_id, f"{ANSWERED_BY_ADMIN}\n{text}", quote)
+            await _send_copy(bot, other, message_id, f"{ANSWERED_BY_ADMIN}\n{text}", quote=quote)
     logger.info("An admin replied to a user")
 
 

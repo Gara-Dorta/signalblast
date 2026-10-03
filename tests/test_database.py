@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from signalblast.database import ConversationMessage, Database, MessageCopy
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 DAY_MS = 24 * 60 * 60 * 1000
 
@@ -56,6 +61,18 @@ def test_ban_unsubscribes_and_numbers_are_never_reused() -> None:
 
     second_id, _ = db.ban("uuid-2", None)
     assert second_id > first_id
+
+
+def test_deleted_data_is_not_left_in_the_file(tmp_path: Path) -> None:
+    path = tmp_path / "signalblast.db"
+    db = Database(path)
+    ban_id, _ = db.ban("uuid-secret", "a secret snippet")
+    db.lift_ban(ban_id)
+    db.close()
+
+    content = path.read_bytes()
+    assert b"uuid-secret" not in content
+    assert b"a secret snippet" not in content
 
 
 def test_admins_and_password() -> None:

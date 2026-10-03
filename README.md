@@ -91,7 +91,6 @@ signalblast reads its settings from environment variables, or from a `.env` file
 | `SIGNALBLAST_PASSWORD` | | The password to become an admin. It is stored hashed, so it only needs to be set on the first start or to change it. Without it nobody can become an admin |
 | `SIGNALBLAST_SIGNAL_SERVICE` | `localhost:8080` | The address of signal-cli-rest-api |
 | `SIGNALBLAST_DATA_DIR` | `~/.local/share/signalblast` | Where the database is stored |
-| `SIGNALBLAST_WELCOME_MESSAGE` | `Subscription successful!` | The reply to `!subscribe` |
 | `SIGNALBLAST_INSTRUCTIONS_URL` | | A link with instructions, shown in the help |
 | `SIGNALBLAST_EXPIRATION_TIME` | 4 weeks | The disappearing messages timer of the chats with the subscribers in seconds, `0` disables it |
 | `SIGNALBLAST_HEALTHCHECK_RECEIVER` | | The contact or group that receives the health check pings, the health check is disabled without it |

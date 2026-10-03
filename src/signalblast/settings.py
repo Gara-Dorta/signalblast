@@ -36,10 +36,6 @@ class Settings(BaseSettings):
         ge=0,
         description="The disappearing messages timer for the subscribers chats in seconds, 0 to disable",
     )
-    welcome_message: str = Field(
-        default="Subscription successful!",
-        description="The message that a user receives after subscribing",
-    )
     instructions_url: str | None = Field(default=None, description="URL with instructions, shown in the help message")
     healthcheck_receiver: str | None = Field(
         default=None,

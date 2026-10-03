@@ -54,6 +54,8 @@ class Database:
         """`data_dir` is where pre-v2 CSV files are looked for when the database is first created."""
         self._conn = sqlite3.connect(path)
         self._conn.execute("PRAGMA foreign_keys = ON")
+        # Overwrite deleted rows with zeros, so expired or removed data can't be recovered from the file
+        self._conn.execute("PRAGMA secure_delete = ON")
         migrate(self._conn, data_dir)
 
     def close(self) -> None:

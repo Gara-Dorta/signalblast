@@ -121,7 +121,3 @@ See the [changelog](CHANGELOG.md) for the changes to the commands and the config
 ### Docker compose
 
 `docker/compose_build.sh` and `docker/compose_up.sh` build and run the image from the local code.
-
-## Roadmap
-
-* Make instructions clearer and add pictures to the readme

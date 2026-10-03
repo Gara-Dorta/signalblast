@@ -40,7 +40,7 @@ async def test_ban_the_sender_of_a_quoted_broadcast(chat: Chat) -> None:
 
 async def test_ban_needs_a_quote_of_a_known_message(chat: Chat) -> None:
     await chat.start(subscribers=(ADMIN,), admins=(ADMIN,))
-    [help_reply] = await chat.send(message("!help", source=ADMIN))
+    [help_reply, _admin_help] = await chat.send(message("!help", source=ADMIN))
 
     for quote in (None, help_reply):
         [reply] = await chat.send(message("!ban", source=ADMIN, quote=quote))

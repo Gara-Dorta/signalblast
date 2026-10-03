@@ -72,11 +72,21 @@ async def test_help_shows_the_admin_commands_only_to_admins(chat: Chat) -> None:
     await chat.start(admins=(ADMIN,), instructions_url="https://example.org/how-to")
 
     [user_help] = await chat.send(message("!help", source=STRANGER))
-    [admin_help] = await chat.send(message("!help", source=ADMIN))
+    [help_to_admin, admin_help] = await chat.send(message("!help", source=ADMIN))
 
     assert "!lift ban" not in str(user_help.text)
     assert "https://example.org/how-to" in str(user_help.text)
+    assert help_to_admin.text == user_help.text
+    assert str(admin_help.text).startswith("Admin commands:")
     assert "!lift ban <number>" in str(admin_help.text)
+
+
+async def test_help_does_not_list_the_broadcast_command(chat: Chat) -> None:
+    await chat.start()
+
+    [reply] = await chat.send(message("!help", source=SUBSCRIBER))
+
+    assert "!broadcast" not in str(reply.text)
 
 
 async def test_group_messages_are_ignored(chat: Chat) -> None:

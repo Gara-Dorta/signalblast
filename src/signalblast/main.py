@@ -1,171 +1,38 @@
-#!/usr/bin/env python
+from __future__ import annotations
 
-import argparse
-import asyncio
-import logging
-import os
+import sys
 
-from signalblast.broadcastbot import BroadcasBot
-from signalblast.commands import (
-    AddAdmin,
-    BanSubscriber,
-    Broadcast,
-    DisplayHelp,
-    LastMsgUserUuid,
-    LiftBanSubscriber,
-    MessageFromAdmin,
-    MessageToAdmin,
-    RemoveAdmin,
-    SetPing,
-    ShowVersion,
-    Subscribe,
-    UnsetPing,
-    Unsubscribe,
-)
-from signalblast.health_check import health_check
-from signalblast.log_rollover import rotate_logs_periodically
-from signalblast.utils import create_or_set_logger, get_data_path
+from pydantic import ValidationError
 
-LOGGING_LEVEL = logging.INFO
-
-# LOG_FILE_PATH = None # Log to console
-LOG_FILE_PATH = get_data_path() / "signalblast.log"
-
-create_or_set_logger("signalbot", logging.WARNING, LOG_FILE_PATH)
-create_or_set_logger("apscheduler", logging.WARNING, LOG_FILE_PATH)
+from signalblast.broadcastbot import BroadcastBot
+from signalblast.commands import register_handlers
+from signalblast.health_check import HealthCheck
+from signalblast.settings import Settings
+from signalblast.utils import configure_logging
 
 
-async def initialise_bot(  # noqa: PLR0913 Too many arguments in function definition
-    signal_service: str,
-    phone_number: str,
-    admin_pass: str,
-    expiration_time: int,
-    welcome_message: str | None = None,
-    health_check_port: int = 15556,
-    health_check_receiver: str | None = None,
-    instructions_url: str | None = None,
-) -> BroadcasBot:
-    config = {
-        "signal_service": signal_service,
-        "phone_number": phone_number,
-        "storage": {"type": "sqlite", "sqlite_db": get_data_path() / "signalblast.db", "check_same_thread": False},
-    }
+def create_bot(settings: Settings) -> BroadcastBot:
+    bot = BroadcastBot(settings)
 
-    get_data_path().mkdir(parents=True, exist_ok=True)
+    # Only private chats, the bot has no group features
+    register_handlers(bot)
 
-    logger = create_or_set_logger("signalblast", LOGGING_LEVEL, LOG_FILE_PATH)
+    if settings.healthcheck_receiver is not None:
+        bot.signal_bot.register(HealthCheck(settings.healthcheck_receiver, settings.healthcheck_port))
 
-    bot = BroadcasBot(config)
-    await bot.load_data(
-        logger=logger,
-        admin_pass=admin_pass,
-        expiration_time=expiration_time,
-        welcome_message=welcome_message,
-        instructions_url=instructions_url,
-    )
-
-    bot.signal_bot.register(Subscribe(bot=bot), groups=False)
-    bot.signal_bot.register(Unsubscribe(bot=bot), groups=False)
-    bot.signal_bot.register(Broadcast(bot=bot), groups=False)
-    bot.signal_bot.register(DisplayHelp(bot=bot), groups=False)
-    bot.signal_bot.register(AddAdmin(bot=bot), groups=False)
-    bot.signal_bot.register(RemoveAdmin(bot=bot), groups=False)
-    bot.signal_bot.register(BanSubscriber(bot=bot), groups=False)
-    bot.signal_bot.register(LiftBanSubscriber(bot=bot), groups=False)
-    bot.signal_bot.register(SetPing(bot=bot), contacts=False, groups=True)
-    bot.signal_bot.register(UnsetPing(bot=bot), contacts=False, groups=True)
-    bot.signal_bot.register(MessageToAdmin(bot=bot), groups=True)
-    bot.signal_bot.register(MessageFromAdmin(bot=bot), groups=True)
-    bot.signal_bot.register(LastMsgUserUuid(bot=bot), groups=True)
-    bot.signal_bot.register(ShowVersion(bot=bot), groups=False)
-
-    bot.scheduler.add_job(bot.delete_old_timestamps, "interval", days=1)
-
-    if health_check_receiver is not None:
-        bot.health_check_task = asyncio.create_task(health_check(bot, health_check_receiver, health_check_port))
-
-    bot.log_rollover_task = asyncio.create_task(rotate_logs_periodically(bot))
+    bot.scheduler.add_job(bot.forget_old_messages, "interval", hours=1)
 
     return bot
 
 
+def main() -> None:
+    try:
+        settings = Settings()  # pyright: ignore[reportCallIssue] -- required fields come from the environment
+    except ValidationError as e:
+        sys.exit(f"Invalid configuration, see .env.example for the SIGNALBLAST_* environment variables\n{e}")
+    configure_logging(settings.log_level, settings.log_file)
+    create_bot(settings).start()
+
+
 if __name__ == "__main__":
-    four_weeks = 60 * 60 * 24 * 7 * 4  # Number of seconds in 4 weeks
-
-    args_parser = argparse.ArgumentParser()
-    args_parser.add_argument(
-        "--admin_pass",
-        type=str,
-        help="the password to add or remove admins",
-        default=os.environ.get("SIGNALBLAST_PASSWORD"),
-    )
-    args_parser.add_argument(
-        "--expiration_time",
-        type=int,
-        default=os.environ.get("SIGNALBLAST_EXPIRATION_TIME", four_weeks),
-        help="the expiration time for the chats in seconds",
-    )
-
-    args_parser.add_argument(
-        "--signal_service",
-        type=str,
-        default=os.environ.get("SIGNAL_SERVICE", "localhost:8080"),
-        help="the address of the signal cli rest api",
-    )
-
-    args_parser.add_argument(
-        "--phone_number",
-        type=str,
-        default=os.environ.get("SIGNALBLAST_PHONE_NUMBER"),
-        help="the phone number of the bot",
-    )
-
-    args_parser.add_argument(
-        "--welcome_message",
-        type=str,
-        default=os.environ.get("SIGNALBLAST_WELCOME_MESSAGE"),
-        help="the initial message that the user receives",
-    )
-
-    args_parser.add_argument(
-        "--health_check_port",
-        type=int,
-        default=os.environ.get("SIGNALBLAST_HEALTHCHECK_PORT", "15556"),
-        help="the port that will be listening for health checks requests",
-    )
-
-    args_parser.add_argument(
-        "--health_check_receiver",
-        type=str,
-        default=os.environ.get("SIGNALBLAST_HEALTHCHECK_RECEIVER"),
-        help="the contact or group to send messages for health checks",
-    )
-
-    args_parser.add_argument(
-        "--instructions_url",
-        type=str,
-        default=os.environ.get("SIGNALBLAST_INSTRUCTIONS_URL"),
-        help="URL for the help message",
-    )
-
-    args = args_parser.parse_args()
-
-    if args.phone_number is None:
-        value_error_msg = "The bot phone number is not set"
-        raise ValueError(value_error_msg)
-
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    bot = loop.run_until_complete(
-        initialise_bot(
-            signal_service=args.signal_service,
-            phone_number=args.phone_number,
-            admin_pass=args.admin_pass,
-            expiration_time=args.expiration_time,
-            welcome_message=args.welcome_message,
-            health_check_port=args.health_check_port,
-            health_check_receiver=args.health_check_receiver,
-            instructions_url=args.instructions_url,
-        ),
-    )
-    bot.start()
+    main()

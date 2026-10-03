@@ -1,133 +1,107 @@
-from datetime import datetime, timedelta, timezone
-from logging import Logger
-from threading import Lock
+from __future__ import annotations
+
+import logging
+from datetime import timedelta
 from typing import TYPE_CHECKING
 
-from signalbot import Context as ChatContext
-from signalbot import SignalBot
+from signalbot import SendMessage, SignalBot, SignalBotError, UpdateContact
 
-from signalblast.admin import Admin
-from signalblast.message_handler import MessageHandler
-from signalblast.users import Users
-from signalblast.utils import TimestampData, get_data_path
+from signalblast.database import Database
+from signalblast.passwords import hash_password
+from signalblast.utils import now_ms, route_signalbot_logs_to_root
 
 if TYPE_CHECKING:
-    from asyncio import Task
+    from signalbot import DataMessageContext
 
-    from apscheduler.job import Job
+    from signalblast.settings import Settings
+
+logger = logging.getLogger(__name__)
+
+# Signal only allows editing or deleting messages for 24 hours, after that the bot forgets who
+# sent each broadcast
+BROADCAST_RETENTION = timedelta(days=1)
+# How long the messages between users and admins can be quoted to reply, or to ban their sender
+CONVERSATION_RETENTION = timedelta(days=7)
 
 
-class BroadcasBot:
-    subscribers_data_path = get_data_path() / "subscribers.csv"
-    banned_users_data_path = get_data_path() / "banned_users.csv"
+class BroadcastBot:
+    def __init__(self, settings: Settings) -> None:
+        self.settings = settings
 
-    def __init__(self, config: dict) -> None:
-        self.signal_bot = SignalBot(config)
-        self.ping_job: Job | None = None
-        self.last_msg_user_uuid: str | None = None
-        self.health_check_task: Task | None = None
-        self.log_rollover_task: Task | None = None
-
-        # Type hint the other attributes that will get defined in load_data
-        self.subscribers: Users
-        self.banned_users: Users
-        self.admin: Admin
-        self.message_handler: MessageHandler
-        self.help_message: str
-        self.wrong_command_message: str
-        self.admin_help_message: str
-        self.admin_wrong_command_message: str
-        self.must_subscribe_message: str
-        self.logger: Logger
-        self.expiration_time: int
-        self.welcome_message: str
-        self.storage_lock: Lock
-
+        settings.data_dir.mkdir(parents=True, exist_ok=True)
+        # signalblast keeps its own database, signalbot's key/value storage is unused
+        self.signal_bot = SignalBot(
+            {
+                "signal_service": settings.signal_service,
+                "phone_number": settings.phone_number,
+                "storage": {"type": "in-memory"},
+            },
+        )
+        route_signalbot_logs_to_root()
         self.scheduler = self.signal_bot.scheduler
+
+        self.db = Database(settings.db_path, settings.data_dir)
+        if settings.password is not None:
+            # Hashed again on every start, so changing the env var changes the password
+            self.db.set_password_hash(hash_password(settings.password.get_secret_value()))
+
+        # 0 disables disappearing messages
+        self.expiration_time: int | None = settings.expiration_time or None
 
     def start(self) -> None:
         self.signal_bot.start()
 
-    async def load_data(
+    async def reply(self, ctx: DataMessageContext, text: str) -> int | None:
+        """Replies to the message in `ctx`. Returns the timestamp of the reply, None if it could not be sent."""
+        try:
+            sent = await ctx.reply(SendMessage(text=text))
+        except SignalBotError:
+            logger.warning("Could not send a reply", exc_info=True)
+            return None
+        return sent.timestamp
+
+    async def send(
         self,
-        logger: Logger,
-        admin_pass: str | None,
-        expiration_time: int | None,
-        welcome_message: str | None = None,
-        instructions_url: str | None = None,
-    ) -> None:
-        self.subscribers = await Users.load_from_file(self.subscribers_data_path)
-        self.banned_users = await Users.load_from_file(self.banned_users_data_path)
-
-        self.admin = await Admin.load_from_file(admin_pass)
-        self.message_handler = MessageHandler()
-
-        self.help_message = self.message_handler.compose_help_message(instructions_url=instructions_url)
-        self.wrong_command_message = self.message_handler.compose_help_message(
-            is_help=False,
-            instructions_url=instructions_url,
+        recipient: str,
+        text: str,
+        attachments: list[str] | None = None,
+        *,
+        quote_timestamp: int | None = None,
+        quote_author: str | None = None,
+    ) -> int | None:
+        """Sends `text` to `recipient`, optionally quoting a message in their chat with the bot. Returns the
+        timestamp of the message, None if it could not be sent."""
+        message = SendMessage(
+            text=text,
+            base64_attachments=attachments,
+            quote_timestamp=quote_timestamp,
+            quote_author=quote_author,
         )
-        self.admin_help_message = self.message_handler.compose_help_message(
-            add_admin_commands=True,
-            instructions_url=instructions_url,
-        )
-        self.admin_wrong_command_message = self.message_handler.compose_help_message(
-            add_admin_commands=True,
-            is_help=False,
-            instructions_url=instructions_url,
-        )
-        self.welcome_message = self.message_handler.compose_welcome_message(welcome_message)
+        try:
+            sent = await self.signal_bot.messages.send(message, recipient)
+        except SignalBotError:
+            logger.warning("Could not send a message", exc_info=True)
+            logger.debug("Could not send a message to %s", recipient)
+            return None
+        return sent.timestamp
 
-        self.must_subscribe_message = self.message_handler.compose_must_subscribe_message(
-            instructions_url=instructions_url,
-        )
+    async def notify_admins(self, text: str, *, exclude: tuple[str | None, ...] = ()) -> None:
+        for admin in self.db.admins():
+            if admin not in exclude:
+                await self.send(admin, text)
 
-        self.expiration_time = expiration_time
+    async def set_expiration_time(self, recipient: str) -> None:
+        """Turns on disappearing messages in the chat with `recipient`, if enabled."""
+        if self.expiration_time is None:
+            return
+        try:
+            await self.signal_bot.contacts.update(UpdateContact(expiration_in_seconds=self.expiration_time), recipient)
+        except SignalBotError:
+            logger.warning("Could not set the disappearing messages timer", exc_info=True)
 
-        self.storage_lock = Lock()
-
-        self.logger = logger
-        self.logger.debug("BotAnswers is initialised")
-
-    async def reply_with_warn_on_failure(self, ctx: ChatContext, message: str) -> bool:
-        if await ctx.reply(message):
-            return True
-        self.logger.warning("Could not send message to %s", ctx.message.source_uuid)
-        return False
-
-    async def is_user_admin(self, ctx: ChatContext, command: str) -> bool:
-        subscriber_uuid = ctx.message.source_uuid
-        if self.admin.admin_id is None:
-            await self.reply_with_warn_on_failure(ctx, "I'm sorry but there are no admins")
-            self.logger.info("Tried to %s but there are no admins! %s", command, subscriber_uuid)
-            return False
-
-        if self.admin.admin_id != subscriber_uuid:
-            await self.reply_with_warn_on_failure(ctx, "I'm sorry but you are not an admin")
-            msg_to_admin = self.message_handler.compose_message_to_admin(f"Tried to {command}", subscriber_uuid)
-            await ctx.bot.send(self.admin.admin_id, msg_to_admin)
-            self.logger.info("%s tried to %s but admin is %s", subscriber_uuid, command, self.admin.admin_id)
-            return False
-
-        return True
-
-    async def set_expiration_time(self, reciver: str, expiration_in_seconds: int) -> None:
-        await self.signal_bot.update_contact(reciver, expiration_in_seconds=expiration_in_seconds)
-
-    async def set_group_expiration_time(self, group_id: str, expiration_in_seconds: int) -> None:
-        await self.signal_bot.update_group(group_id, expiration_in_seconds=expiration_in_seconds)
-
-    async def delete_old_timestamps(self) -> None:
-        """Signal only allows editing messges within 24 hours.
-        No point in keeping the information for older messages"""
-        cursor = self.signal_bot.storage._sqlite.execute("SELECT key FROM signalbot")  # noqa: SLF001
-        keys = [row[0] for row in cursor.fetchall()]
-        for key in keys:
-            value = TimestampData.model_validate(self.signal_bot.storage.read(key))
-            if datetime.fromtimestamp(value.timestamp / 1000, tz=timezone.utc) < (
-                datetime.now(tz=timezone.utc) - timedelta(days=1)
-            ):
-                self.storage_lock.acquire()
-                self.signal_bot.storage.delete(key)
-                self.storage_lock.release()
-                self.logger.info("Deleted expired key with timestamp: %s", value.timestamp)
+    async def forget_old_messages(self) -> None:
+        """Run periodically, see `BROADCAST_RETENTION` and `CONVERSATION_RETENTION`."""
+        now = now_ms()
+        num_deleted = self.db.delete_deliveries_before(now - int(BROADCAST_RETENTION.total_seconds() * 1000))
+        self.db.delete_expired_conversations(now - int(CONVERSATION_RETENTION.total_seconds() * 1000))
+        logger.info("Forgot %s expired broadcast deliveries", num_deleted)

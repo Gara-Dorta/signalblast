@@ -2,11 +2,17 @@
 name = "signalblast"
 dynamic = ["version"]
 description = "Broadcast bot for Signal"
-authors = [{name = "Era Dorta"}]
+authors = [{name = "Gara Dorta"}]
 readme = "README.md"
-requires-python = ">=3.10"
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
+requires-python = ">=3.14"
 classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Communications :: Chat",
 ]
 keywords = [
   "Signal",
@@ -15,18 +21,29 @@ keywords = [
 ]
 dependencies = [
     "bcrypt>=5.0.0",
-    "pydantic>=2.12.3",
-    "signalbot>=0.23.1",
+    "pydantic>=2.13.4",
+    "pydantic-settings>=2.11",
+    "signalbot>=2.1.0",
 ]
+
+[project.scripts]
+signalblast = "signalblast.main:main"
+
+[project.urls]
+Homepage = "https://github.com/Gara-Dorta/signalblast"
+Repository = "https://github.com/Gara-Dorta/signalblast"
 
 [dependency-groups]
 dev = [
-    "hatch>=1.15.1",
-    "prek>=0.3.0",
+    "prek>=0.4.13",
+    "pytest>=8.4.2",
+    "pytest-asyncio>=1.2.0",
+    "pytest-cov>=7.0.0",
+    "pytest-mock>=3.15.1",
+    "pytest-timeout>=2.4.0",
+    "ruff==0.14.14",
+    "ty==0.0.84",
 ]
-
-# [tool.uv.sources]
-# signalbot = { path = "../signalbot", editable = true }
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
@@ -36,8 +53,10 @@ build-backend = "hatchling.build"
 source = "vcs"
 raw-options = { fallback_version = "0.0.0" }
 
-[tool.hatch.build.hooks.vcs]
-version-file = "_version.py"
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+# A deadlock in a handler would otherwise hang the test run forever
+timeout = 60
 
 [tool.ruff]
 src = ["src"]
@@ -49,4 +68,16 @@ ignore = [
   "D",   # Docstrings
   "FIX", # TODO, FIXME and other messages
   "ERA001", # Commented out code
+  "CPY001", # Missing copyright notice on top of file
+  "COM812", # Trailing commas, conflicts with the formatter
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+  "S101", # assert is how pytest checks
+  "INP001", # tests dir has no __init__.py
+  "ARG001", "ARG002", # fixtures/mocker are requested for their side effects, not referenced in the body
+]
+
+# [tool.uv.sources]
+# signalbot = { path = "../signalbot", editable = true }

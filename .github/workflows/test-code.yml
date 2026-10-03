@@ -2,11 +2,10 @@ name: Test Workflow
 
 on:
   push:
-    branches:
-      - '**'
+    branches: [ "main" ]
   pull_request:
-    branches:
-      - '**'
+  # Allows the release workflow to run the tests before publishing
+  workflow_call:
 
 jobs:
   pytest_commit:
@@ -27,6 +26,5 @@ jobs:
       - name: Run prek
         run: uv run prek run --all-files
 
-    # TODO: Enable when unit tests are added
-    #   - name: Run Pytest
-    #     run: uv run pytest --cov=src --cov-report term ./tests
+      - name: Run Pytest
+        run: uv run pytest --cov=src --cov-report term ./tests

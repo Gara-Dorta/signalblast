@@ -1,14 +1,37 @@
-from signalblast.commands.add_admin import AddAdmin  # noqa: F401
-from signalblast.commands.ban_subscriber import BanSubscriber  # noqa: F401
-from signalblast.commands.broadcast import Broadcast  # noqa: F401
-from signalblast.commands.display_help import DisplayHelp  # noqa: F401
-from signalblast.commands.last_msg_user_uuid import LastMsgUserUuid  # noqa: F401
-from signalblast.commands.lift_ban_subscriber import LiftBanSubscriber  # noqa: F401
-from signalblast.commands.message_from_admin import MessageFromAdmin  # noqa: F401
-from signalblast.commands.message_to_admin import MessageToAdmin  # noqa: F401
-from signalblast.commands.remove_admin import RemoveAdmin  # noqa: F401
-from signalblast.commands.set_ping import SetPing  # noqa: F401
-from signalblast.commands.show_version import ShowVersion  # noqa: F401
-from signalblast.commands.subscribe import Subscribe  # noqa: F401
-from signalblast.commands.unset_ping import UnsetPing  # noqa: F401
-from signalblast.commands.unsubscribe import Unsubscribe  # noqa: F401
+"""One signalbot handler per command, plus the handlers for everything that isn't a command.
+
+Every private message is handled by exactly one of them: they are all registered with a priority, and the
+matching one with the highest priority runs (see `base.py`):
+
+1. Edits of a broadcast edit every copy of it.
+2. Commands.
+3. A quote of a message between a user and the admins continues that conversation, it is never broadcast.
+4. Anything else starting with "!" gets the help, so mistyped commands are not broadcast.
+5. Everything else is broadcast.
+"""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from signalblast.commands.broadcast import Broadcast, DeleteBroadcast, EditBroadcast
+from signalblast.commands.messaging import Reply
+from signalblast.commands.registry import COMMANDS, UnknownCommand
+
+if TYPE_CHECKING:
+    from signalblast.broadcastbot import BroadcastBot
+
+
+def register_handlers(bot: BroadcastBot) -> None:
+    for handler in (
+        EditBroadcast(bot),
+        *(command(bot) for command in COMMANDS),
+        Reply(bot),
+        UnknownCommand(bot),
+        Broadcast(bot),
+        DeleteBroadcast(bot),
+    ):
+        handler.register(bot.signal_bot)
+
+
+__all__ = ["register_handlers"]

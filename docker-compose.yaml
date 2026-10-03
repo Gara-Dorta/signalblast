@@ -1,34 +1,27 @@
 services:
-  autoheal:
-    image: willfarrell/autoheal:latest
-    network_mode: none
-    restart: always
-    volumes:
-      - /etc/localtime:/etc/localtime:ro
-      - /var/run/docker.sock:/var/run/docker.sock
-
   signal-cli-rest-api:
-    image: "bbernhard/signal-cli-rest-api:latest"
+    image: "bbernhard/signal-cli-rest-api:${SIGNAL_CLI_REST_API_VERSION:-0.101}"
+    # Fixed name so that docker/watchdog.sh can restart it
+    container_name: signal-cli-rest-api
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     volumes:
       - "$HOME/.local/share/signal-api:/home/.local/share/signal-cli"
     environment:
       - MODE=json-rpc
       - JSON_RPC_TRUST_NEW_IDENTITIES=always
     restart: always
-    labels:
-      autoheal: true
 
   signalblast:
     image: "eradorta/signalblast:$DOCKER_TAG"
+    # Fixed name so that docker/watchdog.sh can restart it
+    container_name: signalblast
     build:
       network: "host"
       args:
         SIGNALBLAST_VERSION: $SIGNALBLAST_VERSION
     network_mode: "host"
     volumes:
-      - "$HOME/.local/share/signal-api/:/home/user/.local/share/signal-api/"
       - "$HOME/.local/share/signalblast/:/home/user/.local/share/signalblast/"
     environment:
       - SIGNALBLAST_PHONE_NUMBER=$SIGNALBLAST_PHONE_NUMBER
@@ -36,9 +29,11 @@ services:
       - SIGNALBLAST_HEALTHCHECK_RECEIVER=$SIGNALBLAST_HEALTHCHECK_RECEIVER
       - SIGNALBLAST_WELCOME_MESSAGE=$SIGNALBLAST_WELCOME_MESSAGE
       - SIGNALBLAST_INSTRUCTIONS_URL=$SIGNALBLAST_INSTRUCTIONS_URL
+      - SIGNALBLAST_EXPIRATION_TIME=$SIGNALBLAST_EXPIRATION_TIME
+      - SIGNALBLAST_SIGNAL_SERVICE=$SIGNALBLAST_SIGNAL_SERVICE
+      - SIGNALBLAST_HEALTHCHECK_PORT=$SIGNALBLAST_HEALTHCHECK_PORT
+      - SIGNALBLAST_LOG_LEVEL=$SIGNALBLAST_LOG_LEVEL
     depends_on:
       signal-cli-rest-api:
         condition: service_healthy
     restart: always
-    labels:
-      autoheal: true

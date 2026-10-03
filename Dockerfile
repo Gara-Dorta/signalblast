@@ -1,38 +1,39 @@
-FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim
+###########################
+# Build the wheel
+###########################
+FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim AS builder
 
-# Install curl for the healthcheck
-RUN apt-get update && \
-    apt-get install -y curl=7.* --no-install-recommends && \
-    rm -rf /var/lib/apt/lists/*
+# The git metadata is not in the build context, so hatch-vcs takes the version from here
+ARG SIGNALBLAST_VERSION
+ENV SETUPTOOLS_SCM_PRETEND_VERSION=$SIGNALBLAST_VERSION
+
+WORKDIR /build
+COPY pyproject.toml README.md LICENSE ./
+COPY src ./src
+RUN uv build --wheel --out-dir /build/dist
+
+###########################
+# Final image
+###########################
+FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim
 
 ##########################
 # Create non-root user
 ##########################
 RUN useradd --create-home --shell /bin/bash --uid 1000 user
-USER user
+USER 1000
 WORKDIR /home/user
-
-ARG SIGNALBLAST_VERSION
-
-###########################
-# Install from source dist
-###########################
-# COPY dist/signalblast-$SIGNALBLAST_VERSION.tar.gz /tmp/signalblast-$SIGNALBLAST_VERSION.tar.gz
-
-# RUN tar -xzf /tmp/signalblast-$SIGNALBLAST_VERSION.tar.gz && \
-#     uv venv && \
-#     uv pip install --no-cache-dir /tmp/signalblast-$SIGNALBLAST_VERSION.tar.gz
 
 ###########################
 # Install from wheel
 ###########################
-COPY dist/signalblast-$SIGNALBLAST_VERSION-py3-none-any.whl /tmp/signalblast-$SIGNALBLAST_VERSION-py3-none-any.whl
+COPY --from=builder /build/dist/ /tmp/dist/
 RUN uv venv && \
-    uv pip install --no-cache-dir /tmp/signalblast-$SIGNALBLAST_VERSION-py3-none-any.whl
+    uv pip install --no-cache-dir /tmp/dist/*.whl
 
 ###########################
-ENV SIGNALBLAST_CONFIG_DIR=/home/user/.local/share/signalblast
+ENV SIGNALBLAST_DATA_DIR=/home/user/.local/share/signalblast
 
-ENTRYPOINT ["uv", "run", "python", "-m", "signalblast.main"]
+ENTRYPOINT ["/home/user/.venv/bin/signalblast"]
 
-HEALTHCHECK --interval=8h --start-period=30s --retries=3 CMD curl -f http://localhost:15556 || exit 1
+HEALTHCHECK --interval=8h --timeout=90s --start-period=1m --retries=3 CMD ["sh", "-c", "[ -z \"$SIGNALBLAST_HEALTHCHECK_RECEIVER\" ] || python -c \"import urllib.request; urllib.request.urlopen('http://localhost:${SIGNALBLAST_HEALTHCHECK_PORT:-15556}', timeout=60)\""]

@@ -1,0 +1,20 @@
+[Unit]
+Description=Restart the signalblast containers if they are unhealthy
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/signalblast-watchdog
+
+
+# User unit installed by docker/install_watchdog.sh, the user must be able to run docker
+
+# Set non default container names with `systemctl --user edit signalblast-watchdog.service`
+# [Service]
+# Environment=SIGNAL_API_CONTAINER=signal-cli-rest-api
+# Environment=SIGNALBLAST_CONTAINER=signalblast
+
+# Visualise the journal by running
+# journalctl --user -u signalblast-watchdog.service
+
+# Run a check immediately with
+# systemctl --user start signalblast-watchdog.service

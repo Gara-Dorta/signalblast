@@ -1,240 +1,302 @@
+from __future__ import annotations
+
 import asyncio
 import contextlib
+import logging
 import random
-from collections import defaultdict
-from collections.abc import Awaitable
-from re import Pattern
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, override
 
-from signalbot import Command, MessageType
-from signalbot import Context as ChatContext
+from signalbot import EditMessage, LinkPreview, RemoteDeleteHandler, SendMessage, SentMessage, SignalBotError
 
-from signalblast.broadcastbot import BroadcasBot
-from signalblast.commands_strings import CommandRegex, PublicCommandStrings
-from signalblast.utils import TimestampData
+from signalblast.commands.base import (
+    BROADCAST_PRIORITY,
+    EDIT_BROADCAST_PRIORITY,
+    Command,
+    SignalblastHandler,
+)
+from signalblast.utils import people
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator, Callable, Coroutine
+
+    from signalbot import Context, DataMessage, DataMessageContext, RemoteDeleteContext, SignalBot
+
+    from signalblast.broadcastbot import BroadcastBot
+
+logger = logging.getLogger(__name__)
+
+# Subscribers are removed after this many broadcasts in a row could not be sent to them
+MAX_FAILED_SENDS = 10
+# Signal stops showing the typing indicator after 15 seconds
+TYPING_REFRESH_SECONDS = 15
+# Random delay between the copies of a broadcast, to avoid Signal's rate limits
+SEND_DELAY_SECONDS = (0.5, 1.0)
+# Receiving a message stops the typing indicator, wait a bit before starting it again
+RESUME_TYPING_DELAY_SECONDS = 0.5
 
 
-class Broadcast(Command):
-    MAX_FAILED_MSGS = 10
+@dataclass(frozen=True)
+class BroadcastContent:
+    text: str
+    attachments: list[str] | None
+    link_preview: LinkPreview | None
+    view_once: bool | None
 
-    def __init__(self, bot: BroadcasBot) -> None:
+    @classmethod
+    def from_message(cls, ctx: DataMessageContext, text: str | None) -> BroadcastContent | None:
+        """`text` is the message without the `!broadcast` command. None if there is nothing to broadcast."""
+        message = ctx.message
+        attachments = [a.base64_content for a in message.attachments or [] if a.base64_content is not None]
+        if not text and not attachments:
+            return None
+
+        link_preview = None
+        if message.previews:
+            preview = message.previews[0]
+            if preview.base64_thumbnail is not None and preview.title is not None and preview.url is not None:
+                link_preview = LinkPreview(
+                    description=preview.description or "",
+                    title=preview.title,
+                    url=preview.url,
+                    thumbnail=preview.base64_thumbnail,
+                )
+
+        return cls(text or "", attachments or None, link_preview, message.view_once)
+
+
+class BroadcastCommand(Command):
+    trigger = "!broadcast"
+    args = "<message>"
+    description = "Send a message to every subscriber, anything that isn't a command is broadcast too"
+
+    @override
+    async def run(self, ctx: DataMessageContext, sender: str, args: str) -> None:
+        await _broadcast(self.bot, ctx, args)
+
+
+class Broadcast(SignalblastHandler):
+    """Every message that no other handler handles is broadcast."""
+
+    priority = BROADCAST_PRIORITY
+
+    @override
+    def matches(self, message: DataMessage) -> bool:
+        return True
+
+    @override
+    async def handle(self, ctx: DataMessageContext, sender: str) -> None:
+        await _broadcast(self.bot, ctx, ctx.message.text)
+
+
+class EditBroadcast(SignalblastHandler):
+    """The sender edited a broadcast, edit every copy of it. Subscribers who joined after it was sent
+    receive the edit as a new message."""
+
+    priority = EDIT_BROADCAST_PRIORITY
+
+    @override
+    def matches(self, message: DataMessage) -> bool:
+        return (
+            isinstance(message, EditMessage)
+            and message.source_uuid is not None
+            and bool(self.bot.db.deliveries(message.source_uuid, message.target_sent_timestamp))
+        )
+
+    @override
+    async def handle(self, ctx: DataMessageContext, sender: str) -> None:
+        text = BroadcastCommand.parse(ctx.message.text)
+        await _broadcast(self.bot, ctx, ctx.message.text if text is None else text)
+
+
+class DeleteBroadcast(RemoteDeleteHandler):
+    """The sender deleted their message for everyone, delete every copy of it if it was a broadcast."""
+
+    def __init__(self, bot: BroadcastBot) -> None:
         super().__init__()
-        self.broadcastbot = bot
-        self.subscribers_num_fails: dict[str, int] = defaultdict(lambda: 0)
+        self.bot = bot
 
-    def is_valid_command(self, message: str, invalid_command: Pattern) -> bool:
-        return any(regex != invalid_command and regex.search(message) is not None for regex in CommandRegex)
+    def register(self, signal_bot: SignalBot) -> None:
+        signal_bot.register(self, groups=False)
 
-    async def check_send_tasks_results(
-        self,
-        ctx: ChatContext,
-        send_tasks: list[asyncio.Task | None],
-        action_str: str,
-    ) -> dict[str, int]:
-        timestamp_data = {}
-        for send_task, subscriber in zip(send_tasks, self.broadcastbot.subscribers, strict=False):
-            if send_task is not None:
-                try:
-                    timestamp_data[subscriber] = send_task.result()
-                    self.subscribers_num_fails.pop(subscriber, None)
-                    self.broadcastbot.logger.info("Message successfully %s %s", action_str, subscriber)
-                except Exception:
-                    self.subscribers_num_fails[subscriber] += 1
-                    self.broadcastbot.logger.exception("Message not %s %s", action_str, subscriber)
-
-        subscribers_to_remove = []
-        for subscriber, num_fails in self.subscribers_num_fails.items():
-            if num_fails >= Broadcast.MAX_FAILED_MSGS:
-                subscribers_to_remove.append(subscriber)
-                await self.broadcastbot.subscribers.remove(subscriber)
-
-                remove_message = "The bot is having problems sending you messages. "
-                remove_message += "You have been removed from the list. "
-                remove_message += "Please update signal, remove old linked devices and try subscribing again."
-                with contextlib.suppress(Exception):
-                    # Most likely will fail to send the message but try anyway
-                    await ctx.bot.send(subscriber, remove_message)
-
-        for subscriber in subscribers_to_remove:
-            del self.subscribers_num_fails[subscriber]
-
-        return timestamp_data
-
-    async def broadcast(self, ctx: ChatContext) -> None:  # noqa: C901, PLR0915, PLR0912 function is too complex
-        broadcast_timestamps: dict[str, int] = {}
-        num_subscribers = -1
-        attachments_deleted = False
-        send_tasks_checked = False
-        timestamp_data_saved = False
-        send_tasks: list[asyncio.Task | None] = []
-        action_str, acting_str = "sent to", "sending"
-
+    @override
+    async def handle_remote_delete(self, context: RemoteDeleteContext) -> None:
         try:
-            subscriber_uuid = ctx.message.source_uuid
-            if subscriber_uuid in self.broadcastbot.banned_users:
-                await ctx.bot.send(subscriber_uuid, "This number is not allowed to send messages")
-                self.broadcastbot.logger.info("%s tried to broadcast but they are banned", subscriber_uuid)
-                return
+            await _delete_broadcast(self.bot, context)
+        except Exception:
+            logger.exception("Failed to delete a broadcast")
 
-            if subscriber_uuid not in self.broadcastbot.subscribers:
-                await ctx.bot.send(subscriber_uuid, self.broadcastbot.must_subscribe_message)
-                self.broadcastbot.logger.info("%s tried to broadcast but they are not subscribed", subscriber_uuid)
-                return
 
-            num_subscribers = len(self.broadcastbot.subscribers)
+async def _broadcast(bot: BroadcastBot, ctx: DataMessageContext, text: str | None) -> None:
+    """Sends the message in `ctx` to every subscriber, `text` is its text without the `!broadcast` command.
+    If it edits a broadcast, the copies of that broadcast are edited. An edit of a message that wasn't
+    broadcast is broadcast as new."""
+    message = ctx.message
+    sender = message.source_uuid
+    if sender is None or not await _may_broadcast(bot, ctx, sender):
+        return
 
-            message = self.broadcastbot.message_handler.remove_command_from_message(
-                ctx.message.text,
-                PublicCommandStrings.broadcast,
+    content = BroadcastContent.from_message(ctx, text)
+    if content is None:
+        await bot.reply(ctx, "There is nothing to broadcast, write your message after !broadcast")
+        return
+
+    # The copies of the version of the message that this one edits
+    edited = bot.db.deliveries(sender, message.target_sent_timestamp) if isinstance(message, EditMessage) else {}
+    is_edit = bool(edited)
+    recipients = bot.db.subscribers()
+    random.shuffle(recipients)
+
+    async with _typing(bot, ctx):
+        delivered = await _send_to_each(
+            recipients,
+            lambda recipient: _send_copy(ctx, sender, recipient, content, edited.get(recipient)),
+        )
+
+    bot.db.save_deliveries(sender, message.timestamp, delivered)
+    await _track_failures(bot, recipients, delivered)
+
+    others = [recipient for recipient in recipients if recipient != sender]
+    num_delivered = sum(recipient in delivered for recipient in others)
+    action = "edited for" if is_edit else "sent to"
+    if num_delivered == len(others):
+        await bot.reply(ctx, f"Message {action} {people(num_delivered)}")
+    else:
+        await bot.reply(
+            ctx,
+            f"Message {action} {num_delivered} out of {people(len(others))}, "
+            "please contact the admins with !admin if this keeps happening",
+        )
+    logger.info("Broadcast %s %s out of %s", action, num_delivered, people(len(others)))
+    logger.debug("Broadcast by %s", sender)
+
+
+async def _delete_broadcast(bot: BroadcastBot, ctx: RemoteDeleteContext) -> None:
+    sender = ctx.message.source_uuid
+    if sender is None:
+        return
+
+    deliveries = bot.db.deliveries(sender, ctx.message.timestamp)
+    if not deliveries:
+        logger.info("Ignoring the deletion of a message that is not a known broadcast")
+        return
+    if bot.db.is_banned(sender):
+        logger.info("Ignoring the deletion of a broadcast by a banned user")
+        return
+
+    recipients = list(deliveries)
+    random.shuffle(recipients)
+    deleted = await _send_to_each(
+        recipients,
+        lambda recipient: ctx.bot.messages.remote_delete(
+            SentMessage(recipient=recipient, timestamp=deliveries[recipient])
+        ),
+    )
+
+    num_deleted = sum(recipient in deleted for recipient in recipients if recipient != sender)
+    with contextlib.suppress(SignalBotError):
+        await ctx.send(SendMessage(text=f"Message deleted for {people(num_deleted)}"))
+    logger.info("Broadcast deleted for %s", people(num_deleted))
+
+
+async def _may_broadcast(bot: BroadcastBot, ctx: DataMessageContext, sender: str) -> bool:
+    if bot.db.is_banned(sender):
+        await bot.reply(ctx, "This number is not allowed to send messages")
+        logger.info("A banned user tried to broadcast")
+        return False
+
+    if not bot.db.is_subscriber(sender):
+        message = "To be able to send messages you must sign up.\nPlease sign up by sending:\n\t!subscribe\n"
+        message += "and try again after that."
+        if bot.settings.instructions_url is not None:
+            message += (
+                f"\nPlease have a look at the instructions if you haven't already:\n{bot.settings.instructions_url}"
             )
-            attachments = self.broadcastbot.message_handler.empty_list_to_none(ctx.message.base64_attachments)
-            link_preview = ctx.message.link_previews[0] if len(ctx.message.link_previews) > 0 else None
+        await bot.reply(ctx, message)
+        logger.info("A non subscriber tried to broadcast")
+        return False
 
-            if message is None and attachments is None and ctx.message.type != MessageType.DELETE_MESSAGE:
-                return
+    return True
 
-            if message is None:
-                message = ""
 
+async def _send_to_each(
+    recipients: list[str],
+    send: Callable[[str], Coroutine[None, None, int]],
+) -> dict[str, int]:
+    """Runs `send` for every recipient, spaced out by a random delay to avoid Signal's rate limits.
+    Returns the timestamp of each successful send by recipient."""
+    tasks: dict[str, asyncio.Task[int]] = {}
+    try:
+        for i, recipient in enumerate(recipients):
+            if i > 0:
+                await asyncio.sleep(random.uniform(*SEND_DELAY_SECONDS))  # noqa: S311 -- not for cryptography
+            tasks[recipient] = asyncio.create_task(send(recipient))
+    finally:
+        # Also on errors or cancellation, so no send is left running without anyone looking at its result
+        await asyncio.gather(*tasks.values(), return_exceptions=True)
+
+    results = {}
+    for recipient, task in tasks.items():
+        if task.exception() is None:
+            results[recipient] = task.result()
+        else:
+            logger.warning("Could not send to a subscriber: %r", task.exception())
+            logger.debug("Could not send to %s", recipient, exc_info=task.exception())
+    return results
+
+
+async def _send_copy(
+    ctx: DataMessageContext,
+    sender: str,
+    recipient: str,
+    content: BroadcastContent,
+    edit_timestamp: int | None,
+) -> int:
+    message = SendMessage(
+        text=content.text,
+        base64_attachments=content.attachments,
+        link_preview=content.link_preview,
+        view_once=content.view_once,
+        edit_timestamp=edit_timestamp,
+    )
+    sent = await ctx.bot.messages.send(message, recipient)
+    if recipient == sender:
+        await asyncio.sleep(RESUME_TYPING_DELAY_SECONDS)
+        with contextlib.suppress(SignalBotError):
+            await ctx.start_typing()
+    return sent.timestamp
+
+
+async def _track_failures(bot: BroadcastBot, recipients: list[str], delivered: dict[str, int]) -> None:
+    for recipient in recipients:
+        if recipient in delivered:
+            bot.db.record_send_success(recipient)
+            continue
+
+        if bot.db.record_send_failure(recipient) >= MAX_FAILED_SENDS:
+            bot.db.remove_subscriber(recipient)
+            logger.info("Unsubscribed a subscriber after %s failed broadcasts in a row", MAX_FAILED_SENDS)
+            # Most likely this fails too, but try anyway
+            await bot.send(
+                recipient,
+                "The bot is having problems sending you messages. You have been removed from the list. "
+                "Please update Signal, remove old linked devices and subscribe again.",
+            )
+
+
+@contextlib.asynccontextmanager
+async def _typing(bot: BroadcastBot, ctx: Context) -> AsyncGenerator[None]:
+    """Shows the typing indicator to the sender while the broadcast is being sent."""
+
+    async def start_typing() -> None:
+        with contextlib.suppress(SignalBotError):
             await ctx.start_typing()
 
-            # The typing indicator dissapears after 15 seconds. Restart it until the broadcast is done.
-            typing_job = self.broadcastbot.scheduler.add_job(ctx.start_typing, "interval", seconds=15)
-
-            # Broadcast message to all subscribers.
-            send_tasks: list[asyncio.Task | None] = [None] * num_subscribers
-
-            if ctx.message.type in (MessageType.DELETE_MESSAGE, MessageType.EDIT_MESSAGE):
-                if ctx.message.type == MessageType.DELETE_MESSAGE:
-                    action_str, acting_str = "deleted for", "deleting"
-                    original_msg_timestamp = ctx.message.remote_delete_timestamp
-                else:
-                    action_str, acting_str = "edited for", "editing"
-                    original_msg_timestamp = ctx.message.target_sent_timestamp
-
-                self.broadcastbot.storage_lock.acquire()
-                prev_timestamps = ctx.bot.storage.read(
-                    f"broadcast-uuid-{subscriber_uuid}-timestamp-{original_msg_timestamp}",
-                )
-                self.broadcastbot.storage_lock.release()
-                to_modify_timestamps = TimestampData.model_validate(prev_timestamps).broadcast_timestamps
-
-            else:
-                to_modify_timestamps = {}
-
-            for i, subscriber in enumerate(self.broadcastbot.subscribers):
-                if ctx.message.type == MessageType.DELETE_MESSAGE:
-                    subscriber_fn = ctx.bot.remote_delete(subscriber, to_modify_timestamps.get(subscriber))
-                else:
-                    subscriber_fn = ctx.bot.send(
-                        subscriber,
-                        message,
-                        base64_attachments=attachments,
-                        link_preview=link_preview,
-                        edit_timestamp=to_modify_timestamps.get(subscriber),
-                        view_once=ctx.message.view_once,
-                    )
-                    if subscriber == subscriber_uuid:
-                        # Typing stops after sending/deleting/editing a message, so start typing right after
-                        async def send_to_self(subscriber_fn: Awaitable[int]) -> int:
-                            timestamp = await subscriber_fn
-                            await asyncio.sleep(0.5)
-                            await ctx.start_typing()
-                            return timestamp
-
-                        subscriber_fn = send_to_self(subscriber_fn)
-
-                send_tasks[i] = asyncio.create_task(subscriber_fn)
-
-                # Avoid rate limiting by waiting a random time between messages
-                await asyncio.sleep(random.uniform(0.5, 1))  # noqa: S311
-
-            await asyncio.wait(send_tasks)
-
-            broadcast_timestamps = await self.check_send_tasks_results(ctx, send_tasks, action_str)
-            send_tasks_checked = True
-
-            if ctx.message.type != MessageType.DELETE_MESSAGE:
-                broadcastdata = TimestampData(
-                    author=subscriber_uuid,
-                    timestamp=ctx.message.timestamp,
-                    broadcast_timestamps=broadcast_timestamps,
-                )
-
-                self.broadcastbot.storage_lock.acquire()
-                ctx.bot.storage.save(
-                    f"broadcast-uuid-{subscriber_uuid}-timestamp-{ctx.message.timestamp}",
-                    broadcastdata.model_dump(),
-                )
-                self.broadcastbot.storage_lock.release()
-            timestamp_data_saved = True
-
-            await self.broadcastbot.message_handler.delete_attachments(ctx)
-            attachments_deleted = True
-
-            typing_job.remove()
+    await start_typing()
+    job = bot.scheduler.add_job(start_typing, "interval", seconds=TYPING_REFRESH_SECONDS)
+    try:
+        yield
+    finally:
+        job.remove()
+        with contextlib.suppress(SignalBotError):
             await ctx.stop_typing()
-            await self.broadcastbot.reply_with_warn_on_failure(
-                ctx,
-                f"Message {action_str} {len(broadcast_timestamps) - 1} people",
-            )
-
-            self.broadcastbot.last_msg_user_uuid = subscriber_uuid
-        except Exception:
-            self.broadcastbot.logger.exception("")
-            try:
-                if send_tasks_checked is False:
-                    broadcast_timestamps = await self.check_send_tasks_results(send_tasks, action_str)
-
-                error_str = f"Something went wrong when {acting_str} the message"
-                error_str += (
-                    f", it was only {action_str} {len(broadcast_timestamps) - 1} out of {num_subscribers - 1} people"
-                )
-                error_str += ", please contact the admin if the problem persists"
-                await self.broadcastbot.reply_with_warn_on_failure(ctx, error_str)
-
-                if attachments_deleted is False:
-                    await self.broadcastbot.message_handler.delete_attachments(ctx)
-
-                if timestamp_data_saved is False and ctx.message.type != MessageType.DELETE_MESSAGE:
-                    broadcastdata = TimestampData(
-                        author=subscriber_uuid,
-                        timestamp=ctx.message.timestamp,
-                        broadcast_timestamps=broadcast_timestamps,
-                    )
-                    self.broadcastbot.storage_lock.acquire()
-                    ctx.bot.storage.save(
-                        f"broadcast-uuid-{subscriber_uuid}-timestamp-{ctx.message.timestamp}",
-                        broadcastdata.model_dump(),
-                    )
-                    self.broadcastbot.storage_lock.release()
-            except Exception:
-                self.broadcastbot.logger.exception("")
-
-    async def handle(self, ctx: ChatContext) -> None:
-        message = ctx.message.text
-        subscriber_uuid = ctx.message.source_uuid
-
-        # Delete a previously broadcasted message
-        if ctx.message.type == MessageType.DELETE_MESSAGE:
-            await self.broadcast(ctx)
-            return
-
-        if message is None:
-            if ctx.message.base64_attachments == []:
-                self.broadcastbot.logger.info("Received reaction, sticker or similar from %s", subscriber_uuid)
-                return
-
-            await ctx.receipt(receipt_type="read")
-
-            # Only attachment, assume the user wants to forward that
-            self.broadcastbot.logger.info("Received a file from %s, broadcasting!", subscriber_uuid)
-            await self.broadcast(ctx)
-            return
-
-        if self.is_valid_command(message, invalid_command=CommandRegex.broadcast):
-            return
-
-        await ctx.receipt(receipt_type="read")
-
-        # By default broadcast all the messages
-        await self.broadcast(ctx)

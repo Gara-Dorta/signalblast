@@ -26,8 +26,12 @@ class ConversationMessage:
     id: int
     # The user the conversation is with
     user: str
-    # False if an admin wrote it
-    from_user: bool
+    # The user, or the admin who wrote it
+    author: str
+
+    @property
+    def from_user(self) -> bool:
+        return self.author == self.user
 
 
 @dataclass(frozen=True)
@@ -184,43 +188,48 @@ class Database:
 
     # --- Messages to the admins ---
 
-    def add_conversation_message(self, user: str, *, from_user: bool, sent_at: int) -> int:
-        """Records a message in the conversation between `user` and the admins, written by `user` or by an
-        admin. Only who it belongs to is stored, not its content. Returns its id."""
+    def add_conversation_message(self, user: str, *, author: str, sent_at: int) -> int:
+        """Records a message in the conversation between `user` and the admins, written by `author` (`user`
+        or an admin). Only who it belongs to is stored, not its content. Returns its id."""
         with self._conn:
             row = self._conn.execute(
-                "INSERT INTO conversation_messages (user, from_user, sent_at) VALUES (?, ?, ?) RETURNING id",
-                [user, from_user, sent_at],
+                "INSERT INTO conversation_messages (user, author, sent_at) VALUES (?, ?, ?) RETURNING id",
+                [user, author, sent_at],
             ).fetchone()
         return row[0]
 
-    def add_copy(self, message_id: int, chat: str, timestamp: int, author: str | None) -> None:
+    def add_copy(self, message_id: int, chat: str, timestamp: int) -> None:
         """Records that the chat between `chat` and the bot has a copy of the message `message_id` at
-        `timestamp`, written by `author` (None for the bot)."""
+        `timestamp`. The first copy in the author's chat is their own message, the others are sent by the bot."""
         with self._conn:
             self._conn.execute(
-                "INSERT OR REPLACE INTO conversation_copies (message_id, chat, timestamp, author) VALUES (?, ?, ?, ?)",
-                [message_id, chat, timestamp, author],
+                "INSERT OR REPLACE INTO conversation_copies (message_id, chat, timestamp) VALUES (?, ?, ?)",
+                [message_id, chat, timestamp],
             )
 
     def conversation_message(self, chat: str, timestamp: int) -> ConversationMessage | None:
         """The conversation message that the copy at `timestamp` in the chat with `chat` belongs to."""
         row = self._conn.execute(
-            "SELECT m.id, m.user, m.from_user FROM conversation_copies c "
+            "SELECT m.id, m.user, m.author FROM conversation_copies c "
             "JOIN conversation_messages m ON m.id = c.message_id WHERE c.chat = ? AND c.timestamp = ?",
             [chat, timestamp],
         ).fetchone()
-        return ConversationMessage(row[0], row[1], bool(row[2])) if row is not None else None
+        return ConversationMessage(*row) if row is not None else None
 
     def copy_in_chat(self, message_id: int, chat: str) -> MessageCopy | None:
         """The first copy of the message `message_id` in the chat with `chat`, i.e. the sender's own message
         in their chat."""
         row = self._conn.execute(
-            "SELECT timestamp, author FROM conversation_copies WHERE message_id = ? AND chat = ? "
-            "ORDER BY rowid LIMIT 1",
+            "SELECT c.timestamp, m.author FROM conversation_copies c "
+            "JOIN conversation_messages m ON m.id = c.message_id WHERE c.message_id = ? AND c.chat = ? "
+            "ORDER BY c.rowid LIMIT 1",
             [message_id, chat],
         ).fetchone()
-        return MessageCopy(*row) if row is not None else None
+        if row is None:
+            return None
+        timestamp, author = row
+        # Only the author's own message is theirs, every other copy was sent by the bot
+        return MessageCopy(timestamp, author if author == chat else None)
 
     def delete_expired_conversations(self, cutoff_ts: int) -> None:
         """Forgets the conversation messages sent before `cutoff_ts` (ms), and their copies."""

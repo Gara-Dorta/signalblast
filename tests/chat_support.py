@@ -98,8 +98,8 @@ def message(
     if isinstance(quote, Sent):
         extra["quote"] = {
             "id": quote.timestamp,
-            "author": ChatTestCase.phone_number,
-            "authorNumber": ChatTestCase.phone_number,
+            "author": BOT,
+            "authorNumber": BOT,
             "text": quote.text,
         }
     elif quote is not None:

@@ -105,25 +105,28 @@ def test_old_deliveries_are_deleted() -> None:
 
 def test_conversations_expire_after_7_days() -> None:
     db = make_db()
-    old = db.add_conversation_message("uuid-1", from_user=True, sent_at=0)
-    db.add_copy(old, "uuid-1", 100, "uuid-1")
-    db.add_copy(old, "admin", 101, None)
-    new = db.add_conversation_message("uuid-1", from_user=False, sent_at=6 * DAY_MS)
-    db.add_copy(new, "admin", 200, "admin")
+    old = db.add_conversation_message("uuid-1", author="uuid-1", sent_at=0)
+    db.add_copy(old, "uuid-1", 100)
+    db.add_copy(old, "admin", 101)
+    new = db.add_conversation_message("uuid-1", author="admin", sent_at=6 * DAY_MS)
+    db.add_copy(new, "admin", 200)
 
     db.delete_expired_conversations(cutoff_ts=8 * DAY_MS - 7 * DAY_MS)
 
     assert db.conversation_message("uuid-1", 100) is None
     assert db.conversation_message("admin", 101) is None
-    assert db.conversation_message("admin", 200) == ConversationMessage(new, "uuid-1", from_user=False)
+    assert db.conversation_message("admin", 200) == ConversationMessage(new, "uuid-1", "admin")
     assert db.conversation_message("other-admin", 200) is None
 
 
 def test_the_first_copy_in_a_chat_is_quoted() -> None:
     db = make_db()
-    message_id = db.add_conversation_message("uuid-1", from_user=True, sent_at=0)
-    db.add_copy(message_id, "uuid-1", 100, "uuid-1")
-    db.add_copy(message_id, "uuid-1", 101, None)
+    message_id = db.add_conversation_message("uuid-1", author="uuid-1", sent_at=0)
+    db.add_copy(message_id, "uuid-1", 100)
+    db.add_copy(message_id, "uuid-1", 101)
+    db.add_copy(message_id, "admin", 102)
 
     assert db.copy_in_chat(message_id, "uuid-1") == MessageCopy(100, "uuid-1")
-    assert db.copy_in_chat(message_id, "admin") is None
+    # The bot sent the admin's copy
+    assert db.copy_in_chat(message_id, "admin") == MessageCopy(102, None)
+    assert db.copy_in_chat(message_id, "other-admin") is None

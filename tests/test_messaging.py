@@ -154,6 +154,7 @@ async def test_replies_that_look_like_commands_still_reach_the_user(chat: Chat) 
 async def test_replies_to_expired_messages_are_not_sent_anywhere(chat: Chat) -> None:
     await chat.start(subscribers=(SUBSCRIBER, OTHER_SUBSCRIBER, ADMIN), admins=(ADMIN,))
     forwarded = await forward(chat, "Please help")
+    confirmation = chat.last_to(SUBSCRIBER)
     await chat.send(message("Sure", source=ADMIN, quote=forwarded))
     admin_reply = chat.last_to(SUBSCRIBER)
     chat.bot.db.delete_expired_conversations(forwarded.timestamp * 10)
@@ -164,11 +165,11 @@ async def test_replies_to_expired_messages_are_not_sent_anywhere(chat: Chat) -> 
         "Not sent: this message is older than 7 days, so its sender can no longer be reached",
     )
 
+    expired = "Not sent: this conversation is older than 7 days, write to the admins with !admin instead"
     [reply] = await chat.send(message("Thanks", source=SUBSCRIBER, quote=admin_reply))
-    assert (reply.recipient, reply.text) == (
-        SUBSCRIBER,
-        "Not sent: this conversation is older than 7 days, write to the admins with !admin instead",
-    )
+    assert (reply.recipient, reply.text) == (SUBSCRIBER, expired)
+    [reply] = await chat.send(message("Hello?", source=SUBSCRIBER, quote=confirmation))
+    assert (reply.recipient, reply.text) == (SUBSCRIBER, expired)
     assert chat.texts_to(OTHER_SUBSCRIBER) == []
 
 

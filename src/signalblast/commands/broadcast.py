@@ -4,7 +4,6 @@ import asyncio
 import contextlib
 import logging
 import random
-from dataclasses import dataclass
 from typing import TYPE_CHECKING, override
 
 from signalbot import EditMessage, LinkPreview, RemoteDeleteHandler, SendMessage, SentMessage, SignalBotError
@@ -34,35 +33,6 @@ TYPING_REFRESH_SECONDS = 15
 SEND_DELAY_SECONDS = (0.5, 1.0)
 # Receiving a message stops the typing indicator, wait a bit before starting it again
 RESUME_TYPING_DELAY_SECONDS = 0.5
-
-
-@dataclass(frozen=True)
-class BroadcastContent:
-    text: str
-    attachments: list[str] | None
-    link_preview: LinkPreview | None
-    view_once: bool | None
-
-    @classmethod
-    def from_message(cls, ctx: DataMessageContext, text: str | None) -> BroadcastContent | None:
-        """`text` is the message without the `!broadcast` command. None if there is nothing to broadcast."""
-        message = ctx.message
-        attachments = [a.base64_content for a in message.attachments or [] if a.base64_content is not None]
-        if not text and not attachments:
-            return None
-
-        link_preview = None
-        if message.previews:
-            preview = message.previews[0]
-            if preview.base64_thumbnail is not None and preview.title is not None and preview.url is not None:
-                link_preview = LinkPreview(
-                    description=preview.description or "",
-                    title=preview.title,
-                    url=preview.url,
-                    thumbnail=preview.base64_thumbnail,
-                )
-
-        return cls(text or "", attachments or None, link_preview, message.view_once)
 
 
 class BroadcastCommand(Command):
@@ -138,8 +108,8 @@ async def _broadcast(bot: BroadcastBot, ctx: DataMessageContext, text: str | Non
     if sender is None or not await _may_broadcast(bot, ctx, sender):
         return
 
-    content = BroadcastContent.from_message(ctx, text)
-    if content is None:
+    broadcast = _broadcast_message(ctx, text)
+    if broadcast is None:
         await bot.reply(ctx, "There is nothing to broadcast, write your message after !broadcast")
         return
 
@@ -152,7 +122,7 @@ async def _broadcast(bot: BroadcastBot, ctx: DataMessageContext, text: str | Non
     async with _typing(bot, ctx):
         delivered = await _send_to_each(
             recipients,
-            lambda recipient: _send_copy(ctx, sender, recipient, content, edited.get(recipient)),
+            lambda recipient: _send_copy(ctx, sender, recipient, broadcast, edited.get(recipient)),
         )
 
     bot.db.save_deliveries(sender, message.timestamp, delivered)
@@ -199,6 +169,40 @@ async def _delete_broadcast(bot: BroadcastBot, ctx: RemoteDeleteContext) -> None
     with contextlib.suppress(SignalBotError):
         await ctx.send(SendMessage(text=f"Message deleted for {people(num_deleted)}"))
     logger.info("Broadcast deleted for %s", people(num_deleted))
+
+
+def _broadcast_message(ctx: DataMessageContext, text: str | None) -> SendMessage | None:
+    """The message to send to every subscriber, `text` is the message without the `!broadcast` command.
+    None if there is nothing to broadcast."""
+    message = ctx.message
+    attachments = [a.base64_content for a in message.attachments or [] if a.base64_content is not None]
+    if not text and not attachments:
+        return None
+
+    link_preview = None
+    if message.previews:
+        preview = message.previews[0]
+        # Signal rejects previews whose URL is not in the text
+        if (
+            preview.base64_thumbnail is not None
+            and preview.title is not None
+            and preview.url is not None
+            and text is not None
+            and preview.url in text
+        ):
+            link_preview = LinkPreview(
+                description=preview.description or "",
+                title=preview.title,
+                url=preview.url,
+                thumbnail=preview.base64_thumbnail,
+            )
+
+    return SendMessage(
+        text=text or "",
+        base64_attachments=attachments or None,
+        link_preview=link_preview,
+        view_once=message.view_once,
+    )
 
 
 async def _may_broadcast(bot: BroadcastBot, ctx: DataMessageContext, sender: str) -> bool:
@@ -251,16 +255,10 @@ async def _send_copy(
     ctx: DataMessageContext,
     sender: str,
     recipient: str,
-    content: BroadcastContent,
+    broadcast: SendMessage,
     edit_timestamp: int | None,
 ) -> int:
-    message = SendMessage(
-        text=content.text,
-        base64_attachments=content.attachments,
-        link_preview=content.link_preview,
-        view_once=content.view_once,
-        edit_timestamp=edit_timestamp,
-    )
+    message = broadcast.model_copy(update={"edit_timestamp": edit_timestamp})
     sent = await ctx.bot.messages.send(message, recipient)
     if recipient == sender:
         await asyncio.sleep(RESUME_TYPING_DELAY_SECONDS)

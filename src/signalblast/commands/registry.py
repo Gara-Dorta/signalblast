@@ -21,7 +21,8 @@ class Help(Command):
 
     @override
     async def run(self, ctx: DataMessageContext, sender: str, args: str) -> None:
-        await self.bot.reply(ctx, help_message(self.bot, is_admin=self.bot.db.is_admin(sender)))
+        intro = "I'm happy to help! These are the commands that you can use:"
+        await self.bot.reply(ctx, help_message(self.bot, sender, intro=intro))
 
 
 class UnknownCommand(SignalblastHandler):
@@ -36,7 +37,8 @@ class UnknownCommand(SignalblastHandler):
 
     @override
     async def handle(self, ctx: DataMessageContext, sender: str) -> None:
-        await self.bot.reply(ctx, help_message(self.bot, is_admin=self.bot.db.is_admin(sender), understood=False))
+        intro = "I'm sorry, I didn't understand that. These are the commands that you can use:"
+        await self.bot.reply(ctx, help_message(self.bot, sender, intro=intro, broadcast_tip=True))
 
 
 # In the order they are shown in the help
@@ -56,21 +58,18 @@ COMMANDS: tuple[type[Command], ...] = (
 )
 
 
-def help_message(bot: BroadcastBot, *, is_admin: bool, understood: bool = True) -> str:
-    if understood:
-        message = "I'm happy to help! These are the commands that you can use:\n"
-    else:
-        message = "I'm sorry, I didn't understand that. These are the commands that you can use:\n"
+def help_message(bot: BroadcastBot, sender: str, *, intro: str, broadcast_tip: bool = False) -> str:
+    message = f"{intro}\n"
 
     def describe(commands: list[type[Command]]) -> str:
         return "".join(f"\n{command.usage()}\n\t{command.description}\n" for command in commands)
 
     message += describe([command for command in COMMANDS if not command.for_admins])
     message += "\nTo reply to a message from the admins, quote it and write your reply.\n"
-    if is_admin:
+    if bot.db.is_admin(sender):
         message += "\nAdmin commands:\n" + describe([command for command in COMMANDS if command.for_admins])
         message += "\nTo reply to a message from a user, quote it and write your reply.\n"
-    if not understood:
+    if broadcast_tip:
         message += "\nTo broadcast a message that starts with !, write !broadcast before it.\n"
     if bot.settings.instructions_url is not None:
         message += "\nPlease have a look at the instructions if you haven't already:\n"

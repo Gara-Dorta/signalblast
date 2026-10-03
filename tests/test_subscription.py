@@ -9,23 +9,27 @@ if TYPE_CHECKING:
 
 
 async def test_subscribe(chat: Chat) -> None:
-    await chat.start(welcome_message="Welcome aboard!")
+    await chat.start()
 
     [reply] = await chat.send(message("!subscribe", source=SUBSCRIBER))
-    assert reply.text == "Welcome aboard!"
+    assert str(reply.text).startswith("Welcome! Any message that you send will be forwarded to everybody in the list.")
+    assert "!unsubscribe" in str(reply.text)
     assert chat.bot.db.is_subscriber(SUBSCRIBER)
 
     [reply] = await chat.send(message("!subscribe", source=SUBSCRIBER))
     assert reply.text == "Already subscribed!"
 
 
-async def test_subscribe_sets_disappearing_messages(chat: Chat) -> None:
+async def test_subscribe_sets_disappearing_messages_after_the_welcome(chat: Chat) -> None:
     await chat.start(expiration_time=3600)
+    num_sent_when_set: list[int] = []
+    chat.update_contact.side_effect = lambda *_: num_sent_when_set.append(len(chat.sent))
 
     await chat.send(message("!subscribe", source=SUBSCRIBER))
 
     [call] = chat.update_contact.await_args_list
     assert call.args[0].expiration_in_seconds == 3600  # noqa: PLR2004
+    assert num_sent_when_set == [1]
 
 
 async def test_disappearing_messages_can_be_disabled(chat: Chat) -> None:

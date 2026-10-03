@@ -10,6 +10,11 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+WELCOME = (
+    "Welcome! Any message that you send will be forwarded to everybody in the list. "
+    "In addition, you can also use these commands:"
+)
+
 
 class Subscribe(Command):
     trigger = "!subscribe"
@@ -26,8 +31,11 @@ class Subscribe(Command):
             await self.bot.reply(ctx, "Already subscribed!")
             return
 
+        # Imported here because the registry imports this module
+        from signalblast.commands.registry import help_message  # noqa: PLC0415
+
+        await self.bot.reply(ctx, help_message(self.bot, sender, intro=WELCOME))
         await self.bot.set_expiration_time(sender)
-        await self.bot.reply(ctx, self.bot.settings.welcome_message)
         logger.info("New subscriber")
         logger.debug("%s subscribed", sender)
 

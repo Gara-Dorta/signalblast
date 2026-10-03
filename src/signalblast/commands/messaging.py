@@ -33,10 +33,19 @@ USER_REPLIED = "User replied:"
 REPLY_SENT = "Reply sent to user"
 REPLY_NOT_SENT = "Reply not sent to user, please try again"
 ANSWERED_BY_ADMIN = "User was answered by an admin:"
-# Starts the replies from an admin that the bot sends to a user
+# Start the messages that the bot sends to a user
 FROM_ADMIN = "Admin:"
+MESSAGE_SENT = "Message sent to the admins"
 # Recognise the bot's copies even after they have expired from the database, so they are never broadcast
-_CONVERSATION_PREFIXES = (USER_WROTE, USER_REPLIED, REPLY_SENT, REPLY_NOT_SENT, ANSWERED_BY_ADMIN, FROM_ADMIN)
+_CONVERSATION_PREFIXES = (
+    USER_WROTE,
+    USER_REPLIED,
+    REPLY_SENT,
+    REPLY_NOT_SENT,
+    ANSWERED_BY_ADMIN,
+    FROM_ADMIN,
+    MESSAGE_SENT,
+)
 
 
 @dataclass(frozen=True)
@@ -75,8 +84,8 @@ def _attachments(ctx: DataMessageContext) -> list[str] | None:
 
 def _record_received(bot: BroadcastBot, ctx: DataMessageContext, sender: str, *, user: str) -> int:
     """Records the message in `ctx` as a new message of the conversation with `user`. Returns its id."""
-    message_id = bot.db.add_conversation_message(user, from_user=sender == user, sent_at=now_ms())
-    bot.db.add_copy(message_id, sender, ctx.message.timestamp, sender)
+    message_id = bot.db.add_conversation_message(user, author=sender, sent_at=now_ms())
+    bot.db.add_copy(message_id, sender, ctx.message.timestamp)
     return message_id
 
 
@@ -89,16 +98,24 @@ async def _send_copy(  # noqa: PLR0913
     attachments: list[str] | None = None,
 ) -> bool:
     """Sends `text` to `chat` as its copy of the message `message_id`, quoting `quote`, and records it."""
-    timestamp = await bot.send(chat, text.rstrip(), attachments, quote)
+    timestamp = await bot.send(
+        chat,
+        text.rstrip(),
+        attachments,
+        quote_timestamp=quote.timestamp if quote is not None else None,
+        quote_author=(quote.author or bot.settings.phone_number) if quote is not None else None,
+    )
     if timestamp is None:
         return False
-    bot.db.add_copy(message_id, chat, timestamp, None)
+    bot.db.add_copy(message_id, chat, timestamp)
     return True
 
 
-async def _confirm(bot: BroadcastBot, sender: str, message_id: int, text: str) -> None:
-    """Tells the sender of the message `message_id` what happened to it, quoting it."""
-    await _send_copy(bot, sender, message_id, text, bot.db.copy_in_chat(message_id, sender))
+async def _confirm(bot: BroadcastBot, ctx: DataMessageContext, sender: str, message_id: int, text: str) -> None:
+    """Tells the sender of the message in `ctx`, recorded as `message_id`, what happened to it."""
+    timestamp = await bot.reply(ctx, text)
+    if timestamp is not None:
+        bot.db.add_copy(message_id, sender, timestamp)
 
 
 async def _write_to_admins(
@@ -132,7 +149,7 @@ async def _write_to_admins(
         await bot.reply(ctx, "I couldn't reach the admins, please try again later")
         return
 
-    await _confirm(bot, sender, message_id, "Message sent to the admins")
+    await _confirm(bot, ctx, sender, message_id, MESSAGE_SENT)
     logger.info("Forwarded a message from a user to %s admins", num_sent)
 
 
@@ -145,10 +162,10 @@ async def _reply_to_user(
 
     quote = bot.db.copy_in_chat(replied_to.id, user)
     if not await _send_copy(bot, user, message_id, f"{FROM_ADMIN} {text}", quote, _attachments(ctx)):
-        await _confirm(bot, admin, message_id, REPLY_NOT_SENT)
+        await _confirm(bot, ctx, admin, message_id, REPLY_NOT_SENT)
         return
 
-    await _confirm(bot, admin, message_id, REPLY_SENT)
+    await _confirm(bot, ctx, admin, message_id, REPLY_SENT)
     for other in bot.db.admins():
         if other != admin:
             quote = bot.db.copy_in_chat(replied_to.id, other)
@@ -193,19 +210,16 @@ class Reply(SignalblastHandler):
             return
 
         replied_to = self.bot.db.conversation_message(sender, quote.id)
-        if replied_to is not None and replied_to.user == sender:
+        if replied_to is None:
+            expired = (
+                "Not sent: this message is older than 7 days, so its sender can no longer be reached"
+                if self.bot.db.is_admin(sender)
+                else "Not sent: this conversation is older than 7 days, write to the admins with !admin instead"
+            )
+            await self.bot.reply(ctx, expired)
+        elif replied_to.user == sender:
             await _write_to_admins(self.bot, ctx, sender, ctx.message.text or "", replied_to)
         elif self.bot.db.is_admin(sender):
-            if replied_to is None:
-                await self.bot.reply(
-                    ctx,
-                    "Not sent: this message is older than 7 days, so its sender can no longer be reached",
-                )
-            else:
-                await _reply_to_user(self.bot, ctx, sender, replied_to)
-        elif replied_to is None:
-            await self.bot.reply(
-                ctx, "Not sent: this conversation is older than 7 days, write to the admins with !admin instead"
-            )
+            await _reply_to_user(self.bot, ctx, sender, replied_to)
         else:
             await self.bot.reply(ctx, "Not sent: only admins can reply to messages from users")

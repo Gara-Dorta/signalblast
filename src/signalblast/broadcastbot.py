@@ -13,7 +13,6 @@ from signalblast.utils import now_ms, route_signalbot_logs_to_root
 if TYPE_CHECKING:
     from signalbot import DataMessageContext
 
-    from signalblast.database import MessageCopy
     from signalblast.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -66,14 +65,18 @@ class BroadcastBot:
         recipient: str,
         text: str,
         attachments: list[str] | None = None,
-        quote: MessageCopy | None = None,
+        *,
+        quote_timestamp: int | None = None,
+        quote_author: str | None = None,
     ) -> int | None:
-        """Sends `text` to `recipient`, quoting `quote` (a message in their chat with the bot) if given.
-        Returns the timestamp of the message, None if it could not be sent."""
-        message = SendMessage(text=text, base64_attachments=attachments)
-        if quote is not None:
-            message.quote_timestamp = quote.timestamp
-            message.quote_author = quote.author or self.settings.phone_number
+        """Sends `text` to `recipient`, optionally quoting a message in their chat with the bot. Returns the
+        timestamp of the message, None if it could not be sent."""
+        message = SendMessage(
+            text=text,
+            base64_attachments=attachments,
+            quote_timestamp=quote_timestamp,
+            quote_author=quote_author,
+        )
         try:
             sent = await self.signal_bot.messages.send(message, recipient)
         except SignalBotError:

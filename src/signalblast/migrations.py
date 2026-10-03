@@ -52,7 +52,7 @@ CREATE INDEX broadcast_deliveries_by_age ON broadcast_deliveries (broadcast_ts);
 CREATE TABLE conversation_messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user TEXT NOT NULL,
-    from_user INTEGER NOT NULL,
+    author TEXT NOT NULL,
     sent_at INTEGER NOT NULL
 );
 CREATE INDEX conversation_messages_by_age ON conversation_messages (sent_at);
@@ -60,7 +60,6 @@ CREATE TABLE conversation_copies (
     message_id INTEGER NOT NULL REFERENCES conversation_messages (id) ON DELETE CASCADE,
     chat TEXT NOT NULL,
     timestamp INTEGER NOT NULL,
-    author TEXT,
     PRIMARY KEY (chat, timestamp)
 );
 CREATE INDEX conversation_copies_by_message ON conversation_copies (message_id, chat);

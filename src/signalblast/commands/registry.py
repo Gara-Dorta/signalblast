@@ -66,6 +66,7 @@ def help_message(bot: BroadcastBot, *, is_admin: bool, understood: bool = True) 
         return "".join(f"\n{command.usage()}\n\t{command.description}\n" for command in commands)
 
     message += describe([command for command in COMMANDS if not command.for_admins])
+    message += "\nTo reply to a message from the admins, quote it and write your reply.\n"
     if is_admin:
         message += "\nAdmin commands:\n" + describe([command for command in COMMANDS if command.for_admins])
         message += "\nTo reply to a message from a user, quote it and write your reply.\n"

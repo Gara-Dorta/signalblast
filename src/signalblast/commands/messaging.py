@@ -4,10 +4,10 @@ Admins never see who they are talking to. A user's `!admin` message reaches ever
 an admin replies by quoting it, the user receives the reply as "Admin: …" and answers by quoting it, and so on.
 
 Every message of a conversation is recorded with its copy in each chat it reached: the sender's own message
-and the bot's copies for everyone else. So quoting any copy continues the conversation and is never broadcast,
-and each copy that the bot sends quotes, in the same chat, the copy of the message it answers. Every chat then
-shows the conversation as a thread, without repeating the messages. Only who each message belongs to is
-stored, never its content.
+(and the bot's confirmation to them) and the bot's copies for everyone else. So quoting any copy continues the
+conversation and is never broadcast, and each copy that the bot sends quotes, in the same chat, the copy of the
+message it answers. Every chat then shows the conversation as a thread, without repeating the messages. Only
+which user each message is about and who wrote it are stored, never its content.
 """
 
 from __future__ import annotations

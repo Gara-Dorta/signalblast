@@ -32,9 +32,9 @@ class Subscribe(Command):
             return
 
         # Imported here because the registry imports this module
-        from signalblast.commands.registry import help_message  # noqa: PLC0415
+        from signalblast.commands.registry import send_help  # noqa: PLC0415
 
-        await self.bot.reply(ctx, help_message(self.bot, sender, intro=WELCOME))
+        await send_help(self.bot, sender, intro=WELCOME)
         await self.bot.set_expiration_time(sender)
         logger.info("New subscriber")
         logger.debug("%s subscribed", sender)

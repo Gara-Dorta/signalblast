@@ -91,6 +91,8 @@ class Command(SignalblastHandler):
     args: ClassVar[str] = ""
     # Shown in the admin section of the help
     for_admins: ClassVar[bool] = False
+    # Listed in the help
+    in_help: ClassVar[bool] = True
     # Only admins may run it, e.g. `!add admin` is for admins but is how a user becomes one
     admin_only: ClassVar[bool] = False
 

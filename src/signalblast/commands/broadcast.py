@@ -69,6 +69,8 @@ class BroadcastCommand(Command):
     trigger = "!broadcast"
     args = "<message>"
     description = "Send a message to every subscriber, anything that isn't a command is broadcast too"
+    # Only needed for messages that start with "!", the help of unknown commands explains it
+    in_help = False
 
     @override
     async def run(self, ctx: DataMessageContext, sender: str, args: str) -> None:

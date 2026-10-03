@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.0.0
 
 This release moves to signalbot 2 and a sqlite database, and changes how admins moderate the list so that they never see who the subscribers are.
 

@@ -13,6 +13,7 @@ from signalblast.utils import now_ms, route_signalbot_logs_to_root
 if TYPE_CHECKING:
     from signalbot import DataMessageContext
 
+    from signalblast.database import MessageCopy
     from signalblast.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -20,8 +21,8 @@ logger = logging.getLogger(__name__)
 # Signal only allows editing or deleting messages for 24 hours, after that the bot forgets who
 # sent each broadcast
 BROADCAST_RETENTION = timedelta(days=1)
-# How long admins can reply to, or ban the sender of, a message sent with !admin
-ADMIN_MESSAGE_RETENTION = timedelta(days=7)
+# How long the messages between users and admins can be quoted to reply, or to ban their sender
+CONVERSATION_RETENTION = timedelta(days=7)
 
 
 class BroadcastBot:
@@ -60,12 +61,21 @@ class BroadcastBot:
             return None
         return sent.timestamp
 
-    async def send(self, recipient: str, text: str, attachments: list[str] | None = None) -> int | None:
-        """Returns the timestamp of the message, None if it could not be sent."""
+    async def send(
+        self,
+        recipient: str,
+        text: str,
+        attachments: list[str] | None = None,
+        quote: MessageCopy | None = None,
+    ) -> int | None:
+        """Sends `text` to `recipient`, quoting `quote` (a message in their chat with the bot) if given.
+        Returns the timestamp of the message, None if it could not be sent."""
+        message = SendMessage(text=text, base64_attachments=attachments)
+        if quote is not None:
+            message.quote_timestamp = quote.timestamp
+            message.quote_author = quote.author or self.settings.phone_number
         try:
-            sent = await self.signal_bot.messages.send(
-                SendMessage(text=text, base64_attachments=attachments), recipient
-            )
+            sent = await self.signal_bot.messages.send(message, recipient)
         except SignalBotError:
             logger.warning("Could not send a message", exc_info=True)
             logger.debug("Could not send a message to %s", recipient)
@@ -87,8 +97,8 @@ class BroadcastBot:
             logger.warning("Could not set the disappearing messages timer", exc_info=True)
 
     async def forget_old_messages(self) -> None:
-        """Run periodically, see `BROADCAST_RETENTION` and `ADMIN_MESSAGE_RETENTION`."""
+        """Run periodically, see `BROADCAST_RETENTION` and `CONVERSATION_RETENTION`."""
         now = now_ms()
         num_deleted = self.db.delete_deliveries_before(now - int(BROADCAST_RETENTION.total_seconds() * 1000))
-        self.db.delete_expired_admin_messages(now - int(ADMIN_MESSAGE_RETENTION.total_seconds() * 1000))
+        self.db.delete_expired_conversations(now - int(CONVERSATION_RETENTION.total_seconds() * 1000))
         logger.info("Forgot %s expired broadcast deliveries", num_deleted)

@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 # Exactly one handler runs for each message, the matching one with the highest priority
 EDIT_BROADCAST_PRIORITY = 40
 COMMAND_PRIORITY = 30
-REPLY_TO_USER_PRIORITY = 20
+REPLY_PRIORITY = 20
 UNKNOWN_COMMAND_PRIORITY = 10
 BROADCAST_PRIORITY = 0
 

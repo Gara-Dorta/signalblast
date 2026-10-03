@@ -49,19 +49,21 @@ CREATE TABLE broadcast_deliveries (
 );
 CREATE INDEX broadcast_deliveries_by_broadcast ON broadcast_deliveries (author, broadcast_ts);
 CREATE INDEX broadcast_deliveries_by_age ON broadcast_deliveries (broadcast_ts);
-CREATE TABLE pseudonyms (
+CREATE TABLE conversation_messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    uuid TEXT NOT NULL UNIQUE,
-    last_message_at INTEGER NOT NULL
+    user TEXT NOT NULL,
+    from_user INTEGER NOT NULL,
+    sent_at INTEGER NOT NULL
 );
-CREATE TABLE admin_messages (
-    admin TEXT NOT NULL,
-    recipient_ts INTEGER NOT NULL,
-    pseudonym_id INTEGER NOT NULL REFERENCES pseudonyms (id) ON DELETE CASCADE,
-    sent_at INTEGER NOT NULL,
-    PRIMARY KEY (admin, recipient_ts)
+CREATE INDEX conversation_messages_by_age ON conversation_messages (sent_at);
+CREATE TABLE conversation_copies (
+    message_id INTEGER NOT NULL REFERENCES conversation_messages (id) ON DELETE CASCADE,
+    chat TEXT NOT NULL,
+    timestamp INTEGER NOT NULL,
+    author TEXT,
+    PRIMARY KEY (chat, timestamp)
 );
-CREATE INDEX admin_messages_by_age ON admin_messages (sent_at);
+CREATE INDEX conversation_copies_by_message ON conversation_copies (message_id, chat);
 """
 
 # Tables of the unversioned database used during the v2 development

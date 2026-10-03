@@ -40,6 +40,7 @@ OTHER_ADMIN = "44444444-4444-4444-4444-444444444444"
 STRANGER = "55555555-5555-5555-5555-555555555555"
 ADMIN_PASSWORD = "correct horse battery staple"  # noqa: S105
 ATTACHMENT_CONTENT = "aGVsbG8="
+BOT = ChatTestCase.phone_number
 
 # Unique timestamps, the bot uses them to tell messages apart
 _received_timestamps = itertools.count(1_700_000_000_000)
@@ -55,6 +56,8 @@ class Sent:
     timestamp: int
     edit_timestamp: int | None
     attachments: list[str] | None
+    quote_timestamp: int | None = None
+    quote_author: str | None = None
 
 
 def _envelope(source: str, timestamp: int, **body: object) -> str:
@@ -84,19 +87,28 @@ def message(
     text: str | None,
     *,
     source: str,
-    quote: Sent | None = None,
+    quote: Sent | str | None = None,
     attachment: bool = False,
     group: bool = False,
 ) -> str:
-    """A message from `source` to the bot, optionally quoting a message the bot sent them."""
+    """A message from `source` to the bot, optionally quoting a message the bot sent them, or one of their own
+    messages (an envelope from `message`)."""
     timestamp = next(_received_timestamps)
     extra: dict[str, Any] = {}
-    if quote is not None:
+    if isinstance(quote, Sent):
         extra["quote"] = {
             "id": quote.timestamp,
             "author": ChatTestCase.phone_number,
             "authorNumber": ChatTestCase.phone_number,
             "text": quote.text,
+        }
+    elif quote is not None:
+        quoted = json.loads(quote)["envelope"]
+        extra["quote"] = {
+            "id": quoted["timestamp"],
+            "author": quoted["sourceUuid"],
+            "authorUuid": quoted["sourceUuid"],
+            "text": quoted["dataMessage"]["message"],
         }
     if attachment:
         extra["attachments"] = [
@@ -215,7 +227,15 @@ class Chat:
             raise SignalBotError(recipient)
         timestamp = next(_sent_timestamps)
         self.sent.append(
-            Sent(recipient, request.message, timestamp, request.edit_timestamp, request.base64_attachments),
+            Sent(
+                recipient,
+                request.message,
+                timestamp,
+                request.edit_timestamp,
+                request.base64_attachments,
+                request.quote_timestamp,
+                request.quote_author,
+            ),
         )
         # One response per recipient
         return [SendMessageResponse(timestamp=str(timestamp))]

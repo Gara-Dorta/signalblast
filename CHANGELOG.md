@@ -13,7 +13,7 @@ This release moves to signalbot 2 and a sqlite database, and changes how admins 
 * **Admins**
   * There can be several admins. `!add admin <password>` adds an admin instead of replacing the current one, and `!remove admin` takes the id of the admin to remove: `!remove admin <password> <admin id>`.
   * `!ban` and `!lift ban` no longer take user ids. Quote a broadcast or a message from a user and send `!ban`; lift bans by number with `!lift ban <number>`, see `!list bans`.
-  * `!reply <user id>` is gone. Messages from users arrive as `User #7 wrote: …`; quote them to reply.
+  * `!reply <user id>` is gone. Messages from users arrive as `User wrote: …`; quote them to reply. Users answer by quoting the reply, and every message of the conversation quotes the one it answers.
   * `!last msg user uuid` is gone.
   * `!set ping` and `!unset ping` are gone, use the health check (`SIGNALBLAST_HEALTHCHECK_RECEIVER`) instead.
 * **Data** is stored in a sqlite database, `signalblast.db` in the data folder. The `subscribers.csv`, `banned_users.csv` and `admin.txt` files from older versions are imported automatically on the first start and renamed to `*.migrated`.
@@ -26,7 +26,6 @@ This release moves to signalbot 2 and a sqlite database, and changes how admins 
 ### New
 
 * `!list admins`, `!list bans`.
-* Users who write to the admins get a pseudonym (`User #7`) that stays the same while they keep writing and expires after 7 days without messages.
 * `SIGNALBLAST_LOG_LEVEL` and `SIGNALBLAST_LOG_FILE`.
 * `SIGNALBLAST_EXPIRATION_TIME=0` disables disappearing messages.
 

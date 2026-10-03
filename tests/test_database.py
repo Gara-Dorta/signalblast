@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from signalblast.database import Database, ForwardedMessageSender
+from signalblast.database import ConversationMessage, Database, MessageCopy
 
 DAY_MS = 24 * 60 * 60 * 1000
 
@@ -103,40 +103,27 @@ def test_old_deliveries_are_deleted() -> None:
     assert db.deliveries("author", 3000) == {"uuid-1": 3001}
 
 
-def test_pseudonym_is_kept_while_the_user_keeps_writing() -> None:
+def test_conversations_expire_after_7_days() -> None:
     db = make_db()
-    first = db.pseudonym_for("uuid-1", now_ts=0)
-    other = db.pseudonym_for("uuid-2", now_ts=0)
-    assert first != other
+    old = db.add_conversation_message("uuid-1", from_user=True, sent_at=0)
+    db.add_copy(old, "uuid-1", 100, "uuid-1")
+    db.add_copy(old, "admin", 101, None)
+    new = db.add_conversation_message("uuid-1", from_user=False, sent_at=6 * DAY_MS)
+    db.add_copy(new, "admin", 200, "admin")
 
-    # Writes every 5 days, the pseudonym is never more than 7 days without a message
-    for day in (5, 10, 15):
-        db.delete_expired_admin_messages(cutoff_ts=day * DAY_MS - 7 * DAY_MS)
-        assert db.pseudonym_for("uuid-1", now_ts=day * DAY_MS) == first
+    db.delete_expired_conversations(cutoff_ts=8 * DAY_MS - 7 * DAY_MS)
+
+    assert db.conversation_message("uuid-1", 100) is None
+    assert db.conversation_message("admin", 101) is None
+    assert db.conversation_message("admin", 200) == ConversationMessage(new, "uuid-1", from_user=False)
+    assert db.conversation_message("other-admin", 200) is None
 
 
-def test_pseudonym_expires_after_7_days_without_messages() -> None:
+def test_the_first_copy_in_a_chat_is_quoted() -> None:
     db = make_db()
-    first = db.pseudonym_for("uuid-1", now_ts=0)
-    db.save_admin_message("admin", recipient_ts=100, pseudonym_id=first, sent_at=0)
-    assert db.admin_message_sender("admin", 100) == ForwardedMessageSender("uuid-1", first)
+    message_id = db.add_conversation_message("uuid-1", from_user=True, sent_at=0)
+    db.add_copy(message_id, "uuid-1", 100, "uuid-1")
+    db.add_copy(message_id, "uuid-1", 101, None)
 
-    now = 8 * DAY_MS
-    db.delete_expired_admin_messages(cutoff_ts=now - 7 * DAY_MS)
-
-    assert db.admin_message_sender("admin", 100) is None
-    assert db.pseudonym_for("uuid-1", now_ts=now) > first
-
-
-def test_purge_keeps_messages_that_can_still_be_quoted() -> None:
-    db = make_db()
-    pseudonym = db.pseudonym_for("uuid-1", now_ts=0)
-    db.save_admin_message("admin", recipient_ts=100, pseudonym_id=pseudonym, sent_at=0)
-    db.pseudonym_for("uuid-1", now_ts=6 * DAY_MS)
-    db.save_admin_message("admin", recipient_ts=200, pseudonym_id=pseudonym, sent_at=6 * DAY_MS)
-
-    db.delete_expired_admin_messages(cutoff_ts=8 * DAY_MS - 7 * DAY_MS)
-
-    assert db.admin_message_sender("admin", 100) is None
-    assert db.admin_message_sender("admin", 200) == ForwardedMessageSender("uuid-1", pseudonym)
-    assert db.admin_message_sender("other-admin", 200) is None
+    assert db.copy_in_chat(message_id, "uuid-1") == MessageCopy(100, "uuid-1")
+    assert db.copy_in_chat(message_id, "admin") is None

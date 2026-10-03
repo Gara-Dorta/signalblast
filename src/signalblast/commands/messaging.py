@@ -1,8 +1,13 @@
-"""Messages between users and the admins.
+"""Conversations between users and the admins.
 
-Admins never see who they are talking to: a user's `!admin` message reaches them as "User #7 wrote: …",
-and an admin replies by quoting it. Every message the bot sends to an admin about a user starts with
-`USER_PREFIX` and is recorded, so quoting any of them reaches that user.
+Admins never see who they are talking to. A user's `!admin` message reaches every admin as "User wrote: …",
+an admin replies by quoting it, the user receives the reply as "Admin: …" and answers by quoting it, and so on.
+
+Every message of a conversation is recorded with its copy in each chat it reached: the sender's own message
+and the bot's copies for everyone else. So quoting any copy continues the conversation and is never broadcast,
+and each copy that the bot sends quotes, in the same chat, the copy of the message it answers. Every chat then
+shows the conversation as a thread, without repeating the messages. Only who each message belongs to is
+stored, never its content.
 """
 
 from __future__ import annotations
@@ -11,37 +16,40 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, override
 
-from signalblast.commands.base import REPLY_TO_USER_PRIORITY, Command, SignalblastHandler
+from signalblast.commands.base import REPLY_PRIORITY, Command, SignalblastHandler
 from signalblast.utils import now_ms, snippet
 
 if TYPE_CHECKING:
-    from signalbot import DataMessage, DataMessageContext, Quote
+    from signalbot import DataMessage, DataMessageContext
 
     from signalblast.broadcastbot import BroadcastBot
+    from signalblast.database import ConversationMessage, MessageCopy
 
 logger = logging.getLogger(__name__)
 
-USER_PREFIX = "User #"
+# Start the messages that the bot sends to the admins about a user
+USER_WROTE = "User wrote:"
+USER_REPLIED = "User replied:"
+REPLY_SENT = "Reply sent to user"
+REPLY_NOT_SENT = "Reply not sent to user, please try again"
+ANSWERED_BY_ADMIN = "User was answered by an admin:"
+# Starts the replies from an admin that the bot sends to a user
+FROM_ADMIN = "Admin:"
+# Recognise the bot's copies even after they have expired from the database, so they are never broadcast
+_CONVERSATION_PREFIXES = (USER_WROTE, USER_REPLIED, REPLY_SENT, REPLY_NOT_SENT, ANSWERED_BY_ADMIN, FROM_ADMIN)
 
 
 @dataclass(frozen=True)
 class QuoteTarget:
-    """The user behind a quoted broadcast or message about a user."""
+    """The user behind a quoted broadcast or message to the admins."""
 
     uuid: str
     snippet: str | None
-    pseudonym_id: int | None = None
-
-
-def quotes_a_user_message(quote: Quote | None) -> bool:
-    """Whether `quote` is a message that the bot sent to an admin about a user. Works without the database,
-    so it is recognised even after the message has expired."""
-    return quote is not None and quote.text is not None and quote.text.startswith(USER_PREFIX)
 
 
 def resolve_quote(bot: BroadcastBot, ctx: DataMessageContext) -> QuoteTarget | None:
-    """Who sent the broadcast or the `!admin` message that the sender quoted, None if it can't be known
-    (no quote, the message has expired, or it is neither)."""
+    """Who sent the broadcast or the message to the admins that the sender quoted, None if it can't be known
+    (no quote, the message has expired, or it is neither, e.g. an admin's reply)."""
     sender = ctx.message.source_uuid
     quote = ctx.message.quote
     if sender is None or quote is None:
@@ -51,11 +59,11 @@ def resolve_quote(bot: BroadcastBot, ctx: DataMessageContext) -> QuoteTarget | N
     if author is not None:
         return QuoteTarget(author, snippet(quote.text))
 
-    user = bot.db.admin_message_sender(sender, quote.id)
-    if user is not None and quote.text is not None:
-        # Drop the "User #7 wrote:" line
-        _, _, text = quote.text.partition("\n")
-        return QuoteTarget(user.uuid, snippet(text), user.pseudonym_id)
+    message = bot.db.conversation_message(sender, quote.id)
+    if message is not None and message.from_user:
+        # Drop the "User wrote:" line
+        _, _, text = (quote.text or "").partition("\n")
+        return QuoteTarget(message.user, snippet(text))
 
     return None
 
@@ -65,19 +73,87 @@ def _attachments(ctx: DataMessageContext) -> list[str] | None:
     return attachments or None
 
 
-async def _send_about_user(
+def _record_received(bot: BroadcastBot, ctx: DataMessageContext, sender: str, *, user: str) -> int:
+    """Records the message in `ctx` as a new message of the conversation with `user`. Returns its id."""
+    message_id = bot.db.add_conversation_message(user, from_user=sender == user, sent_at=now_ms())
+    bot.db.add_copy(message_id, sender, ctx.message.timestamp, sender)
+    return message_id
+
+
+async def _send_copy(  # noqa: PLR0913
     bot: BroadcastBot,
-    admin: str,
-    pseudonym_id: int,
+    chat: str,
+    message_id: int,
     text: str,
+    quote: MessageCopy | None,
     attachments: list[str] | None = None,
 ) -> bool:
-    """Sends a message starting with "User #<pseudonym_id>" to `admin` and records it, so it can be quoted."""
-    timestamp = await bot.send(admin, f"{USER_PREFIX}{pseudonym_id} {text}", attachments)
+    """Sends `text` to `chat` as its copy of the message `message_id`, quoting `quote`, and records it."""
+    timestamp = await bot.send(chat, text.rstrip(), attachments, quote)
     if timestamp is None:
         return False
-    bot.db.save_admin_message(admin, timestamp, pseudonym_id, now_ms())
+    bot.db.add_copy(message_id, chat, timestamp, None)
     return True
+
+
+async def _confirm(bot: BroadcastBot, sender: str, message_id: int, text: str) -> None:
+    """Tells the sender of the message `message_id` what happened to it, quoting it."""
+    await _send_copy(bot, sender, message_id, text, bot.db.copy_in_chat(message_id, sender))
+
+
+async def _write_to_admins(
+    bot: BroadcastBot,
+    ctx: DataMessageContext,
+    sender: str,
+    text: str,
+    replied_to: ConversationMessage | None,
+) -> None:
+    """Sends `text` and the attachments in `ctx` to every admin, as a new conversation or as an answer
+    to `replied_to`."""
+    if bot.db.is_banned(sender):
+        await bot.reply(ctx, "You are not allowed to contact the admins")
+        logger.info("A banned user tried to contact the admins")
+        return
+
+    admins = [admin for admin in bot.db.admins() if admin != sender]
+    if not admins:
+        await bot.reply(ctx, "I'm sorry but there are no admins to contact")
+        return
+
+    message_id = _record_received(bot, ctx, sender, user=sender)
+    header = USER_WROTE if replied_to is None else USER_REPLIED
+    attachments = _attachments(ctx)
+    num_sent = 0
+    for admin in admins:
+        quote = bot.db.copy_in_chat(replied_to.id, admin) if replied_to is not None else None
+        num_sent += await _send_copy(bot, admin, message_id, f"{header}\n{text}", quote, attachments)
+
+    if num_sent == 0:
+        await bot.reply(ctx, "I couldn't reach the admins, please try again later")
+        return
+
+    await _confirm(bot, sender, message_id, "Message sent to the admins")
+    logger.info("Forwarded a message from a user to %s admins", num_sent)
+
+
+async def _reply_to_user(
+    bot: BroadcastBot, ctx: DataMessageContext, admin: str, replied_to: ConversationMessage
+) -> None:
+    text = ctx.message.text or ""
+    user = replied_to.user
+    message_id = _record_received(bot, ctx, admin, user=user)
+
+    quote = bot.db.copy_in_chat(replied_to.id, user)
+    if not await _send_copy(bot, user, message_id, f"{FROM_ADMIN} {text}", quote, _attachments(ctx)):
+        await _confirm(bot, admin, message_id, REPLY_NOT_SENT)
+        return
+
+    await _confirm(bot, admin, message_id, REPLY_SENT)
+    for other in bot.db.admins():
+        if other != admin:
+            quote = bot.db.copy_in_chat(replied_to.id, other)
+            await _send_copy(bot, other, message_id, f"{ANSWERED_BY_ADMIN}\n{text}", quote)
+    logger.info("An admin replied to a user")
 
 
 class MessageAdmins(Command):
@@ -87,44 +163,28 @@ class MessageAdmins(Command):
 
     @override
     async def run(self, ctx: DataMessageContext, sender: str, args: str) -> None:
-        if self.bot.db.is_banned(sender):
-            await self.bot.reply(ctx, "You are not allowed to contact the admins")
-            logger.info("A banned user tried to contact the admins")
-            return
-
-        attachments = _attachments(ctx)
-        if not args and attachments is None:
+        if not args and _attachments(ctx) is None:
             await self.bot.reply(ctx, "Write your message after !admin, e.g. !admin I have a question")
             return
 
-        admins = [admin for admin in self.bot.db.admins() if admin != sender]
-        if not admins:
-            await self.bot.reply(ctx, "I'm sorry but there are no admins to contact")
-            return
-
-        pseudonym_id = self.bot.db.pseudonym_for(sender, now_ms())
-        num_sent = 0
-        for admin in admins:
-            text = f"wrote:\n{args}".rstrip()
-            num_sent += await _send_about_user(self.bot, admin, pseudonym_id, text, attachments)
-
-        if num_sent == 0:
-            await self.bot.reply(ctx, "I couldn't reach the admins, please try again later")
-            return
-
-        await self.bot.reply(ctx, "Message sent to the admins")
-        logger.info("Forwarded a message from user #%s to %s admins", pseudonym_id, num_sent)
+        await _write_to_admins(self.bot, ctx, sender, args, replied_to=None)
 
 
-class ReplyToUser(SignalblastHandler):
-    """An admin quoted a message about a user and wrote a reply. Never broadcast, even when it isn't
-    sent (the sender is no longer an admin, or the message has expired)."""
+class Reply(SignalblastHandler):
+    """The sender quoted a message of a conversation between a user and the admins: an admin replies to the
+    user, or the user answers the admins. Never broadcast, even when it isn't sent (the sender is no longer
+    an admin, or the conversation has expired)."""
 
-    priority = REPLY_TO_USER_PRIORITY
+    priority = REPLY_PRIORITY
 
     @override
     def matches(self, message: DataMessage) -> bool:
-        return quotes_a_user_message(message.quote)
+        quote = message.quote
+        if quote is None or message.source_uuid is None:
+            return False
+        if quote.text is not None and quote.text.startswith(_CONVERSATION_PREFIXES):
+            return True
+        return self.bot.db.conversation_message(message.source_uuid, quote.id) is not None
 
     @override
     async def handle(self, ctx: DataMessageContext, sender: str) -> None:
@@ -132,28 +192,20 @@ class ReplyToUser(SignalblastHandler):
         if quote is None:
             return
 
-        if not self.bot.db.is_admin(sender):
-            await self.bot.reply(ctx, "Not sent: only admins can reply to messages from users")
-            return
-
-        user = self.bot.db.admin_message_sender(sender, quote.id)
-        if user is None:
+        replied_to = self.bot.db.conversation_message(sender, quote.id)
+        if replied_to is not None and replied_to.user == sender:
+            await _write_to_admins(self.bot, ctx, sender, ctx.message.text or "", replied_to)
+        elif self.bot.db.is_admin(sender):
+            if replied_to is None:
+                await self.bot.reply(
+                    ctx,
+                    "Not sent: this message is older than 7 days, so its sender can no longer be reached",
+                )
+            else:
+                await _reply_to_user(self.bot, ctx, sender, replied_to)
+        elif replied_to is None:
             await self.bot.reply(
-                ctx,
-                "Not sent: this message is older than 7 days, so its sender can no longer be reached",
+                ctx, "Not sent: this conversation is older than 7 days, write to the admins with !admin instead"
             )
-            return
-
-        text = ctx.message.text or ""
-        if await self.bot.send(user.uuid, f"Admin: {text}".rstrip(), _attachments(ctx)) is None:
-            await _send_about_user(
-                self.bot, sender, user.pseudonym_id, "could not receive your reply, please try again"
-            )
-            return
-
-        await _send_about_user(self.bot, sender, user.pseudonym_id, "received your reply")
-        for admin in self.bot.db.admins():
-            if admin != sender:
-                answer = f"was answered by an admin:\n{text}".rstrip()
-                await _send_about_user(self.bot, admin, user.pseudonym_id, answer)
-        logger.info("An admin replied to user #%s", user.pseudonym_id)
+        else:
+            await self.bot.reply(ctx, "Not sent: only admins can reply to messages from users")

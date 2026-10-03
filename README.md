@@ -28,13 +28,13 @@ Broadcasts can be edited and deleted for everyone in Signal as usual, for up to 
 * `!lift ban <number>` lift a ban
 * `!version` show the versions of signalblast, signalbot and signal-cli-rest-api
 
-Messages that users send with `!admin` reach every admin as `User #7 wrote: …`. To reply, quote the message and write the reply, without any command. The other admins get a copy of the reply.
+Messages that users send with `!admin` reach every admin as `User wrote: …`. To reply, quote the message and write the reply, without any command. The user receives it as `Admin: …` and answers the same way, by quoting it, and so on. The other admins get a copy of every reply. Each message the bot sends in a conversation quotes the message it answers, so every chat shows the conversation as a thread. Quoting any message of a conversation continues it, it is never broadcast.
 
 ### Privacy
 
 * Subscribers never learn who else is subscribed, or who sent a broadcast.
-* Admins never learn who a subscriber is either: users who write to the admins appear as `User #7`, and bans and replies work by quoting messages. A user keeps the same number while they keep writing, and gets a new one after 7 days without writing to the admins.
-* The server running the bot does know who everyone is. Its database stores who sent each broadcast for 24 hours (to allow edits, deletes and bans), and who sent each message to the admins for 7 days. Subscriber ids only appear in the logs with `SIGNALBLAST_LOG_LEVEL=DEBUG`.
+* Admins never learn who a subscriber is either: users who write to the admins appear as `User`, and bans and replies work by quoting messages.
+* The server running the bot does know who everyone is. Its database stores who sent each broadcast for 24 hours (to allow edits, deletes and bans), and which user each message between users and admins belongs to for 7 days (not its content). Subscriber ids only appear in the logs with `SIGNALBLAST_LOG_LEVEL=DEBUG`.
 
 ## Installation
 

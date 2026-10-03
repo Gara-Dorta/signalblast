@@ -20,11 +20,23 @@ class Ban:
 
 
 @dataclass(frozen=True)
-class ForwardedMessageSender:
-    """Who sent the `!admin` message that the bot forwarded to an admin."""
+class ConversationMessage:
+    """A message between a user and the admins. Every chat that it reached has a copy of it."""
 
-    uuid: str
-    pseudonym_id: int
+    id: int
+    # The user the conversation is with
+    user: str
+    # False if an admin wrote it
+    from_user: bool
+
+
+@dataclass(frozen=True)
+class MessageCopy:
+    """The copy of a conversation message in someone's chat with the bot, enough to quote it."""
+
+    timestamp: int
+    # None if the bot sent it
+    author: str | None
 
 
 class Database:
@@ -172,43 +184,48 @@ class Database:
 
     # --- Messages to the admins ---
 
-    def pseudonym_for(self, uuid: str, now_ts: int) -> int:
-        """The number that identifies `uuid` to the admins. It stays the same while the user keeps
-        writing and expires `delete_expired_admin_messages` after their last message."""
+    def add_conversation_message(self, user: str, *, from_user: bool, sent_at: int) -> int:
+        """Records a message in the conversation between `user` and the admins, written by `user` or by an
+        admin. Only who it belongs to is stored, not its content. Returns its id."""
         with self._conn:
             row = self._conn.execute(
-                "INSERT INTO pseudonyms (uuid, last_message_at) VALUES (?, ?) "
-                "ON CONFLICT (uuid) DO UPDATE SET last_message_at = excluded.last_message_at RETURNING id",
-                [uuid, now_ts],
+                "INSERT INTO conversation_messages (user, from_user, sent_at) VALUES (?, ?, ?) RETURNING id",
+                [user, from_user, sent_at],
             ).fetchone()
         return row[0]
 
-    def save_admin_message(self, admin: str, recipient_ts: int, pseudonym_id: int, sent_at: int) -> None:
-        """Records that the message `admin` received at `recipient_ts` is about the user `pseudonym_id`,
-        so the admin can quote it to reply to them."""
+    def add_copy(self, message_id: int, chat: str, timestamp: int, author: str | None) -> None:
+        """Records that the chat between `chat` and the bot has a copy of the message `message_id` at
+        `timestamp`, written by `author` (None for the bot)."""
         with self._conn:
             self._conn.execute(
-                "INSERT OR REPLACE INTO admin_messages (admin, recipient_ts, pseudonym_id, sent_at) "
-                "VALUES (?, ?, ?, ?)",
-                [admin, recipient_ts, pseudonym_id, sent_at],
+                "INSERT OR REPLACE INTO conversation_copies (message_id, chat, timestamp, author) VALUES (?, ?, ?, ?)",
+                [message_id, chat, timestamp, author],
             )
 
-    def admin_message_sender(self, admin: str, recipient_ts: int) -> ForwardedMessageSender | None:
+    def conversation_message(self, chat: str, timestamp: int) -> ConversationMessage | None:
+        """The conversation message that the copy at `timestamp` in the chat with `chat` belongs to."""
         row = self._conn.execute(
-            "SELECT pseudonyms.uuid, pseudonyms.id FROM admin_messages "
-            "JOIN pseudonyms ON pseudonyms.id = admin_messages.pseudonym_id "
-            "WHERE admin_messages.admin = ? AND admin_messages.recipient_ts = ?",
-            [admin, recipient_ts],
+            "SELECT m.id, m.user, m.from_user FROM conversation_copies c "
+            "JOIN conversation_messages m ON m.id = c.message_id WHERE c.chat = ? AND c.timestamp = ?",
+            [chat, timestamp],
         ).fetchone()
-        return ForwardedMessageSender(*row) if row is not None else None
+        return ConversationMessage(row[0], row[1], bool(row[2])) if row is not None else None
 
-    def delete_expired_admin_messages(self, cutoff_ts: int) -> None:
-        """Forgets the admin messages sent before `cutoff_ts` (ms) and the pseudonyms of users who have
-        not written since. A pseudonym is never older than its newest message, so a message that can
-        still be quoted always keeps its pseudonym."""
+    def copy_in_chat(self, message_id: int, chat: str) -> MessageCopy | None:
+        """The first copy of the message `message_id` in the chat with `chat`, i.e. the sender's own message
+        in their chat."""
+        row = self._conn.execute(
+            "SELECT timestamp, author FROM conversation_copies WHERE message_id = ? AND chat = ? "
+            "ORDER BY rowid LIMIT 1",
+            [message_id, chat],
+        ).fetchone()
+        return MessageCopy(*row) if row is not None else None
+
+    def delete_expired_conversations(self, cutoff_ts: int) -> None:
+        """Forgets the conversation messages sent before `cutoff_ts` (ms), and their copies."""
         with self._conn:
-            self._conn.execute("DELETE FROM admin_messages WHERE sent_at < ?", [cutoff_ts])
-            self._conn.execute("DELETE FROM pseudonyms WHERE last_message_at < ?", [cutoff_ts])
+            self._conn.execute("DELETE FROM conversation_messages WHERE sent_at < ?", [cutoff_ts])
 
     def _exists(self, query: str, *params: object) -> bool:
         return self._conn.execute(query, params).fetchone() is not None

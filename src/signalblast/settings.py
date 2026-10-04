@@ -33,8 +33,10 @@ class Settings(BaseSettings):
     )
     expiration_time: int = Field(
         default=FOUR_WEEKS,
-        ge=0,
-        description="The disappearing messages timer for the subscribers chats in seconds, 0 to disable",
+        ge=-1,
+        description=(
+            "The disappearing messages timer for the subscribers chats in seconds, 0 to not change it, -1 to disable"
+        ),
     )
     instructions_url: str | None = Field(default=None, description="URL with instructions, shown in the help message")
     healthcheck_receiver: str | None = Field(

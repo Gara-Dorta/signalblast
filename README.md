@@ -34,7 +34,15 @@ Messages that users send with `!admin` reach every admin as `User wrote: …`. T
 
 * Subscribers never learn who else is subscribed, or who sent a broadcast.
 * Admins never learn who a subscriber is either: users who write to the admins appear as `User`, and bans and replies work by quoting messages.
-* The server running the bot does know who everyone is. Its database stores who sent each broadcast for 24 hours (to allow edits, deletes and bans), and which user each message between users and admins belongs to for 7 days (not its content). Subscriber ids only appear in the logs with `SIGNALBLAST_LOG_LEVEL=DEBUG`.
+* The bot's database keeps only:
+   * who sent each broadcast, for 24 hours, so that broadcasts can be edited and deleted
+   * which user each message between users and admins belongs to, for 7 days, so that replies reach the right person.
+   The content of the messages is not stored.
+   * both are also used to let admins ban a sender just by quoting their message.
+* Whoever hosts the bot can, in principle, see who everyone is and what they send, since every message passes through their server.
+By default the bot does not record this.
+However, there is currently no easy way to prove that the host has not modified the bot.
+Ways to address this are discussed in [#39](https://github.com/Gara-Dorta/signalblast/issues/39).
 
 ## Installation
 

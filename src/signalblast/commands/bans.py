@@ -60,7 +60,7 @@ class ListBans(Command):
             await self.bot.reply(ctx, "Nobody is banned")
             return
 
-        lines = [f"#{b.id} · {b.banned_at[:10]}" + (f' · "{b.snippet}"' if b.snippet else "") for b in bans]
+        lines = [f"#{b.id}" + (f' · "{b.snippet}"' if b.snippet else "") for b in bans]
         await self.bot.reply(ctx, "Banned users:\n" + "\n".join(lines))
 
 

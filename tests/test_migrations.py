@@ -98,6 +98,39 @@ def test_imports_the_development_database(tmp_path: Path) -> None:
     assert not any(table.startswith("dev_") for table in tables)
 
 
+def test_upgrades_a_v1_database(tmp_path: Path) -> None:
+    path = tmp_path / "signalblast.db"
+    with sqlite3.connect(path) as conn:
+        conn.executescript(migrations._SCHEMA_V1)  # noqa: SLF001
+        conn.executescript("""
+            INSERT INTO subscribers (uuid, failed_sends) VALUES ('uuid-1', 2), ('uuid-2', 0);
+            INSERT INTO banned_users (uuid, snippet) VALUES ('uuid-3', 'spam');
+            INSERT INTO admins (uuid) VALUES ('admin-uuid');
+            PRAGMA user_version = 1;
+        """)
+    conn.close()
+    # Files that are not imported on an upgrade are left alone
+    write_users_csv(tmp_path / "subscribers.csv", ["uuid-4"])
+
+    db = Database(path, tmp_path)
+
+    assert user_version(path) == SCHEMA_VERSION
+    assert [(ban.id, ban.uuid, ban.snippet) for ban in db.bans()] == [(1, "uuid-3", "spam")]
+    assert db.admins() == ["admin-uuid"]
+    with sqlite3.connect(path) as check:
+        assert check.execute("SELECT uuid, failed_sends FROM subscribers").fetchall() == [("uuid-1", 2), ("uuid-2", 0)]
+        columns = {
+            table: [row[1] for row in check.execute(f"PRAGMA table_info({table})")]
+            for table in ("subscribers", "banned_users", "admins")
+        }
+    assert columns == {
+        "subscribers": ["uuid", "failed_sends"],
+        "banned_users": ["id", "uuid", "snippet"],
+        "admins": ["uuid"],
+    }
+    assert (tmp_path / "subscribers.csv").exists()
+
+
 def test_refuses_a_database_from_a_newer_version(tmp_path: Path) -> None:
     path = tmp_path / "signalblast.db"
     with sqlite3.connect(path) as conn:

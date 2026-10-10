@@ -15,7 +15,6 @@ if TYPE_CHECKING:
 class Ban:
     id: int
     uuid: str
-    banned_at: str
     snippet: str | None
 
 
@@ -114,7 +113,7 @@ class Database:
         return self._exists("SELECT 1 FROM banned_users WHERE uuid = ?", uuid)
 
     def bans(self) -> list[Ban]:
-        rows = self._conn.execute("SELECT id, uuid, banned_at, snippet FROM banned_users ORDER BY id")
+        rows = self._conn.execute("SELECT id, uuid, snippet FROM banned_users ORDER BY id")
         return [Ban(*row) for row in rows]
 
     def lift_ban(self, ban_id: int) -> str | None:

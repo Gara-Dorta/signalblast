@@ -74,9 +74,8 @@ async def test_list_and_lift_bans(chat: Chat) -> None:
 
     [reply] = await chat.send(message("!list bans", source=ADMIN))
     [first, second] = str(reply.text).splitlines()[1:]
-    assert first.startswith("#1 · ")
-    assert first.endswith(' · "spam"')
-    assert second.startswith("#2 · ")
+    assert first == '#1 · "spam"'
+    assert second == "#2"
 
     [notice, reply] = await chat.send(message("!lift ban #1", source=ADMIN))
     assert (notice.recipient, notice.text) == (

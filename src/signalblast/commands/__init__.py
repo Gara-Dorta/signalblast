@@ -7,7 +7,7 @@ matching one with the highest priority runs (see `base.py`):
 2. Commands.
 3. A quote of a message between a user and the admins continues that conversation, it is never broadcast.
 4. Anything else starting with "!" gets the help, so mistyped commands are not broadcast.
-5. Everything else is broadcast.
+5. Everything else is broadcast, unless it quotes a message.
 """
 
 from __future__ import annotations

@@ -117,10 +117,13 @@ class DeleteBroadcast(RemoteDeleteHandler):
 async def _broadcast(bot: BroadcastBot, ctx: DataMessageContext, text: str | None) -> None:
     """Sends the message in `ctx` to every subscriber, `text` is its text without the `!broadcast` command.
     If it edits a broadcast, the copies of that broadcast are edited. An edit of a message that wasn't
-    broadcast is broadcast as new."""
+    broadcast is broadcast as new. Replies are never broadcast, the recipients would not see what they answer."""
     message = ctx.message
     sender = message.source_uuid
     if sender is None or not await _may_broadcast(bot, ctx, sender):
+        return
+    if message.quote is not None:
+        await bot.reply(ctx, "Not sent: replies are not broadcast, to broadcast this message send it without replying")
         return
 
     broadcast = _broadcast_message(ctx, text)

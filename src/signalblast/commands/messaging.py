@@ -114,9 +114,9 @@ async def _send_copy(  # noqa: PLR0913
 
 async def _confirm(bot: BroadcastBot, ctx: DataMessageContext, sender: str, message_id: int, text: str) -> None:
     """Tells the sender of the message in `ctx`, recorded as `message_id`, what happened to it."""
-    timestamp = await bot.reply(ctx, text)
-    if timestamp is not None:
-        bot.db.add_copy(message_id, sender, timestamp)
+    reply = await bot.reply(ctx, text)
+    if reply is not None:
+        bot.db.add_copy(message_id, sender, reply.timestamp)
 
 
 async def _write_to_admins(

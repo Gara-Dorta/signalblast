@@ -4,6 +4,7 @@ import asyncio
 import contextlib
 import logging
 import random
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, override
 
 from signalbot import EditMessage, LinkPreview, RemoteDeleteHandler, SendMessage, SentMessage, SignalBotError
@@ -17,7 +18,7 @@ from signalblast.commands.base import (
 from signalblast.utils import people
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator, Callable, Coroutine
+    from collections.abc import AsyncGenerator, Awaitable, Callable, Coroutine
 
     from signalbot import Context, DataMessage, DataMessageContext, RemoteDeleteContext, SignalBot
 
@@ -33,6 +34,20 @@ TYPING_REFRESH_SECONDS = 15
 SEND_DELAY_SECONDS = (0.5, 1.0)
 # Receiving a message stops the typing indicator, wait a bit before starting it again
 RESUME_TYPING_DELAY_SECONDS = 0.5
+# Copies of a broadcast that could not be sent, edited or deleted are tried once more after a random
+# delay, most failures are temporary
+RETRY_DELAY_SECONDS = (10 * 60, 15 * 60)
+RETRYING = "trying the rest again in a few minutes"
+CONTACT_ADMINS = "please contact the admins with !admin if this keeps happening"
+
+
+@dataclass
+class BroadcastRetry:
+    """A pending retry of the copies of a broadcast that failed, see `_schedule_retry`."""
+
+    task: asyncio.Task[None] = field(init=False)
+    # Whether the delay is over and the copies are being sent
+    sending: bool = False
 
 
 class BroadcastCommand(Command):
@@ -114,7 +129,11 @@ async def _broadcast(bot: BroadcastBot, ctx: DataMessageContext, text: str | Non
         return
 
     # The copies of the version of the message that this one edits
-    edited = bot.db.deliveries(sender, message.target_sent_timestamp) if isinstance(message, EditMessage) else {}
+    edited: dict[str, int] = {}
+    if isinstance(message, EditMessage):
+        # Who missed that version gets this one as a new message, there is no point in retrying it
+        await _cancel_retry(bot, (sender, message.target_sent_timestamp))
+        edited = bot.db.deliveries(sender, message.target_sent_timestamp)
     is_edit = bool(edited)
     recipients = bot.db.subscribers()
     random.shuffle(recipients)
@@ -122,25 +141,38 @@ async def _broadcast(bot: BroadcastBot, ctx: DataMessageContext, text: str | Non
     async with _typing(bot, ctx):
         delivered = await _send_to_each(
             recipients,
-            lambda recipient: _send_copy(ctx, sender, recipient, broadcast, edited.get(recipient)),
+            lambda recipient: _send_copy(ctx, recipient, broadcast, edited.get(recipient), typing_for=sender),
         )
 
     bot.db.save_deliveries(sender, message.timestamp, delivered)
-    await _track_failures(bot, recipients, delivered)
+    # Failures only count once the retry fails too
+    for recipient in delivered:
+        bot.db.record_send_success(recipient)
 
-    others = [recipient for recipient in recipients if recipient != sender]
-    num_delivered = sum(recipient in delivered for recipient in others)
+    num_others = len(set(recipients) - {sender})
+    num_delivered = len(delivered.keys() - {sender})
     action = "edited for" if is_edit else "sent to"
-    if num_delivered == len(others):
-        await bot.reply(ctx, f"Message {action} {people(num_delivered)}")
-    else:
-        await bot.reply(
-            ctx,
-            f"Message {action} {num_delivered} out of {people(len(others))}, "
-            "please contact the admins with !admin if this keeps happening",
-        )
-    logger.info("Broadcast %s %s out of %s", action, num_delivered, people(len(others)))
+    failed = [recipient for recipient in recipients if recipient not in delivered]
+    reply = await bot.reply(ctx, _broadcast_report(action, num_delivered, num_others, RETRYING))
+    logger.info("Broadcast %s %s out of %s", action, num_delivered, people(num_others))
     logger.debug("Broadcast by %s", sender)
+    if not failed:
+        return
+
+    async def finish(delivered_again: dict[str, int]) -> None:
+        bot.db.save_deliveries(sender, message.timestamp, delivered_again)
+        await _track_failures(bot, failed, delivered_again)
+        if reply is not None:
+            total = num_delivered + len(delivered_again.keys() - {sender})
+            await bot.edit(reply, _broadcast_report(action, total, num_others, CONTACT_ADMINS))
+
+    _schedule_retry(
+        bot,
+        (sender, message.timestamp),
+        failed,
+        lambda recipient: _send_copy(ctx, recipient, broadcast, edited.get(recipient), typing_for=None),
+        finish,
+    )
 
 
 async def _delete_broadcast(bot: BroadcastBot, ctx: RemoteDeleteContext) -> None:
@@ -148,7 +180,10 @@ async def _delete_broadcast(bot: BroadcastBot, ctx: RemoteDeleteContext) -> None
     if sender is None:
         return
 
-    deliveries = bot.db.deliveries(sender, ctx.message.timestamp)
+    key = (sender, ctx.message.timestamp)
+    # Whoever the retry is for doesn't have the message
+    await _cancel_retry(bot, key)
+    deliveries = bot.db.deliveries(*key)
     if not deliveries:
         logger.info("Ignoring the deletion of a message that is not a known broadcast")
         return
@@ -158,17 +193,34 @@ async def _delete_broadcast(bot: BroadcastBot, ctx: RemoteDeleteContext) -> None
 
     recipients = list(deliveries)
     random.shuffle(recipients)
-    deleted = await _send_to_each(
-        recipients,
-        lambda recipient: ctx.bot.messages.remote_delete(
-            SentMessage(recipient=recipient, timestamp=deliveries[recipient])
-        ),
-    )
 
-    num_deleted = sum(recipient in deleted for recipient in recipients if recipient != sender)
+    def delete(recipient: str) -> Coroutine[None, None, int]:
+        return ctx.bot.messages.remote_delete(SentMessage(recipient=recipient, timestamp=deliveries[recipient]))
+
+    deleted = await _send_to_each(recipients, delete)
+
+    num_others = len(set(recipients) - {sender})
+    num_deleted = len(deleted.keys() - {sender})
+    failed = [recipient for recipient in recipients if recipient not in deleted]
+    reply = None
     with contextlib.suppress(SignalBotError):
-        await ctx.send(SendMessage(text=f"Message deleted for {people(num_deleted)}"))
-    logger.info("Broadcast deleted for %s", people(num_deleted))
+        reply = await ctx.send(SendMessage(text=_broadcast_report("deleted for", num_deleted, num_others, RETRYING)))
+    logger.info("Broadcast deleted for %s out of %s", num_deleted, people(num_others))
+    if not failed:
+        return
+
+    async def finish(deleted_again: dict[str, int]) -> None:
+        if reply is not None:
+            await bot.edit(reply, f"Message deleted for {people(num_deleted + len(deleted_again.keys() - {sender}))}")
+
+    _schedule_retry(bot, key, failed, delete, finish)
+
+
+def _broadcast_report(action: str, num_delivered: int, num_others: int, then: str) -> str:
+    """What the sender is told about their broadcast, `then` is what happens about the failures."""
+    if num_delivered == num_others:
+        return f"Message {action} {people(num_delivered)}"
+    return f"Message {action} {num_delivered} out of {people(num_others)}, {then}"
 
 
 def _broadcast_message(ctx: DataMessageContext, text: str | None) -> SendMessage | None:
@@ -253,18 +305,65 @@ async def _send_to_each(
 
 async def _send_copy(
     ctx: DataMessageContext,
-    sender: str,
     recipient: str,
     broadcast: SendMessage,
     edit_timestamp: int | None,
+    typing_for: str | None,
 ) -> int:
+    """Sends a copy of `broadcast` to `recipient`. The typing indicator is shown to `typing_for` while the
+    broadcast is being sent, and receiving their copy stops it."""
     message = broadcast.model_copy(update={"edit_timestamp": edit_timestamp})
     sent = await ctx.bot.messages.send(message, recipient)
-    if recipient == sender:
+    if recipient == typing_for:
         await asyncio.sleep(RESUME_TYPING_DELAY_SECONDS)
         with contextlib.suppress(SignalBotError):
             await ctx.start_typing()
     return sent.timestamp
+
+
+def _schedule_retry(
+    bot: BroadcastBot,
+    key: tuple[str, int],
+    recipients: list[str],
+    send: Callable[[str], Coroutine[None, None, int]],
+    finish: Callable[[dict[str, int]], Awaitable[None]],
+) -> None:
+    """Runs `send` once more for `recipients` after a random delay, then `finish` with the timestamp of
+    each successful send by recipient. `key` is the author and timestamp of the broadcast, see
+    `_cancel_retry`."""
+    retry = BroadcastRetry()
+
+    async def run() -> None:
+        try:
+            await _wait_before_retry()
+            retry.sending = True
+            results = await _send_to_each(recipients, send)
+            logger.info("Retried a broadcast for %s out of %s", len(results), people(len(recipients)))
+            await finish(results)
+        except Exception:
+            logger.exception("Failed to retry a broadcast")
+        finally:
+            if bot.broadcast_retries.get(key) is retry:
+                del bot.broadcast_retries[key]
+
+    retry.task = asyncio.create_task(run())
+    bot.broadcast_retries[key] = retry
+
+
+async def _wait_before_retry() -> None:
+    await asyncio.sleep(random.uniform(*RETRY_DELAY_SECONDS))  # noqa: S311 -- not for cryptography
+
+
+async def _cancel_retry(bot: BroadcastBot, key: tuple[str, int]) -> None:
+    """Cancels the retry of the broadcast that is being edited or deleted. If it is already sending, waits
+    until it's done instead, so that the copies it sends are edited or deleted too."""
+    retry = bot.broadcast_retries.pop(key, None)
+    if retry is None:
+        return
+    if retry.sending:
+        await asyncio.wait([retry.task])
+    else:
+        retry.task.cancel()
 
 
 async def _track_failures(bot: BroadcastBot, recipients: list[str], delivered: dict[str, int]) -> None:

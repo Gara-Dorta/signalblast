@@ -143,15 +143,112 @@ async def test_delete_of_a_non_broadcast_is_ignored(chat: Chat) -> None:
     assert chat.texts_to(OTHER_SUBSCRIBER) == [FOLLOW_UP]
 
 
-async def test_failed_sends_are_reported(chat: Chat) -> None:
+async def test_failed_sends_are_retried_then_reported(chat: Chat) -> None:
     await chat.start(subscribers=(SUBSCRIBER, OTHER_SUBSCRIBER, THIRD_SUBSCRIBER))
     chat.unreachable.add(THIRD_SUBSCRIBER)
 
     await chat.send(message("Hello", source=SUBSCRIBER))
+    reply = chat.last_to(SUBSCRIBER)
+    assert reply.text == "Message sent to 1 out of 2 people, trying the rest again in a few minutes"
 
-    assert chat.texts_to(SUBSCRIBER)[-1] == (
-        "Message sent to 1 out of 2 people, please contact the admins with !admin if this keeps happening"
+    await chat.run_retries()
+
+    edited = chat.last_to(SUBSCRIBER)
+    assert (edited.text, edited.edit_timestamp, edited.quote_timestamp) == (
+        "Message sent to 1 out of 2 people, please contact the admins with !admin if this keeps happening",
+        reply.timestamp,
+        reply.quote_timestamp,
     )
+    assert chat.bot.broadcast_retries == {}
+
+
+async def test_retry_reaches_subscribers_back_online(chat: Chat) -> None:
+    await chat.start(subscribers=(SUBSCRIBER, OTHER_SUBSCRIBER, THIRD_SUBSCRIBER))
+    chat.unreachable.add(THIRD_SUBSCRIBER)
+    original = message("Hello", source=SUBSCRIBER)
+    await chat.send(original)
+    reply = chat.last_to(SUBSCRIBER)
+    chat.unreachable.clear()
+
+    await chat.run_retries()
+
+    assert chat.texts_to(THIRD_SUBSCRIBER) == ["Hello"]
+    edited = chat.last_to(SUBSCRIBER)
+    assert (edited.text, edited.edit_timestamp) == ("Message sent to 2 people", reply.timestamp)
+    # The copy sent by the retry is edited like the others
+    late_copy = chat.last_to(THIRD_SUBSCRIBER)
+    await chat.send(edit("Hello!", source=SUBSCRIBER, target_timestamp=timestamp_of(original)))
+    assert chat.last_to(THIRD_SUBSCRIBER).edit_timestamp == late_copy.timestamp
+
+
+async def test_nothing_is_retried_when_every_send_works(chat: Chat) -> None:
+    await chat.start(subscribers=(SUBSCRIBER, OTHER_SUBSCRIBER))
+
+    await chat.send(message("Hello", source=SUBSCRIBER))
+
+    assert chat.bot.broadcast_retries == {}
+
+
+async def test_edit_cancels_the_pending_retry(chat: Chat) -> None:
+    await chat.start(subscribers=(SUBSCRIBER, OTHER_SUBSCRIBER, THIRD_SUBSCRIBER))
+    chat.unreachable.add(THIRD_SUBSCRIBER)
+    original = message("Helo", source=SUBSCRIBER)
+    await chat.send(original)
+    chat.unreachable.clear()
+
+    await chat.send(edit("Hello", source=SUBSCRIBER, target_timestamp=timestamp_of(original)))
+    await chat.run_retries()
+
+    # The subscriber who missed the original gets the edit as a new message, and nothing else
+    assert chat.texts_to(THIRD_SUBSCRIBER) == ["Hello"]
+    assert chat.last_to(THIRD_SUBSCRIBER).edit_timestamp is None
+    assert chat.texts_to(SUBSCRIBER)[-1] == "Message edited for 2 people"
+
+
+async def test_delete_cancels_the_pending_retry(chat: Chat) -> None:
+    await chat.start(subscribers=(SUBSCRIBER, OTHER_SUBSCRIBER, THIRD_SUBSCRIBER))
+    chat.unreachable.add(THIRD_SUBSCRIBER)
+    original = message("Oops", source=SUBSCRIBER)
+    await chat.send(original)
+    chat.unreachable.clear()
+
+    await chat.send(remote_delete(source=SUBSCRIBER, target_timestamp=timestamp_of(original)))
+    await chat.run_retries()
+
+    assert chat.texts_to(THIRD_SUBSCRIBER) == []
+    assert chat.texts_to(SUBSCRIBER)[-1] == "Message deleted for 1 person"
+
+
+async def test_failed_deletes_are_retried(chat: Chat) -> None:
+    await chat.start(subscribers=(SUBSCRIBER, OTHER_SUBSCRIBER, THIRD_SUBSCRIBER))
+    original = message("Oops", source=SUBSCRIBER)
+    await chat.send(original)
+    chat.unreachable.add(THIRD_SUBSCRIBER)
+
+    await chat.send(remote_delete(source=SUBSCRIBER, target_timestamp=timestamp_of(original)))
+    reply = chat.last_to(SUBSCRIBER)
+    assert reply.text == "Message deleted for 1 out of 2 people, trying the rest again in a few minutes"
+
+    chat.unreachable.clear()
+    await chat.run_retries()
+
+    assert {recipient for recipient, _ in chat.deleted} == {SUBSCRIBER, OTHER_SUBSCRIBER, THIRD_SUBSCRIBER}
+    edited = chat.last_to(SUBSCRIBER)
+    assert (edited.text, edited.edit_timestamp) == ("Message deleted for 2 people", reply.timestamp)
+
+
+async def test_retry_does_not_show_the_typing_indicator(chat: Chat) -> None:
+    await chat.start(subscribers=(SUBSCRIBER, OTHER_SUBSCRIBER))
+    # The sender's own copy fails
+    chat.unreachable.add(SUBSCRIBER)
+    await chat.send(message("Hello", source=SUBSCRIBER))
+    chat.unreachable.clear()
+    num_typing = chat.start_typing.await_count
+
+    await chat.run_retries()
+
+    assert chat.texts_to(SUBSCRIBER) == ["Hello"]
+    assert chat.start_typing.await_count == num_typing
 
 
 async def test_unreachable_subscribers_are_removed(chat: Chat) -> None:
@@ -160,9 +257,13 @@ async def test_unreachable_subscribers_are_removed(chat: Chat) -> None:
 
     for i in range(broadcast.MAX_FAILED_SENDS - 1):
         await chat.send(message(f"Hello {i}", source=SUBSCRIBER))
+        await chat.run_retries()
         assert chat.bot.db.is_subscriber(OTHER_SUBSCRIBER)
 
     await chat.send(message("Hello again", source=SUBSCRIBER))
+    # Only the failed retry counts
+    assert chat.bot.db.is_subscriber(OTHER_SUBSCRIBER)
+    await chat.run_retries()
     assert not chat.bot.db.is_subscriber(OTHER_SUBSCRIBER)
 
 
@@ -171,11 +272,15 @@ async def test_failure_count_resets_after_a_successful_send(chat: Chat) -> None:
     chat.unreachable.add(OTHER_SUBSCRIBER)
     for i in range(broadcast.MAX_FAILED_SENDS - 1):
         await chat.send(message(f"Hello {i}", source=SUBSCRIBER))
+        await chat.run_retries()
 
-    chat.unreachable.clear()
+    # Back online by the time of the retry
     await chat.send(message("Back online", source=SUBSCRIBER))
+    chat.unreachable.clear()
+    await chat.run_retries()
     chat.unreachable.add(OTHER_SUBSCRIBER)
     await chat.send(message("Down again", source=SUBSCRIBER))
+    await chat.run_retries()
 
     assert chat.bot.db.is_subscriber(OTHER_SUBSCRIBER)
 

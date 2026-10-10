@@ -6,6 +6,7 @@ test can quote a message that the bot sent earlier, e.g. to reply to a forwarded
 
 from __future__ import annotations
 
+import asyncio
 import itertools
 import json
 from dataclasses import dataclass
@@ -173,6 +174,9 @@ class Chat:
         )
         mocker.patch("signalblast.commands.broadcast.SEND_DELAY_SECONDS", (0, 0))
         mocker.patch("signalblast.commands.broadcast.RESUME_TYPING_DELAY_SECONDS", 0)
+        # Broadcast retries wait until `run_retries` instead of several minutes
+        self._retries_due = asyncio.Event()
+        mocker.patch("signalblast.commands.broadcast._wait_before_retry", new=self._retries_due.wait)
         self.bot: BroadcastBot
 
     async def start(
@@ -215,6 +219,13 @@ class Chat:
             await pipeline._consume_new_item(1)  # noqa: SLF001
         return self.sent[num_sent:]
 
+    async def run_retries(self) -> None:
+        """Runs the pending broadcast retries and waits until they are done."""
+        retries = [retry.task for retry in self.bot.broadcast_retries.values()]
+        self._retries_due.set()
+        await asyncio.gather(*retries)
+        self._retries_due.clear()
+
     def texts_to(self, recipient: str) -> list[str | None]:
         return [sent.text for sent in self.sent if sent.recipient == recipient]
 
@@ -241,5 +252,7 @@ class Chat:
         return [SendMessageResponse(timestamp=str(timestamp))]
 
     async def _remote_delete(self, request: RemoteDeleteRequest) -> RemoteDeleteResponse:
+        if request.recipient in self.unreachable:
+            raise SignalBotError(request.recipient)
         self.deleted.append((request.recipient, request.timestamp))
         return RemoteDeleteResponse(timestamp=str(next(_sent_timestamps)))

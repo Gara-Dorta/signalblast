@@ -11,8 +11,9 @@ from signalblast.passwords import hash_password
 from signalblast.utils import now_ms, route_signalbot_logs_to_root
 
 if TYPE_CHECKING:
-    from signalbot import DataMessageContext
+    from signalbot import DataMessageContext, SentMessage
 
+    from signalblast.commands.broadcast import BroadcastRetry
     from signalblast.settings import Settings
 
 logger = logging.getLogger(__name__)
@@ -48,17 +49,31 @@ class BroadcastBot:
         # 0 disables disappearing messages
         self.expiration_time: int | None = settings.expiration_time or None
 
+        # The pending retries of broadcasts that could not be sent to everyone, by author and timestamp of
+        # the broadcast. Only kept in memory, they are lost on restart
+        self.broadcast_retries: dict[tuple[str, int], BroadcastRetry] = {}
+
     def start(self) -> None:
         self.signal_bot.start()
 
-    async def reply(self, ctx: DataMessageContext, text: str) -> int | None:
-        """Replies to the message in `ctx`. Returns the timestamp of the reply, None if it could not be sent."""
+    async def reply(self, ctx: DataMessageContext, text: str) -> SentMessage | None:
+        """Replies to the message in `ctx`. Returns the reply, None if it could not be sent."""
         try:
-            sent = await ctx.reply(SendMessage(text=text))
+            return await ctx.reply(SendMessage(text=text))
         except SignalBotError:
             logger.warning("Could not send a reply", exc_info=True)
             return None
-        return sent.timestamp
+
+    async def edit(self, message: SentMessage, text: str) -> None:
+        """Changes the text of `message`, sent by the bot, keeping everything else. Does nothing if the
+        text is the same."""
+        if message.text == text:
+            return
+        new_message = SendMessage(**(message.model_dump(exclude={"recipient", "timestamp"}) | {"text": text}))
+        try:
+            await self.signal_bot.messages.edit(new_message, message)
+        except SignalBotError:
+            logger.warning("Could not edit a message", exc_info=True)
 
     async def send(
         self,

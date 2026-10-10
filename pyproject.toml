@@ -54,8 +54,8 @@ source = "vcs"
 raw-options = { fallback_version = "0.0.0" }
 
 [tool.uv]
-# Pinned so that builds are reproducible, the CI reads it from here. Keep it in sync with the uv image in the Dockerfile
-required-version = "==0.11.14"
+# Minimum version, the uv version doesn't change the built wheel and sdist, those depend on build-constraints.txt
+required-version = ">=0.11.14"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

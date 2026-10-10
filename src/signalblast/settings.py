@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 FOUR_WEEKS = 60 * 60 * 24 * 7 * 4  # In seconds
@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     healthcheck_port: int = Field(default=15556, description="The port listening for health check requests")
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(default="INFO")
     log_file: Path | None = Field(default=None, description="Log to this file instead of the console")
+
+    @field_validator("data_dir", "log_file")
+    @classmethod
+    def _expand_user(cls, path: Path | None) -> Path | None:
+        return path.expanduser() if path is not None else None
 
     @property
     def db_path(self) -> Path:

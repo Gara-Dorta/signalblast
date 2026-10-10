@@ -50,6 +50,18 @@ def test_env_file_shared_with_docker_compose(tmp_path: Path, monkeypatch: pytest
     assert "secret" not in repr(settings)
 
 
+def test_expands_home_in_paths(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("SIGNALBLAST_PHONE_NUMBER", "+491234")
+    monkeypatch.setenv("SIGNALBLAST_DATA_DIR", "~/data")
+    monkeypatch.setenv("SIGNALBLAST_LOG_FILE", "~/signalblast.log")
+
+    settings = Settings(_env_file=None)  # pyright: ignore[reportCallIssue]
+
+    assert settings.data_dir == tmp_path / "data"
+    assert settings.log_file == tmp_path / "signalblast.log"
+
+
 def test_main_explains_missing_settings(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.chdir(tmp_path)  # No .env file
     monkeypatch.delenv("SIGNALBLAST_PHONE_NUMBER", raising=False)

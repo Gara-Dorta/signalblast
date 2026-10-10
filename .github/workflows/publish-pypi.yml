@@ -97,6 +97,8 @@ jobs:
       # Needed to sign the attestation with the workflow's identity
       id-token: write
       attestations: write
+    env:
+      IMAGE: eradorta/signalblast
     steps:
 
     - name: Checkout code
@@ -139,13 +141,13 @@ jobs:
         # rewrite-timestamp sets the file times in the layers to SOURCE_DATE_EPOCH
         outputs: type=image,push=true,oci-mediatypes=true,rewrite-timestamp=true
         tags: |
-          eradorta/signalblast:${{ env.DOCKER_TAG }}
-          eradorta/signalblast:latest
+          ${{ env.IMAGE }}:${{ env.DOCKER_TAG }}
+          ${{ env.IMAGE }}:latest
 
     # Signs that the image was built by this workflow, verify it with `gh attestation verify`, see scripts/verify-release.sh
     - name: Attest the image
       uses: actions/attest-build-provenance@v4.2.2
       with:
-        subject-name: index.docker.io/eradorta/signalblast
+        subject-name: index.docker.io/${{ env.IMAGE }}
         subject-digest: ${{ steps.push.outputs.digest }}
         push-to-registry: true

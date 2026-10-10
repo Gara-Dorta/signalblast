@@ -9,9 +9,8 @@ set -euo pipefail
 TAG=${1:?usage: $0 <release tag, e.g. v1.2.3>}
 export PLATFORMS=${PLATFORMS:-linux/amd64,linux/arm64}
 GITHUB_REPO=Gara-Dorta/signalblast
-# Overridable to test the script against a local repo and registry
-REPO_URL=${REPO_URL:-https://github.com/${GITHUB_REPO}}
-IMAGE=${IMAGE:-eradorta/signalblast}
+REPO_URL=https://github.com/${GITHUB_REPO}
+IMAGE=eradorta/signalblast
 
 # Same version and tag conversion as the release workflow
 VERSION="${TAG#v}"
@@ -54,35 +53,44 @@ if [ ! -f "$WORK_DIR/src/scripts/build-reproducible.sh" ]; then
     exit 1
 fi
 
+# What was published is fetched before the slow build, so that an unsigned image is reported straight away
+curl -fsSL "https://pypi.org/pypi/signalblast/${VERSION}/json" \
+    | jq -r '.urls[] | "\(.filename) \(.digests.sha256)"' > "$WORK_DIR/pypi.txt"
+
+# The tag is resolved once, so that the image whose signature is checked is the one whose platforms are compared
+DIGEST=$(docker buildx imagetools inspect "${IMAGE}:${DOCKER_TAG}" --format '{{.Manifest.Digest}}')
+signed "Docker ${IMAGE}:${DOCKER_TAG}" gh attestation verify "oci://${IMAGE}@${DIGEST}" \
+    --repo "$GITHUB_REPO" \
+    --signer-workflow "${GITHUB_REPO}/.github/workflows/publish-pypi.yml" \
+    --source-ref "refs/tags/${TAG}"
+# Compared per platform, the published image index also has the provenance attestations so its digest differs
+docker buildx imagetools inspect --raw "${IMAGE}@${DIGEST}" \
+    | jq -r '.manifests[] | select(.platform.os != "unknown") | "\(.platform.os)/\(.platform.architecture) \(.digest)"' \
+    > "$WORK_DIR/published.txt"
+
 # Built with the script from the tag, so that it is built the same way as the release was
 echo "Building the release for ${PLATFORMS}"
 "$WORK_DIR/src/scripts/build-reproducible.sh" "$WORK_DIR/out"
 HASHES="$WORK_DIR/out/hashes.txt"
 
-curl -fsSL "https://pypi.org/pypi/signalblast/${VERSION}/json" \
-    | jq -r '.urls[] | "\(.filename) \(.digests.sha256)"' > "$WORK_DIR/pypi.txt"
 while read -r filename published; do
     rebuilt=$(awk -v f="$filename" '$2 == f {print $1}' "$HASHES")
     check "PyPI   ${filename}" "$published" "${rebuilt:-<not rebuilt>}"
-    signed "PyPI   ${filename}" uvx --quiet pypi-attestations verify pypi --repository "https://github.com/${GITHUB_REPO}" "pypi:${filename}"
+    if [ -n "$rebuilt" ]; then
+        # Checks the signature published on PyPI against the rebuilt file
+        signed "PyPI   ${filename}" uvx --quiet pypi-attestations verify pypi --repository "$REPO_URL" \
+            "$WORK_DIR/out/dist/${filename}"
+    fi
 done < "$WORK_DIR/pypi.txt"
 
-# Compared per platform, the published image index also has the provenance attestations so its digest differs
-docker buildx imagetools inspect --raw "${IMAGE}:${DOCKER_TAG}" \
-    | jq -r '.manifests[] | select(.platform.os != "unknown") | "\(.platform.os)/\(.platform.architecture) \(.digest)"' \
-    > "$WORK_DIR/published.txt"
 for platform in ${PLATFORMS//,/ }; do
     published=$(awk -v p="$platform" '$1 == p {print $2}' "$WORK_DIR/published.txt")
     rebuilt=$(awk -v p="$platform" '$2 == "image" && $3 == p {print $1}' "$HASHES")
     check "Docker ${IMAGE}:${DOCKER_TAG} ${platform}" "${published:-<not published>}" "${rebuilt:-<not rebuilt>}"
 done
-signed "Docker ${IMAGE}:${DOCKER_TAG}" gh attestation verify "oci://${IMAGE}:${DOCKER_TAG}" \
-    --repo "$GITHUB_REPO" \
-    --signer-workflow "${GITHUB_REPO}/.github/workflows/publish-pypi.yml" \
-    --source-ref "refs/tags/${TAG}"
 
 if [ "$failed" -ne 0 ]; then
-    echo "The rebuilt release differs from the published one"
+    echo "The release could not be verified"
     exit 1
 fi
-echo "The release is reproducible"
+echo "The release is reproducible and signed"

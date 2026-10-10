@@ -53,6 +53,10 @@ build-backend = "hatchling.build"
 source = "vcs"
 raw-options = { fallback_version = "0.0.0" }
 
+[tool.uv]
+# Pinned so that builds are reproducible, the CI reads it from here. Keep it in sync with the uv image in the Dockerfile
+required-version = "==0.11.14"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 # A deadlock in a handler would otherwise hang the test run forever

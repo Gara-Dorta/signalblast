@@ -46,6 +46,6 @@ repos:
       - id: hadolint-docker
 
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.9.28
+    rev: 0.11.14  # keep in sync with required-version in pyproject.toml
     hooks:
       - id: uv-lock

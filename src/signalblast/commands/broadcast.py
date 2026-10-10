@@ -15,7 +15,7 @@ from signalblast.commands.base import (
     Command,
     SignalblastHandler,
 )
-from signalblast.utils import people
+from signalblast.utils import log_event, people
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Awaitable, Callable, Coroutine
@@ -157,8 +157,7 @@ async def _broadcast(bot: BroadcastBot, ctx: DataMessageContext, text: str | Non
     action = "edited for" if is_edit else "sent to"
     failed = [recipient for recipient in recipients if recipient not in delivered]
     reply = await bot.reply(ctx, _broadcast_report(action, num_delivered, num_others, RETRYING))
-    logger.info("Broadcast %s %s out of %s", action, num_delivered, people(num_others))
-    logger.debug("Broadcast by %s", sender)
+    log_event(logger, "Broadcast %s %s out of %s", action, num_delivered, people(num_others), user=sender)
     if not failed:
         return
 
@@ -188,10 +187,10 @@ async def _delete_broadcast(bot: BroadcastBot, ctx: RemoteDeleteContext) -> None
     await _cancel_retry(bot, key)
     deliveries = bot.db.deliveries(*key)
     if not deliveries:
-        logger.info("Ignoring the deletion of a message that is not a known broadcast")
+        logger.debug("Ignoring the deletion of a message that is not a known broadcast")
         return
     if bot.db.is_banned(sender):
-        logger.info("Ignoring the deletion of a broadcast by a banned user")
+        log_event(logger, "Ignoring the deletion of a broadcast by a banned user", user=sender)
         return
 
     recipients = list(deliveries)
@@ -208,7 +207,7 @@ async def _delete_broadcast(bot: BroadcastBot, ctx: RemoteDeleteContext) -> None
     reply = None
     with contextlib.suppress(SignalBotError):
         reply = await ctx.send(SendMessage(text=_broadcast_report("deleted for", num_deleted, num_others, RETRYING)))
-    logger.info("Broadcast deleted for %s out of %s", num_deleted, people(num_others))
+    log_event(logger, "Broadcast deleted for %s out of %s", num_deleted, people(num_others), user=sender)
     if not failed:
         return
 
@@ -263,7 +262,7 @@ def _broadcast_message(ctx: DataMessageContext, text: str | None) -> SendMessage
 async def _may_broadcast(bot: BroadcastBot, ctx: DataMessageContext, sender: str) -> bool:
     if bot.db.is_banned(sender):
         await bot.reply(ctx, "This number is not allowed to send messages")
-        logger.info("A banned user tried to broadcast")
+        log_event(logger, "A banned user tried to broadcast", user=sender)
         return False
 
     if not bot.db.is_subscriber(sender):
@@ -274,7 +273,7 @@ async def _may_broadcast(bot: BroadcastBot, ctx: DataMessageContext, sender: str
                 f"\nPlease have a look at the instructions if you haven't already:\n{bot.settings.instructions_url}"
             )
         await bot.reply(ctx, message)
-        logger.info("A non subscriber tried to broadcast")
+        log_event(logger, "A non subscriber tried to broadcast", user=sender)
         return False
 
     return True
@@ -301,8 +300,9 @@ async def _send_to_each(
         if task.exception() is None:
             results[recipient] = task.result()
         else:
-            logger.warning("Could not send to a subscriber: %r", task.exception())
-            logger.debug("Could not send to %s", recipient, exc_info=task.exception())
+            log_event(
+                logger, "Could not send to a subscriber: %r", task.exception(), user=recipient, level=logging.WARNING
+            )
     return results
 
 
@@ -341,7 +341,9 @@ def _schedule_retry(
             await _wait_before_retry()
             retry.sending = True
             results = await _send_to_each(recipients, send)
-            logger.info("Retried a broadcast for %s out of %s", len(results), people(len(recipients)))
+            log_event(
+                logger, "Retried a broadcast for %s out of %s", len(results), people(len(recipients)), user=key[0]
+            )
             await finish(results)
         except Exception:
             logger.exception("Failed to retry a broadcast")
@@ -377,7 +379,12 @@ async def _track_failures(bot: BroadcastBot, recipients: list[str], delivered: d
 
         if bot.db.record_send_failure(recipient) >= MAX_FAILED_SENDS:
             bot.db.remove_subscriber(recipient)
-            logger.info("Unsubscribed a subscriber after %s failed broadcasts in a row", MAX_FAILED_SENDS)
+            log_event(
+                logger,
+                "Unsubscribed a subscriber after %s failed broadcasts in a row",
+                MAX_FAILED_SENDS,
+                user=recipient,
+            )
             # Most likely this fails too, but try anyway
             await bot.send(
                 recipient,

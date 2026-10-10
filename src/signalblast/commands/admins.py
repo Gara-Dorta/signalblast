@@ -9,6 +9,7 @@ from signalbot import __version__ as signalbot_version
 from signalblast import __version__ as signalblast_version
 from signalblast.commands.base import Command
 from signalblast.passwords import check_password
+from signalblast.utils import log_event
 
 if TYPE_CHECKING:
     from signalbot import DataMessageContext
@@ -18,7 +19,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-async def _check_password(bot: BroadcastBot, ctx: DataMessageContext, password: str, action: str) -> bool:
+async def _check_password(bot: BroadcastBot, ctx: DataMessageContext, sender: str, password: str, action: str) -> bool:
     """Replies and warns the admins if the password is wrong. The sender's id is not shared."""
     password_hash = bot.db.password_hash()
     if password_hash is None:
@@ -28,7 +29,7 @@ async def _check_password(bot: BroadcastBot, ctx: DataMessageContext, password: 
     if not await check_password(password, password_hash):
         await bot.reply(ctx, "Wrong password!")
         await bot.notify_admins(f"Someone tried to {action} with a wrong password")
-        logger.warning("Wrong password when trying to %s", action)
+        log_event(logger, "Wrong password when trying to %s", action, user=sender, level=logging.WARNING)
         return False
 
     return True
@@ -54,7 +55,7 @@ class AddAdmin(Command):
             await self.bot.reply(ctx, "Missing the password, usage: !add admin <password>")
             return
 
-        if not await _check_password(self.bot, ctx, args, "become an admin"):
+        if not await _check_password(self.bot, ctx, sender, args, "become an admin"):
             return
 
         if not self.bot.db.add_admin(sender):
@@ -63,8 +64,7 @@ class AddAdmin(Command):
 
         await self.bot.reply(ctx, "You are now an admin! Send !help to see the admin commands")
         await self.bot.notify_admins(f"{sender} is now an admin", exclude=(sender,))
-        logger.info("New admin")
-        logger.debug("New admin %s", sender)
+        log_event(logger, "New admin", user=sender)
 
 
 class RemoveAdmin(Command):
@@ -81,7 +81,7 @@ class RemoveAdmin(Command):
             await self.bot.reply(ctx, "Usage: !remove admin <password> <admin id>, see the admin ids with !list admins")
             return
 
-        if not await _check_password(self.bot, ctx, password, "remove an admin"):
+        if not await _check_password(self.bot, ctx, sender, password, "remove an admin"):
             return
 
         if not self.bot.db.remove_admin(admin_id):
@@ -92,8 +92,7 @@ class RemoveAdmin(Command):
         if admin_id != sender:
             await self.bot.send(admin_id, "You are no longer an admin")
         await self.bot.notify_admins(f"{admin_id} is no longer an admin", exclude=(sender,))
-        logger.info("Removed an admin")
-        logger.debug("Removed admin %s", admin_id)
+        log_event(logger, "Removed an admin", user=admin_id)
 
 
 class ListAdmins(Command):
@@ -106,6 +105,7 @@ class ListAdmins(Command):
     async def run(self, ctx: DataMessageContext, sender: str, args: str) -> None:
         lines = [f"{admin} (you)" if admin == sender else admin for admin in self.bot.db.admins()]
         await self.bot.reply(ctx, "Admins:\n" + "\n".join(lines))
+        log_event(logger, "Listed the admins", user=sender)
 
 
 class ShowVersion(Command):
@@ -124,3 +124,4 @@ class ShowVersion(Command):
             f"\tsignalbot: {signalbot_version}\n"
             f"\tsignal-cli-rest-api: {signal_cli_rest_api_version}",
         )
+        log_event(logger, "Showed the versions", user=sender)

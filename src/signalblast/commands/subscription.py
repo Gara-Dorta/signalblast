@@ -4,6 +4,7 @@ import logging
 from typing import TYPE_CHECKING, override
 
 from signalblast.commands.base import Command
+from signalblast.utils import log_event
 
 if TYPE_CHECKING:
     from signalbot import DataMessageContext
@@ -24,7 +25,7 @@ class Subscribe(Command):
     async def run(self, ctx: DataMessageContext, sender: str, args: str) -> None:
         if self.bot.db.is_banned(sender):
             await self.bot.reply(ctx, "This number is not allowed to subscribe")
-            logger.info("A banned user tried to subscribe")
+            log_event(logger, "A banned user tried to subscribe", user=sender)
             return
 
         if not self.bot.db.add_subscriber(sender):
@@ -36,8 +37,7 @@ class Subscribe(Command):
 
         await send_help(self.bot, sender, intro=WELCOME)
         await self.bot.set_expiration_time(sender)
-        logger.info("New subscriber")
-        logger.debug("%s subscribed", sender)
+        log_event(logger, "New subscriber", user=sender)
 
 
 class Unsubscribe(Command):
@@ -51,5 +51,4 @@ class Unsubscribe(Command):
             return
 
         await self.bot.reply(ctx, "Successfully unsubscribed!")
-        logger.info("A subscriber unsubscribed")
-        logger.debug("%s unsubscribed", sender)
+        log_event(logger, "A subscriber unsubscribed", user=sender)

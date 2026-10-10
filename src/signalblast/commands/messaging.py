@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, override
 
 from signalblast.commands.base import REPLY_PRIORITY, Command, SignalblastHandler
-from signalblast.utils import now_ms, snippet
+from signalblast.utils import log_event, now_ms, snippet
 
 if TYPE_CHECKING:
     from signalbot import DataMessage, DataMessageContext
@@ -130,7 +130,7 @@ async def _write_to_admins(
     to `replied_to`."""
     if bot.db.is_banned(sender):
         await bot.reply(ctx, "You are not allowed to contact the admins")
-        logger.info("A banned user tried to contact the admins")
+        log_event(logger, "A banned user tried to contact the admins", user=sender)
         return
 
     admins = [admin for admin in bot.db.admins() if admin != sender]
@@ -151,7 +151,7 @@ async def _write_to_admins(
         return
 
     await _confirm(bot, ctx, sender, message_id, MESSAGE_SENT)
-    logger.info("Forwarded a message from a user to %s admins", num_sent)
+    log_event(logger, "Forwarded a message from a user to %s admins", num_sent, user=sender)
 
 
 async def _reply_to_user(
@@ -171,7 +171,7 @@ async def _reply_to_user(
         if other != admin:
             quote = bot.db.copy_in_chat(replied_to.id, other)
             await _send_copy(bot, other, message_id, f"{ANSWERED_BY_ADMIN}\n{text}", quote=quote)
-    logger.info("An admin replied to a user")
+    log_event(logger, "An admin replied to a user", user=user)
 
 
 class MessageAdmins(Command):

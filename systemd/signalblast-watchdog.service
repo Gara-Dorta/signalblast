@@ -14,7 +14,7 @@ ExecStart=%h/.local/bin/signalblast-watchdog
 # Environment=SIGNALBLAST_CONTAINER=signalblast
 
 # Visualise the journal by running
-# journalctl --user -u signalblast-watchdog.service
+# journalctl --user -t signalblast-watchdog
 
 # Run a check immediately with
 # systemctl --user start signalblast-watchdog.service

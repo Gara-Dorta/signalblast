@@ -10,6 +10,11 @@ services:
     environment:
       - MODE=json-rpc
       - JSON_RPC_TRUST_NEW_IDENTITIES=always
+    security_opt:
+      - no-new-privileges:true
+    # Needed with no-new-privileges, the image runs as 1000:1000 and s6 has to write to /run
+    tmpfs:
+      - /run:exec,size=64m,uid=1000,gid=1000,mode=0755
     restart: always
 
   signalblast:

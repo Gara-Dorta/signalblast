@@ -38,6 +38,8 @@ services:
       - SIGNALBLAST_SIGNAL_SERVICE=${SIGNALBLAST_SIGNAL_SERVICE:-}
       - SIGNALBLAST_HEALTHCHECK_PORT=${SIGNALBLAST_HEALTHCHECK_PORT:-}
       - SIGNALBLAST_LOG_LEVEL=${SIGNALBLAST_LOG_LEVEL:-}
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       signal-cli-rest-api:
         condition: service_healthy

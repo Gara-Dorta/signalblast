@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import csv
+import pkgutil
+import re
 import sqlite3
 from typing import TYPE_CHECKING
 
@@ -8,7 +10,8 @@ import pytest
 
 from signalblast import migrations
 from signalblast.database import Database
-from signalblast.migrations import SCHEMA_VERSION
+from signalblast.migrations import SCHEMA_VERSION, v1
+from signalblast.migrations.apply import MIGRATIONS
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -26,6 +29,13 @@ def write_users_csv(path: Path, uuids: list[str]) -> None:
 def user_version(path: Path) -> int:
     with sqlite3.connect(path) as conn:
         return conn.execute("PRAGMA user_version").fetchone()[0]
+
+
+def test_every_version_is_applied_in_order() -> None:
+    # A new vN.py that is not added to MIGRATIONS would never be applied
+    versions = [m.name for m in pkgutil.iter_modules(migrations.__path__) if re.fullmatch(r"v\d+", m.name)]
+    expected = [f"signalblast.migrations.v{n}" for n in range(1, len(versions) + 1)]
+    assert [migration.__name__ for migration in MIGRATIONS] == expected
 
 
 def test_new_database(tmp_path: Path) -> None:
@@ -101,7 +111,7 @@ def test_imports_the_development_database(tmp_path: Path) -> None:
 def test_upgrades_a_v1_database(tmp_path: Path) -> None:
     path = tmp_path / "signalblast.db"
     with sqlite3.connect(path) as conn:
-        conn.executescript(migrations._SCHEMA_V1)  # noqa: SLF001
+        conn.executescript(v1.SQL)
         conn.executescript("""
             INSERT INTO subscribers (uuid, failed_sends) VALUES ('uuid-1', 2), ('uuid-2', 0);
             INSERT INTO banned_users (uuid, snippet) VALUES ('uuid-3', 'spam');
@@ -148,7 +158,7 @@ def test_failed_migration_is_rolled_back(tmp_path: Path, monkeypatch: pytest.Mon
     def fail(*_args: object) -> None:
         raise sqlite3.OperationalError
 
-    monkeypatch.setattr(migrations, "_import_admin", fail)
+    monkeypatch.setattr(v1, "_import_admin", fail)
     path = tmp_path / "signalblast.db"
     with pytest.raises(sqlite3.OperationalError):
         Database(path, tmp_path)

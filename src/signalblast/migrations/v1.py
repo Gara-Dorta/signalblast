@@ -1,8 +1,8 @@
-"""Creates and upgrades signalblast's database schema, tracked with sqlite's `user_version`.
+"""v1: the schema released in v1.0.0, which every database is created with.
 
-The first time the database is created, the data from older signalblast versions is imported: the
-`subscribers.csv`, `banned_users.csv` and `admin.txt` files in the data directory (renamed to
-`*.migrated` afterwards), and the tables of the unversioned database used during the v2 development.
+The data from older signalblast versions is imported into it: the `subscribers.csv`, `banned_users.csv`
+and `admin.txt` files in the data directory, and the tables of the unversioned database used during the
+v2 development.
 """
 
 from __future__ import annotations
@@ -17,8 +17,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# The schema released in v1.0.0, new databases are created with it and then upgraded
-_SCHEMA_V1 = """
+SQL = """
 CREATE TABLE subscribers (
     uuid TEXT PRIMARY KEY,
     subscribed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -64,71 +63,24 @@ CREATE TABLE conversation_copies (
 CREATE INDEX conversation_copies_by_message ON conversation_copies (message_id, chat);
 """
 
-# The upgrade from each schema version to the next one, starting from v1
-_UPGRADES = [
-    # v2: drops the timestamps that were never needed, so they are not kept about anyone
-    """
-    ALTER TABLE subscribers DROP COLUMN subscribed_at;
-    ALTER TABLE banned_users DROP COLUMN banned_at;
-    ALTER TABLE admins DROP COLUMN added_at;
-    """,
-]
-
-SCHEMA_VERSION = len(_UPGRADES) + 1
-
 # Tables of the unversioned database used during the v2 development
 _DEV_TABLES = ("subscribers", "banned_users", "admin", "ping", "last_broadcast", "broadcast_timestamps", "signalbot")
 
 
-def migrate(conn: sqlite3.Connection, data_dir: Path | None) -> None:
-    version = conn.execute("PRAGMA user_version").fetchone()[0]
-    if version == SCHEMA_VERSION:
-        return
-    if version > SCHEMA_VERSION:
-        msg = f"The database was created by a newer signalblast (schema {version}), please upgrade signalblast"
-        raise RuntimeError(msg)
-
-    imported: list[Path] = []
-    conn.execute("BEGIN")
-    try:
-        if version == 0:
-            imported = _create_v1(conn, data_dir)
-            version = 1
-        for upgrade in _UPGRADES[version - 1 :]:
-            _run_script(conn, upgrade)
-        conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
-    except BaseException:
-        conn.rollback()
-        raise
-    conn.commit()
-
-    for path in imported:
-        path.rename(path.with_name(path.name + ".migrated"))
-        logger.info("Imported %s into the database and renamed it to %s.migrated", path.name, path.name)
-
-
-def _create_v1(conn: sqlite3.Connection, data_dir: Path | None) -> list[Path]:
-    """Creates the v1 schema with the data of older versions. Returns the files that were imported."""
-    dev_tables = _rename_dev_tables(conn)
-    _run_script(conn, _SCHEMA_V1)
-    if dev_tables:
-        _import_dev_tables(conn, dev_tables)
-    return _import_csv_files(conn, data_dir) if data_dir is not None else []
-
-
-def _run_script(conn: sqlite3.Connection, script: str) -> None:
-    # `executescript` would commit the open transaction, run the statements one by one instead
-    for statement in script.split(";"):
-        if statement.strip():
-            conn.execute(statement)
-
-
-def _rename_dev_tables(conn: sqlite3.Connection) -> set[str]:
+def rename_dev_tables(conn: sqlite3.Connection) -> set[str]:
+    """Moves the development tables out of the way of `SQL`, they reuse some of its table names."""
     existing = {row[0] for row in conn.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
     dev_tables = existing.intersection(_DEV_TABLES)
     for table in dev_tables:
         conn.execute(f"ALTER TABLE {table} RENAME TO dev_{table}")
     return dev_tables
+
+
+def import_old_data(conn: sqlite3.Connection, dev_tables: set[str], data_dir: Path | None) -> list[Path]:
+    """Returns the files that were imported."""
+    if dev_tables:
+        _import_dev_tables(conn, dev_tables)
+    return _import_csv_files(conn, data_dir) if data_dir is not None else []
 
 
 def _import_dev_tables(conn: sqlite3.Connection, dev_tables: set[str]) -> None:

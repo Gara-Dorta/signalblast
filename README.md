@@ -44,21 +44,25 @@ This uses the images from https://hub.docker.com/r/eradorta/signalblast
 
 * Install [docker](https://www.docker.com/).
 * Set up signal-cli-rest-api for the bot's phone number as specified [here](https://signalbot-org.github.io/signalbot/latest/getting_started/#setup-signal-cli-rest-api).
-* Download the [docker-compose.yaml](https://github.com/Gara-Dorta/signalblast/blob/main/docker-compose.yaml) and [.env.example](https://github.com/Gara-Dorta/signalblast/blob/main/.env.example) files.
+* Download the [docker-compose.yaml](https://github.com/Gara-Dorta/signalblast/blob/main/docker-compose.yaml) and [.env.example](https://github.com/Gara-Dorta/signalblast/blob/main/.env.example) files, the latter is downloaded as `.env`.
+  ```bash
+  curl -fsSLO https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/docker-compose.yaml
+  curl -fsSL -o .env https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/.env.example
+  ```
+* Fill in `SIGNALBLAST_PHONE_NUMBER` in `.env`.
+The rest are optional, uncomment the ones you want to set, see [configuration](#configuration).
+You'll likely want `SIGNALBLAST_PASSWORD`, otherwise nobody can become an admin.
 * Create a data folder
   ```bash
   mkdir -p $HOME/.local/share/signalblast
   ```
-* Create your `.env` file from the example and fill in the values, see [configuration](#configuration). `DOCKER_TAG` and `SIGNAL_CLI_REST_API_VERSION` set the versions of signalblast and signal-cli-rest-api that run.
-  ```bash
-  cp .env.example .env
-  ```
-* Run via docker compose:
+* Run via docker compose on the folder where the `docker-compose.yaml` file is located:
   ```bash
   docker compose up
   ```
 * Optional: restart the containers automatically when signalblast can't send messages.
-  * Set `SIGNALBLAST_HEALTHCHECK_RECEIVER` in your `.env` file, it will receive a "Ping" message every 8 hours. The signalblast container is reported as unhealthy after 3 failed pings in a row, so a problem is detected within a day.
+  * Set `SIGNALBLAST_HEALTHCHECK_RECEIVER` in your `.env` file, it will receive a "Ping" message every 8 hours.
+  The signalblast container is reported as unhealthy after 3 failed pings in a row, so a problem is detected within a day.
   * Docker doesn't restart unhealthy containers on its own, and the error is often only recoverable by restarting both signal-cli-rest-api and signalblast. Install the [watchdog](https://github.com/Gara-Dorta/signalblast/blob/main/docker/watchdog.sh) as a systemd user timer that does that, it runs as your user (which must be able to run docker):
     ```bash
     curl -fsSL https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/docker/install_watchdog.sh | bash
@@ -85,24 +89,25 @@ This uses the images from https://hub.docker.com/r/eradorta/signalblast
 
 signalblast reads its settings from environment variables, or from a `.env` file in the working directory. Empty values are treated as unset.
 
+The only required variable is the phone number of the bot:
+
+| Variable | Description |
+|---|---|
+| `SIGNALBLAST_PHONE_NUMBER` | The phone number of the bot |
+
+The rest are optional:
+
 | Variable | Default | Description |
 |---|---|---|
-| `SIGNALBLAST_PHONE_NUMBER` | required | The phone number of the bot |
 | `SIGNALBLAST_PASSWORD` | | The password to become an admin. It is stored hashed, so it only needs to be set on the first start or to change it. Without it nobody can become an admin |
 | `SIGNALBLAST_SIGNAL_SERVICE` | `localhost:8080` | The address of signal-cli-rest-api |
 | `SIGNALBLAST_DATA_DIR` | `~/.local/share/signalblast` | Where the database is stored |
 | `SIGNALBLAST_INSTRUCTIONS_URL` | | A link with instructions, shown in the help |
-| `SIGNALBLAST_EXPIRATION_TIME` | 4 weeks | The disappearing messages timer of the chats with the subscribers in seconds, `0` disables it |
+| `SIGNALBLAST_EXPIRATION_TIME` | 4 weeks | The disappearing messages timer of the chats with the subscribers in seconds, `0` leaves the timer of the chats unchanged, `-1` disables it |
 | `SIGNALBLAST_HEALTHCHECK_RECEIVER` | | The contact or group that receives the health check pings, the health check is disabled without it |
 | `SIGNALBLAST_HEALTHCHECK_PORT` | `15556` | The port of the health check endpoint, on localhost |
 | `SIGNALBLAST_LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING` or `ERROR` |
 | `SIGNALBLAST_LOG_FILE` | | Log to this file, rotated weekly, instead of the console |
-
-## Upgrading
-
-The database is created, and upgraded, automatically on start. Data from versions that stored it in `subscribers.csv`, `banned_users.csv` and `admin.txt` is imported into the database the first time, and the files are renamed to `*.migrated`. You can delete them once the bot works as expected.
-
-See the [changelog](CHANGELOG.md) for the changes to the commands and the configuration.
 
 ## Development
 
@@ -110,13 +115,13 @@ See the [changelog](CHANGELOG.md) for the changes to the commands and the config
 * Clone the repo
 * Install [uv](https://docs.astral.sh/uv/)
 * Install the repo and the dependencies in a new virtual environment with `uv sync`
-* Install the prek hooks with `uv run prek install`, they run ruff and ty
+* Install the prek hooks with `uv run prek install`, they run `ruff` and `ty`
 * Run the tests with `uv run pytest`
-* Run the bot
-  * Directly via `uv run signalblast`
-  * Via systemd as a user service with `systemd/signalblast.service`, see the comments in the file for how to install it. Create `systemd/env_file.env` from `systemd/env_file.env.example` for the configuration.
+* Run `signal-cli-rest-api`, we have a convenience bash [script](docker/run_signal_cli_rest_api.sh) for that
+* Run the bot `uv run signalblast`
 * Optional: install signalbot as an editable dependency with `uv add --editable ../signalbot/`, but don't commit that change
 
 ### Docker compose
 
+The docker compose scripts will automatically get and set the signalblast version from the git history.
 `docker/compose_build.sh` and `docker/compose_up.sh` build and run the image from the local code.

@@ -41,3 +41,6 @@ This release moves to signalbot 2 and a sqlite database, and changes how admins 
 * `!add admin` crashed when no admin password was set, and checking passwords blocked the bot.
 * Log files were rotated by several handlers at once.
 * The health check could reset the connection instead of answering.
+
+- Clarify which env vars are needed
+- Move to the relese pages

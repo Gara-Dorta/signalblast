@@ -28,6 +28,7 @@ This release moves to signalbot 2 and a sqlite database, and changes how admins 
 * `!list admins`, `!list bans`.
 * `SIGNALBLAST_LOG_LEVEL` and `SIGNALBLAST_LOG_FILE`.
 * `SIGNALBLAST_EXPIRATION_TIME=0` disables disappearing messages.
+* Broadcasts, edits and deletes that could not reach some subscribers are tried again once for them 10 to 15 minutes later, and the sender's confirmation is updated with the final count. Only a failed retry counts towards removing a subscriber.
 
 ### Fixes
 
@@ -42,5 +43,4 @@ This release moves to signalbot 2 and a sqlite database, and changes how admins 
 * Log files were rotated by several handlers at once.
 * The health check could reset the connection instead of answering.
 
-- Clarify which env vars are needed
 - Move to the relese pages

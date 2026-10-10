@@ -125,7 +125,7 @@ The rest are optional:
 * Install the repo and the dependencies in a new virtual environment with `uv sync`
 * Install the prek hooks with `uv run prek install`, they run `ruff` and `ty`
 * Run the tests with `uv run pytest`
-* Run `signal-cli-rest-api`, we have a convenience bash [script](docker/run_signal_cli_rest_api.sh) for that
+* Run `signal-cli-rest-api` with `docker compose up signal-cli-rest-api`
 * Run the bot `uv run signalblast`
 * Optional: install signalbot as an editable dependency with `uv add --editable ../signalbot/`, but don't commit that change
 

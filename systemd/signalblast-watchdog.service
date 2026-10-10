@@ -1,5 +1,5 @@
 [Unit]
-Description=Restart the signalblast containers if they are unhealthy
+Description=Check the health of the signalblast containers
 
 [Service]
 Type=oneshot

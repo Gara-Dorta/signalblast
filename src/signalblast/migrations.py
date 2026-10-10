@@ -17,8 +17,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-SCHEMA_VERSION = 1
-
+# The schema released in v1.0.0, new databases are created with it and then upgraded
 _SCHEMA_V1 = """
 CREATE TABLE subscribers (
     uuid TEXT PRIMARY KEY,
@@ -65,10 +64,20 @@ CREATE TABLE conversation_copies (
 CREATE INDEX conversation_copies_by_message ON conversation_copies (message_id, chat);
 """
 
+# The upgrade from each schema version to the next one, starting from v1
+_UPGRADES = [
+    # v2: drops the timestamps that were never needed, so they are not kept about anyone
+    """
+    ALTER TABLE subscribers DROP COLUMN subscribed_at;
+    ALTER TABLE banned_users DROP COLUMN banned_at;
+    ALTER TABLE admins DROP COLUMN added_at;
+    """,
+]
+
+SCHEMA_VERSION = len(_UPGRADES) + 1
+
 # Tables of the unversioned database used during the v2 development
 _DEV_TABLES = ("subscribers", "banned_users", "admin", "ping", "last_broadcast", "broadcast_timestamps", "signalbot")
-
-_CSV_FILES = ("subscribers.csv", "banned_users.csv", "admin.txt")
 
 
 def migrate(conn: sqlite3.Connection, data_dir: Path | None) -> None:
@@ -79,31 +88,37 @@ def migrate(conn: sqlite3.Connection, data_dir: Path | None) -> None:
         msg = f"The database was created by a newer signalblast (schema {version}), please upgrade signalblast"
         raise RuntimeError(msg)
 
+    imported: list[Path] = []
     conn.execute("BEGIN")
     try:
-        dev_tables = _rename_dev_tables(conn)
-        _create_v1(conn)
-        if dev_tables:
-            _import_dev_tables(conn, dev_tables)
-        if data_dir is not None:
-            _import_csv_files(conn, data_dir)
+        if version == 0:
+            imported = _create_v1(conn, data_dir)
+            version = 1
+        for upgrade in _UPGRADES[version - 1 :]:
+            _run_script(conn, upgrade)
         conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
     except BaseException:
         conn.rollback()
         raise
     conn.commit()
 
-    if data_dir is not None:
-        for name in _CSV_FILES:
-            path = data_dir / name
-            if path.exists():
-                path.rename(path.with_name(name + ".migrated"))
-                logger.info("Imported %s into the database and renamed it to %s.migrated", name, name)
+    for path in imported:
+        path.rename(path.with_name(path.name + ".migrated"))
+        logger.info("Imported %s into the database and renamed it to %s.migrated", path.name, path.name)
 
 
-def _create_v1(conn: sqlite3.Connection) -> None:
+def _create_v1(conn: sqlite3.Connection, data_dir: Path | None) -> list[Path]:
+    """Creates the v1 schema with the data of older versions. Returns the files that were imported."""
+    dev_tables = _rename_dev_tables(conn)
+    _run_script(conn, _SCHEMA_V1)
+    if dev_tables:
+        _import_dev_tables(conn, dev_tables)
+    return _import_csv_files(conn, data_dir) if data_dir is not None else []
+
+
+def _run_script(conn: sqlite3.Connection, script: str) -> None:
     # `executescript` would commit the open transaction, run the statements one by one instead
-    for statement in _SCHEMA_V1.split(";"):
+    for statement in script.split(";"):
         if statement.strip():
             conn.execute(statement)
 
@@ -127,10 +142,12 @@ def _import_dev_tables(conn: sqlite3.Connection, dev_tables: set[str]) -> None:
             _import_admin(conn, row[0], row[1])
     for table in dev_tables:
         conn.execute(f"DROP TABLE dev_{table}")
-    logger.info("Imported the development database tables into schema %s", SCHEMA_VERSION)
+    logger.info("Imported the development database tables")
 
 
-def _import_csv_files(conn: sqlite3.Connection, data_dir: Path) -> None:
+def _import_csv_files(conn: sqlite3.Connection, data_dir: Path) -> list[Path]:
+    """Returns the files that were imported."""
+    imported = []
     for name, table in (("subscribers.csv", "subscribers"), ("banned_users.csv", "banned_users")):
         path = data_dir / name
         if not path.exists():
@@ -139,12 +156,15 @@ def _import_csv_files(conn: sqlite3.Connection, data_dir: Path) -> None:
             uuids = [(row["uuid"],) for row in csv.DictReader(f) if row.get("uuid")]
         # `table` is one of the two literals above
         conn.executemany(f"INSERT OR IGNORE INTO {table} (uuid) VALUES (?)", uuids)  # noqa: S608
+        imported.append(path)
 
     admin_txt = data_dir / "admin.txt"
     if admin_txt.exists():
         # First line is the admin uuid (empty if there was none), second line the bcrypt hash
         lines = [*admin_txt.read_text().splitlines(), "", ""]
         _import_admin(conn, lines[0].strip() or None, lines[1].strip().encode())
+        imported.append(admin_txt)
+    return imported
 
 
 def _import_admin(conn: sqlite3.Connection, admin_id: str | None, password_hash: bytes | None) -> None:

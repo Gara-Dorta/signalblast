@@ -1,0 +1,117 @@
+name: Reproducible Builds
+
+# Builds the package distributions and the image twice on different runners and checks that they are identical.
+# The release workflow publishes the distributions built here, see publish-pypi.yml
+on:
+  push:
+    branches: [ "main" ]
+    paths: &build-inputs
+      - "src/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "build-constraints.txt"
+      - "README.md"
+      - "LICENSE"
+      - "Dockerfile"
+      - ".dockerignore"
+      - "scripts/build-reproducible.sh"
+      - ".github/workflows/reproducibility.yml"
+  pull_request:
+    branches: [ "main" ]
+    paths: *build-inputs
+  # Allows the release workflow to run the check before publishing
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reproducibility-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Build ${{ matrix.id }} (${{ matrix.runner }})
+    strategy:
+      matrix:
+        # Vary the environment so that anything leaking into the build shows up as a difference
+        include:
+          - id: 1
+            runner: ubuntu-24.04
+            umask: "022"
+            tz: UTC
+          - id: 2
+            runner: ubuntu-22.04
+            umask: "077"
+            tz: Asia/Tokyo
+    runs-on: ${{ matrix.runner }}
+    env:
+      TZ: ${{ matrix.tz }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.2.0
+
+      - name: Clone the code with a different umask
+        run: |
+          umask ${{ matrix.umask }}
+          git clone --quiet --no-local "$GITHUB_WORKSPACE" "$RUNNER_TEMP/src"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build
+        run: |
+          "$RUNNER_TEMP/src/scripts/build-reproducible.sh" "$RUNNER_TEMP/out"
+          cat "$RUNNER_TEMP/out/hashes.txt"
+
+      - name: Upload the hashes and the distributions
+        uses: actions/upload-artifact@v7
+        with:
+          name: build-${{ matrix.id }}
+          path: |
+            ${{ runner.temp }}/out/hashes.txt
+            ${{ runner.temp }}/out/dist/
+          if-no-files-found: error
+
+      # Only needed to look into differences with https://github.com/reproducible-containers/diffoci
+      - name: Upload the image
+        uses: actions/upload-artifact@v7
+        with:
+          name: image-${{ matrix.id }}
+          path: ${{ runner.temp }}/out/image.tar
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+  compare:
+    name: Compare the builds
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download the hashes and the distributions
+        uses: actions/download-artifact@v8
+        with:
+          pattern: build-*
+
+      - name: Compare the hashes
+        run: diff -u build-1/hashes.txt build-2/hashes.txt
+
+      - name: Install uv
+        if: failure()
+        uses: astral-sh/setup-uv@v10.2.0
+
+      - name: Show the differences in the distributions
+        if: failure()
+        run: |
+          for file in build-1/dist/*; do
+            uvx diffoscope "$file" "build-2/dist/$(basename "$file")" || true
+          done

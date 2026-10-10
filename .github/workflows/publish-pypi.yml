@@ -1,6 +1,6 @@
 name: Release
 
-# Runs the tests, then publishes the package to TestPyPI and PyPI and the image to Docker Hub
+# Runs the tests and the reproducibility check, then publishes the package to TestPyPI and PyPI and the image to Docker Hub
 on:
   release:
     types: [published]
@@ -13,35 +13,13 @@ jobs:
     name: Run the tests
     uses: ./.github/workflows/test-code.yml
 
-  build:
-    name: Build the package distributions
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-
-    - name: Checkout code
-      uses: actions/checkout@v7
-      with:
-        fetch-depth: 0
-
-    - name: Install the latest version of uv
-      uses: astral-sh/setup-uv@v10.2.0
-      with:
-        version: latest
-
-    - name: Build the wheel and the source dist
-      run: uv build
-
-    - name: Upload the distributions
-      uses: actions/upload-artifact@v7
-      with:
-        name: dist
-        path: dist/
-        if-no-files-found: error
+  reproducibility:
+    name: Check that the builds are reproducible
+    uses: ./.github/workflows/reproducibility.yml
 
   testpypi:
     name: Upload release to TestPyPI
-    needs: build
+    needs: [test, reproducibility]
     runs-on: ubuntu-latest
     environment:
       name: testpypi
@@ -50,15 +28,17 @@ jobs:
       id-token: write
     steps:
 
+    # Published from the reproducibility check, so these are exactly the files it checked
     - name: Download the distributions
       uses: actions/download-artifact@v8
       with:
-        name: dist
-        path: dist/
+        name: build-1
+        path: build/
 
     - name: Publish package distributions to TestPyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
+        packages-dir: build/dist/
         repository-url: https://test.pypi.org/legacy/
 
   pypi:
@@ -72,14 +52,41 @@ jobs:
       id-token: write
     steps:
 
+    # Published from the reproducibility check, so these are exactly the files it checked
     - name: Download the distributions
       uses: actions/download-artifact@v8
       with:
-        name: dist
-        path: dist/
+        name: build-1
+        path: build/
 
     - name: Publish package distributions to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        packages-dir: build/dist/
+
+  checksums:
+    name: Attach the checksums to the release
+    needs: pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+
+    # Published from the reproducibility check, so these are exactly the files it checked
+    - name: Download the distributions
+      uses: actions/download-artifact@v8
+      with:
+        name: build-1
+        path: build/
+
+    - name: Upload SHA256SUMS
+      env:
+        GH_TOKEN: ${{ github.token }}
+        RELEASE_TAG: ${{ github.event.release.tag_name }}
+      run: |
+        (cd build/dist && sha256sum -- *) > SHA256SUMS
+        cat SHA256SUMS
+        gh release upload "$RELEASE_TAG" SHA256SUMS --repo "$GITHUB_REPOSITORY"
 
   docker:
     name: Push the image to Docker Hub
@@ -102,6 +109,8 @@ jobs:
         echo "the docker version is $DOCKER_TAG"
         echo "SIGNALBLAST_VERSION=$SIGNALBLAST_VERSION" >> "$GITHUB_ENV"
         echo "DOCKER_TAG=$DOCKER_TAG" >> "$GITHUB_ENV"
+        # Use the commit time instead of the current time, so that the build is reproducible, buildx reads it from the env
+        echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v4
@@ -121,7 +130,8 @@ jobs:
         context: .
         platforms: linux/amd64,linux/arm64
         build-args: SIGNALBLAST_VERSION=${{ env.SIGNALBLAST_VERSION }}
-        push: true
+        # rewrite-timestamp sets the file times in the layers to SOURCE_DATE_EPOCH
+        outputs: type=image,push=true,oci-mediatypes=true,rewrite-timestamp=true
         tags: |
           eradorta/signalblast:${{ env.DOCKER_TAG }}
           eradorta/signalblast:latest

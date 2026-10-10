@@ -133,3 +133,17 @@ The rest are optional:
 
 The docker compose scripts will automatically get and set the signalblast version from the git history.
 `docker/compose_build.sh` and `docker/compose_up.sh` build and run the image from the local code.
+
+### Reproducible builds
+
+The package distributions and the docker image are reproducible, building the same commit always gives byte-for-byte identical files.
+The build tools are pinned (uv in `pyproject.toml`, hatchling in `build-constraints.txt` and the base images by digest in the `Dockerfile`), the image dependencies come from `uv.lock`, and all the timestamps are set from the commit time through `SOURCE_DATE_EPOCH`.
+
+The [Reproducible Builds](.github/workflows/reproducibility.yml) workflow builds everything twice on different runners with `scripts/build-reproducible.sh` and fails if anything differs. It also runs before every release, and the release publishes the distributions it built.
+
+To check that a release on PyPI and Docker Hub was built from the code in its git tag, rebuild and compare it with:
+```bash
+scripts/verify-release.sh v1.2.3
+```
+Building the arm64 image needs QEMU, set `PLATFORMS=linux/amd64` to only check the amd64 one.
+Update the pinned build backend in `build-constraints.txt` with `scripts/update-build-constraints.sh`, or `scripts/update-build-constraints.sh hatchling` to only upgrade some packages.

@@ -23,6 +23,15 @@ async def test_unknown_commands_get_the_help_and_are_not_broadcast(chat: Chat) -
     assert chat.texts_to(OTHER_SUBSCRIBER) == []
 
 
+async def test_unknown_commands_in_replies_get_the_help(chat: Chat) -> None:
+    await chat.start(subscribers=(SUBSCRIBER, OTHER_SUBSCRIBER))
+    await chat.send(message("Hello everyone", source=SUBSCRIBER))
+
+    [reply] = await chat.send(message("!subscibe", source=OTHER_SUBSCRIBER, quote=chat.last_to(OTHER_SUBSCRIBER)))
+
+    assert str(reply.text).startswith(NOT_UNDERSTOOD)
+
+
 async def test_commands_are_case_insensitive(chat: Chat) -> None:
     await chat.start()
 

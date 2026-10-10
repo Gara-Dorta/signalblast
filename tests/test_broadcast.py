@@ -54,6 +54,36 @@ async def test_nothing_to_broadcast(chat: Chat) -> None:
     assert reply.text == "There is nothing to broadcast, write your message after !broadcast"
 
 
+async def test_replies_are_not_broadcast(chat: Chat) -> None:
+    await chat.start(subscribers=(SUBSCRIBER, OTHER_SUBSCRIBER))
+    broadcast_message = message("Hello everyone", source=SUBSCRIBER)
+    await chat.send(broadcast_message)
+    copy = chat.last_to(OTHER_SUBSCRIBER)
+
+    # Each reply only gets the notice, nothing is broadcast
+    not_sent = "Not sent: replies are not broadcast, to broadcast this message send it without replying"
+    [reply] = await chat.send(message("Hi!", source=OTHER_SUBSCRIBER, quote=copy))
+    assert (reply.recipient, reply.text) == (OTHER_SUBSCRIBER, not_sent)
+    [reply] = await chat.send(message("Anyone?", source=SUBSCRIBER, quote=broadcast_message))
+    assert (reply.recipient, reply.text) == (SUBSCRIBER, not_sent)
+    [reply] = await chat.send(message("!broadcast Anyone?", source=SUBSCRIBER, quote=broadcast_message))
+    assert (reply.recipient, reply.text) == (SUBSCRIBER, not_sent)
+
+
+async def test_replies_of_who_cannot_broadcast_get_the_reason(chat: Chat) -> None:
+    await chat.start(subscribers=(SUBSCRIBER, OTHER_SUBSCRIBER))
+    await chat.send(message("Hello everyone", source=SUBSCRIBER))
+    copy = chat.last_to(OTHER_SUBSCRIBER)
+    chat.bot.db.ban(OTHER_SUBSCRIBER, None)
+
+    [reply] = await chat.send(message("Hi!", source=OTHER_SUBSCRIBER, quote=copy))
+    assert reply.text == "This number is not allowed to send messages"
+
+    [reply] = await chat.send(message("Hi!", source=STRANGER))
+    [reply] = await chat.send(message("Hi again", source=STRANGER, quote=reply))
+    assert str(reply.text).startswith("To be able to send messages you must sign up.")
+
+
 async def test_banned_users_cannot_broadcast(chat: Chat) -> None:
     await chat.start(subscribers=(OTHER_SUBSCRIBER,))
     chat.bot.db.ban(SUBSCRIBER, None)

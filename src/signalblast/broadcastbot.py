@@ -8,7 +8,7 @@ from signalbot import SendMessage, SignalBot, SignalBotError, UpdateContact
 
 from signalblast.database import Database
 from signalblast.passwords import hash_password
-from signalblast.utils import now_ms, route_signalbot_logs_to_root
+from signalblast.utils import log_event, now_ms, route_signalbot_logs_to_root
 
 if TYPE_CHECKING:
     from signalbot import DataMessageContext, SentMessage
@@ -95,8 +95,7 @@ class BroadcastBot:
         try:
             sent = await self.signal_bot.messages.send(message, recipient)
         except SignalBotError:
-            logger.warning("Could not send a message", exc_info=True)
-            logger.debug("Could not send a message to %s", recipient)
+            log_event(logger, "Could not send a message", user=recipient, level=logging.WARNING, exc_info=True)
             return None
         return sent.timestamp
 

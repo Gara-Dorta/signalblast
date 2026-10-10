@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, override
 
 from signalblast.commands.base import Command
 from signalblast.commands.messaging import resolve_quote
+from signalblast.utils import log_event
 
 if TYPE_CHECKING:
     from signalbot import DataMessageContext
@@ -43,8 +44,7 @@ class Ban(Command):
         reply = f"Banned {about} (ban #{ban_id}), undo it with !lift ban {ban_id}"
         await self.bot.reply(ctx, reply if notified else reply + ". They could not be notified")
         await self.bot.notify_admins(f"An admin banned {about} (ban #{ban_id})", exclude=(sender,))
-        logger.info("Ban #%s", ban_id)
-        logger.debug("Ban #%s is %s", ban_id, target.uuid)
+        log_event(logger, "Ban #%s", ban_id, user=target.uuid)
 
 
 class ListBans(Command):
@@ -56,12 +56,9 @@ class ListBans(Command):
     @override
     async def run(self, ctx: DataMessageContext, sender: str, args: str) -> None:
         bans = self.bot.db.bans()
-        if not bans:
-            await self.bot.reply(ctx, "Nobody is banned")
-            return
-
         lines = [f"#{b.id}" + (f' · "{b.snippet}"' if b.snippet else "") for b in bans]
-        await self.bot.reply(ctx, "Banned users:\n" + "\n".join(lines))
+        await self.bot.reply(ctx, ("Banned users:\n" + "\n".join(lines)) if bans else "Nobody is banned")
+        log_event(logger, "Listed the bans", user=sender)
 
 
 class LiftBan(Command):
@@ -90,4 +87,4 @@ class LiftBan(Command):
         reply = f"Lifted ban #{ban_id}"
         await self.bot.reply(ctx, reply if notified else reply + ". They could not be notified")
         await self.bot.notify_admins(f"An admin lifted ban #{ban_id}", exclude=(sender,))
-        logger.info("Lifted ban #%s", ban_id)
+        log_event(logger, "Lifted ban #%s", ban_id, user=uuid)

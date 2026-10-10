@@ -39,6 +39,21 @@ def route_signalbot_logs_to_root() -> None:
     logging.getLogger("signalbot").handlers.clear()
 
 
+def log_event(
+    logger: logging.Logger,
+    msg: str,
+    *args: object,
+    user: str,
+    level: int = logging.INFO,
+    exc_info: bool | BaseException | None = None,
+) -> None:
+    """Logs `msg` without saying who it is about, unless debug logging is on, then the uuid of `user` is added.
+    `exc_info` is passed to `logger.log`."""
+    if logger.isEnabledFor(logging.DEBUG):
+        msg, args = msg + " (%s)", (*args, user)
+    logger.log(level, msg, *args, exc_info=exc_info, stacklevel=2)
+
+
 def now_ms() -> int:
     """The current time as a Signal timestamp."""
     return int(time.time() * 1000)

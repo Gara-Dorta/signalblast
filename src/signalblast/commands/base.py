@@ -7,6 +7,8 @@ from typing import TYPE_CHECKING, ClassVar
 
 from signalbot import DataMessage, DataMessageHandler, ReceiptType, SignalBotError
 
+from signalblast.utils import log_event
+
 if TYPE_CHECKING:
     from signalbot import DataMessageContext, ReceivedMessage, SignalBot
 
@@ -118,6 +120,9 @@ class Command(SignalblastHandler):
         if self.admin_only and not self.bot.db.is_admin(sender):
             await self.bot.reply(ctx, "I'm sorry but only admins can do that")
             await self.bot.notify_admins(f"Someone who is not an admin tried to use {self.trigger}")
+            log_event(
+                logger, "Someone who is not an admin tried to use %s", self.trigger, user=sender, level=logging.WARNING
+            )
             return
         await self.run(ctx, sender, self.parse(ctx.message.text) or "")
 

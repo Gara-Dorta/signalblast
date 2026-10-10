@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING, override
 
 from signalblast.commands.admins import AddAdmin, ListAdmins, RemoveAdmin, ShowVersion
@@ -8,11 +9,14 @@ from signalblast.commands.base import UNKNOWN_COMMAND_PRIORITY, Command, Signalb
 from signalblast.commands.broadcast import BroadcastCommand
 from signalblast.commands.messaging import MessageAdmins
 from signalblast.commands.subscription import Subscribe, Unsubscribe
+from signalblast.utils import log_event
 
 if TYPE_CHECKING:
     from signalbot import DataMessage, DataMessageContext
 
     from signalblast.broadcastbot import BroadcastBot
+
+logger = logging.getLogger(__name__)
 
 
 class Help(Command):
@@ -22,6 +26,7 @@ class Help(Command):
     @override
     async def run(self, ctx: DataMessageContext, sender: str, args: str) -> None:
         await send_help(self.bot, sender, intro="I'm happy to help! These are the commands that you can use:")
+        log_event(logger, "Sent the help", user=sender)
 
 
 class UnknownCommand(SignalblastHandler):
@@ -38,6 +43,7 @@ class UnknownCommand(SignalblastHandler):
     async def handle(self, ctx: DataMessageContext, sender: str) -> None:
         intro = "I'm sorry, I didn't understand that. These are the commands that you can use:"
         await send_help(self.bot, sender, intro=intro, broadcast_tip=True)
+        log_event(logger, "Unknown command, sent the help", user=sender)
 
 
 # In the order they are shown in the help

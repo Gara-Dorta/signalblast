@@ -139,7 +139,7 @@ The docker compose scripts will automatically get and set the signalblast versio
 The package distributions and the docker image are reproducible, building the same commit always gives byte-for-byte identical files.
 The build tools are pinned (uv in `pyproject.toml`, hatchling in `build-constraints.txt` and the base images by digest in the `Dockerfile`), the image dependencies come from `uv.lock`, and all the timestamps are set from the commit time through `SOURCE_DATE_EPOCH`.
 
-The [Reproducible Builds](.github/workflows/reproducibility.yml) workflow builds everything twice on different runners and fails if anything differs, it also runs before every release.
+The [Reproducible Builds](.github/workflows/reproducibility.yml) workflow builds everything twice on different runners with `scripts/build-reproducible.sh` and fails if anything differs. It also runs before every release, and the release publishes the distributions it built.
 
 To check that a release on PyPI and Docker Hub was built from the code in its git tag, rebuild and compare it with:
 ```bash

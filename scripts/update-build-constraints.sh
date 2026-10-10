@@ -5,26 +5,24 @@
 #   scripts/update-build-constraints.sh hatchling    only upgrades the given packages
 set -euo pipefail
 
-REPO_DIR=$(dirname "$(dirname "$(realpath "$0")")")
-cd "$REPO_DIR"
+cd "$(dirname "$(dirname "$(realpath "$0")")")"
 
 if [ $# -eq 0 ]; then
-    upgrade=(--upgrade)
+    set -- --upgrade
 else
-    upgrade=()
-    for package in "$@"; do
-        upgrade+=(--upgrade-package "$package")
-    done
+    set -- "${@/#/--upgrade-package=}"
 fi
 
-# These must match build-system.requires in pyproject.toml
-printf 'hatchling\nhatch-vcs\n' | uv pip compile - \
-    --generate-hashes \
-    --universal \
-    --python-version 3.14 \
-    --quiet \
-    --custom-compile-command "scripts/update-build-constraints.sh" \
-    "${upgrade[@]}" \
-    --output-file build-constraints.txt
+# The packages are build-system.requires in pyproject.toml
+uv run --no-project python -c \
+    'import tomllib; print(*tomllib.load(open("pyproject.toml", "rb"))["build-system"]["requires"], sep="\n")' \
+    | uv pip compile - \
+        --generate-hashes \
+        --universal \
+        --python-version 3.14 \
+        --quiet \
+        --custom-compile-command "scripts/update-build-constraints.sh" \
+        "$@" \
+        --output-file build-constraints.txt
 
 git --no-pager diff --stat -- build-constraints.txt

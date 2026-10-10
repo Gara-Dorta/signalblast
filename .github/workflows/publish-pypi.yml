@@ -17,36 +17,9 @@ jobs:
     name: Check that the builds are reproducible
     uses: ./.github/workflows/reproducibility.yml
 
-  build:
-    name: Build the package distributions
-    needs: [test, reproducibility]
-    runs-on: ubuntu-latest
-    steps:
-
-    - name: Checkout code
-      uses: actions/checkout@v7
-      with:
-        fetch-depth: 0
-
-    - name: Install uv
-      uses: astral-sh/setup-uv@v10.2.0
-
-    - name: Build the wheel and the source dist
-      run: |
-        # Use the commit time instead of the current time, so that the build is reproducible
-        export SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)
-        uv build --build-constraint build-constraints.txt --require-hashes
-
-    - name: Upload the distributions
-      uses: actions/upload-artifact@v7
-      with:
-        name: dist
-        path: dist/
-        if-no-files-found: error
-
   testpypi:
     name: Upload release to TestPyPI
-    needs: build
+    needs: [test, reproducibility]
     runs-on: ubuntu-latest
     environment:
       name: testpypi
@@ -55,15 +28,17 @@ jobs:
       id-token: write
     steps:
 
+    # Published from the reproducibility check, so these are exactly the files it checked
     - name: Download the distributions
       uses: actions/download-artifact@v8
       with:
-        name: dist
-        path: dist/
+        name: build-1
+        path: build/
 
     - name: Publish package distributions to TestPyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
+        packages-dir: build/dist/
         repository-url: https://test.pypi.org/legacy/
 
   pypi:
@@ -77,14 +52,17 @@ jobs:
       id-token: write
     steps:
 
+    # Published from the reproducibility check, so these are exactly the files it checked
     - name: Download the distributions
       uses: actions/download-artifact@v8
       with:
-        name: dist
-        path: dist/
+        name: build-1
+        path: build/
 
     - name: Publish package distributions to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        packages-dir: build/dist/
 
   checksums:
     name: Attach the checksums to the release
@@ -94,18 +72,19 @@ jobs:
       contents: write
     steps:
 
+    # Published from the reproducibility check, so these are exactly the files it checked
     - name: Download the distributions
       uses: actions/download-artifact@v8
       with:
-        name: dist
-        path: dist/
+        name: build-1
+        path: build/
 
     - name: Upload SHA256SUMS
       env:
         GH_TOKEN: ${{ github.token }}
         RELEASE_TAG: ${{ github.event.release.tag_name }}
       run: |
-        (cd dist && sha256sum *) > SHA256SUMS
+        (cd build/dist && sha256sum -- *) > SHA256SUMS
         cat SHA256SUMS
         gh release upload "$RELEASE_TAG" SHA256SUMS --repo "$GITHUB_REPOSITORY"
 

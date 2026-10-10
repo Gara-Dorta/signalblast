@@ -6,7 +6,6 @@ SIGNALBLAST_VERSION=$(uvx hatch version)
 
 # Use the commit time instead of the current time, so that the build is reproducible
 SOURCE_DATE_EPOCH=$(git -C "${REPO_DIR}" log -1 --format=%ct)
-export SOURCE_DATE_EPOCH
 
 # Replace the + for a -, as + is not a valid docker tag
 export DOCKER_TAG="${SIGNALBLAST_VERSION//+/-}"

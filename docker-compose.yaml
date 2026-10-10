@@ -13,25 +13,26 @@ services:
     restart: always
 
   signalblast:
-    image: "eradorta/signalblast:$DOCKER_TAG"
+    image: "eradorta/signalblast:${DOCKER_TAG:-latest}"
     # Fixed name so that docker/watchdog.sh can restart it
     container_name: signalblast
     build:
       network: "host"
       args:
-        SIGNALBLAST_VERSION: $SIGNALBLAST_VERSION
+        SIGNALBLAST_VERSION: ${SIGNALBLAST_VERSION:-}
     network_mode: "host"
     volumes:
       - "$HOME/.local/share/signalblast/:/home/user/.local/share/signalblast/"
     environment:
+      # Required, the rest are optional and default to empty so that compose doesn't warn about them
       - SIGNALBLAST_PHONE_NUMBER=$SIGNALBLAST_PHONE_NUMBER
-      - SIGNALBLAST_PASSWORD=$SIGNALBLAST_PASSWORD
-      - SIGNALBLAST_HEALTHCHECK_RECEIVER=$SIGNALBLAST_HEALTHCHECK_RECEIVER
-      - SIGNALBLAST_INSTRUCTIONS_URL=$SIGNALBLAST_INSTRUCTIONS_URL
-      - SIGNALBLAST_EXPIRATION_TIME=$SIGNALBLAST_EXPIRATION_TIME
-      - SIGNALBLAST_SIGNAL_SERVICE=$SIGNALBLAST_SIGNAL_SERVICE
-      - SIGNALBLAST_HEALTHCHECK_PORT=$SIGNALBLAST_HEALTHCHECK_PORT
-      - SIGNALBLAST_LOG_LEVEL=$SIGNALBLAST_LOG_LEVEL
+      - SIGNALBLAST_PASSWORD=${SIGNALBLAST_PASSWORD:-}
+      - SIGNALBLAST_HEALTHCHECK_RECEIVER=${SIGNALBLAST_HEALTHCHECK_RECEIVER:-}
+      - SIGNALBLAST_INSTRUCTIONS_URL=${SIGNALBLAST_INSTRUCTIONS_URL:-}
+      - SIGNALBLAST_EXPIRATION_TIME=${SIGNALBLAST_EXPIRATION_TIME:-}
+      - SIGNALBLAST_SIGNAL_SERVICE=${SIGNALBLAST_SIGNAL_SERVICE:-}
+      - SIGNALBLAST_HEALTHCHECK_PORT=${SIGNALBLAST_HEALTHCHECK_PORT:-}
+      - SIGNALBLAST_LOG_LEVEL=${SIGNALBLAST_LOG_LEVEL:-}
     depends_on:
       signal-cli-rest-api:
         condition: service_healthy

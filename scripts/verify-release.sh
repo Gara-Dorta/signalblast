@@ -1,14 +1,16 @@
 #!/bin/bash
-# Rebuilds a release from its git tag and checks that it is identical to what was published on PyPI and Docker Hub.
+# Rebuilds a release from its git tag and checks that it is identical to what was published on PyPI and Docker Hub,
+# and that the published files were signed by the release workflow of this repo.
 # Usage: scripts/verify-release.sh v1.2.3
 # Set PLATFORMS to check fewer image platforms, e.g. PLATFORMS=linux/amd64, building other platforms needs QEMU.
-# Requires git, uv, docker with buildx, curl and jq.
+# Requires git, uv, docker with buildx, curl, jq and the GitHub CLI (gh), logged in with `gh auth login`.
 set -euo pipefail
 
 TAG=${1:?usage: $0 <release tag, e.g. v1.2.3>}
 export PLATFORMS=${PLATFORMS:-linux/amd64,linux/arm64}
+GITHUB_REPO=Gara-Dorta/signalblast
 # Overridable to test the script against a local repo and registry
-REPO_URL=${REPO_URL:-https://github.com/Gara-Dorta/signalblast}
+REPO_URL=${REPO_URL:-https://github.com/${GITHUB_REPO}}
 IMAGE=${IMAGE:-eradorta/signalblast}
 
 # Same version and tag conversion as the release workflow
@@ -31,6 +33,19 @@ check() {
     fi
 }
 
+signed() {
+    # signed <name> <verification command...>
+    local name=$1 output
+    shift
+    if output=$("$@" 2>&1); then
+        echo "SIGNED    $name"
+    else
+        echo "UNSIGNED  $name"
+        echo "$output"
+        failed=1
+    fi
+}
+
 echo "Cloning ${REPO_URL} at ${TAG}"
 git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$TAG" "$REPO_URL" "$WORK_DIR/src"
 
@@ -49,6 +64,7 @@ curl -fsSL "https://pypi.org/pypi/signalblast/${VERSION}/json" \
 while read -r filename published; do
     rebuilt=$(awk -v f="$filename" '$2 == f {print $1}' "$HASHES")
     check "PyPI   ${filename}" "$published" "${rebuilt:-<not rebuilt>}"
+    signed "PyPI   ${filename}" uvx --quiet pypi-attestations verify pypi --repository "https://github.com/${GITHUB_REPO}" "pypi:${filename}"
 done < "$WORK_DIR/pypi.txt"
 
 # Compared per platform, the published image index also has the provenance attestations so its digest differs
@@ -60,6 +76,10 @@ for platform in ${PLATFORMS//,/ }; do
     rebuilt=$(awk -v p="$platform" '$2 == "image" && $3 == p {print $1}' "$HASHES")
     check "Docker ${IMAGE}:${DOCKER_TAG} ${platform}" "${published:-<not published>}" "${rebuilt:-<not rebuilt>}"
 done
+signed "Docker ${IMAGE}:${DOCKER_TAG}" gh attestation verify "oci://${IMAGE}:${DOCKER_TAG}" \
+    --repo "$GITHUB_REPO" \
+    --signer-workflow "${GITHUB_REPO}/.github/workflows/publish-pypi.yml" \
+    --source-ref "refs/tags/${TAG}"
 
 if [ "$failed" -ne 0 ]; then
     echo "The rebuilt release differs from the published one"

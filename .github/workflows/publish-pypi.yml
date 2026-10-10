@@ -92,6 +92,11 @@ jobs:
     name: Push the image to Docker Hub
     needs: pypi
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Needed to sign the attestation with the workflow's identity
+      id-token: write
+      attestations: write
     steps:
 
     - name: Checkout code
@@ -125,6 +130,7 @@ jobs:
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
     - name: Build and push the image
+      id: push
       uses: docker/build-push-action@v7
       with:
         context: .
@@ -135,3 +141,11 @@ jobs:
         tags: |
           eradorta/signalblast:${{ env.DOCKER_TAG }}
           eradorta/signalblast:latest
+
+    # Signs that the image was built by this workflow, verify it with `gh attestation verify`, see scripts/verify-release.sh
+    - name: Attest the image
+      uses: actions/attest-build-provenance@v4.2.2
+      with:
+        subject-name: index.docker.io/eradorta/signalblast
+        subject-digest: ${{ steps.push.outputs.digest }}
+        push-to-registry: true

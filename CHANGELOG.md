@@ -12,8 +12,8 @@ This release moves to signalbot 2 and a sqlite database, and changes how admins 
   * Run the bot with the `signalblast` command (`python -m signalblast.main` still works).
 * **Admins**
   * There can be several admins. `!add admin <password>` adds an admin instead of replacing the current one, and `!remove admin` takes the id of the admin to remove: `!remove admin <password> <admin id>`.
-  * `!ban` and `!lift ban` no longer take user ids. Quote a broadcast or a message from a user and send `!ban`; lift bans by number with `!lift ban <number>`, see `!list bans`.
-  * `!reply <user id>` is gone. Messages from users arrive as `User wrote: …`; quote them to reply. Users answer by quoting the reply, and every message of the conversation quotes the one it answers.
+  * `!ban` and `!lift ban` no longer take user ids. Reply `!ban` to a broadcast or a message from a user; lift bans by number with `!lift ban <number>`, see `!list bans`.
+  * `!reply <user id>` is gone. Messages from users arrive as `User wrote: …`; reply to them to answer. Users answer by replying to the admin's message, and every message of the conversation is a reply to the one it answers.
   * `!last msg user uuid` is gone.
   * `!set ping` and `!unset ping` are gone, use the health check (`SIGNALBLAST_HEALTHCHECK_RECEIVER`) instead.
 * **Data** is stored in a sqlite database, `signalblast.db` in the data folder. The `subscribers.csv`, `banned_users.csv` and `admin.txt` files from older versions are imported automatically on the first start and renamed to `*.migrated`.

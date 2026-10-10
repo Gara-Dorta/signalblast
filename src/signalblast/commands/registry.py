@@ -74,7 +74,7 @@ async def send_help(
         )
 
     message = f"{intro}\n" + describe(for_admins=False)
-    message += "\nTo reply to a message from the admins, quote it and write your reply.\n"
+    message += "\nTo answer a message from the admins, reply to it.\n"
     if broadcast_tip:
         message += "\nTo broadcast a message that starts with !, write !broadcast before it.\n"
     if bot.settings.instructions_url is not None:
@@ -84,5 +84,5 @@ async def send_help(
 
     if bot.db.is_admin(sender):
         message = "Admin commands:\n" + describe(for_admins=True)
-        message += "\nTo reply to a message from a user, quote it and write your reply."
+        message += "\nTo answer a message from a user, reply to it."
         await bot.send(sender, message)

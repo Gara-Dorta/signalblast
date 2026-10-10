@@ -44,7 +44,7 @@ async def test_ban_needs_a_quote_of_a_known_message(chat: Chat) -> None:
 
     for quote in (None, help_reply):
         [reply] = await chat.send(message("!ban", source=ADMIN, quote=quote))
-        assert str(reply.text).startswith("To ban someone, quote their broadcast")
+        assert str(reply.text).startswith("To ban someone, reply !ban to their broadcast")
 
 
 async def test_ban_after_the_broadcast_expired(chat: Chat) -> None:
@@ -54,7 +54,7 @@ async def test_ban_after_the_broadcast_expired(chat: Chat) -> None:
 
     [reply] = await chat.send(message("!ban", source=ADMIN, quote=copy))
 
-    assert str(reply.text).startswith("To ban someone, quote their broadcast")
+    assert str(reply.text).startswith("To ban someone, reply !ban to their broadcast")
     assert not chat.bot.db.is_banned(SUBSCRIBER)
 
 

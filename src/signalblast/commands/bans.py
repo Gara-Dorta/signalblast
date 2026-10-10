@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 class Ban(Command):
     trigger = "!ban"
-    description = "Quote a broadcast or a message from a user and send !ban to ban its sender"
+    description = "Reply !ban to a broadcast or a message from a user to ban its sender"
     for_admins = True
     admin_only = True
 
@@ -24,8 +24,8 @@ class Ban(Command):
         if target is None:
             await self.bot.reply(
                 ctx,
-                "To ban someone, quote their broadcast (from the last 24 hours) or their message to the admins "
-                "(from the last 7 days) and send !ban",
+                "To ban someone, reply !ban to their broadcast (from the last 24 hours) or their message to the "
+                "admins (from the last 7 days)",
             )
             return
 

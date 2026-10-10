@@ -23,22 +23,22 @@ Broadcasts can be edited and deleted for everyone in Signal as usual, for up to 
 * `!add admin <password>` become an admin, the password is `SIGNALBLAST_PASSWORD`. There can be several admins
 * `!remove admin <password> <admin id>` remove an admin
 * `!list admins` show the ids of the admins
-* `!ban` quote a broadcast, or a message from a user, and send `!ban` to ban its sender. This works for broadcasts from the last 24 hours (so the admin must be subscribed to receive them) and for messages from the last 7 days
+* `!ban` reply `!ban` to a broadcast, or to a message from a user, to ban its sender. This works for broadcasts from the last 24 hours (so the admin must be subscribed to receive them) and for messages from the last 7 days
 * `!list bans` show the banned users, numbered, with the start of the message they were banned for
 * `!lift ban <number>` lift a ban
 * `!version` show the versions of signalblast, signalbot and signal-cli-rest-api
 
-Messages that users send with `!admin` reach every admin as `User wrote: …`. To reply, quote the message and write the reply, without any command. The user receives it as `Admin: …` and answers the same way, by quoting it, and so on. The other admins get a copy of every reply. Each message the bot sends in a conversation quotes the message it answers, so every chat shows the conversation as a thread. Quoting any message of a conversation continues it, it is never broadcast.
+Messages that users send with `!admin` reach every admin as `User wrote: …`. To answer, reply to the message, without any command. The user receives it as `Admin: …` and answers the same way, by replying to it, and so on. The other admins get a copy of every reply. Each message the bot sends in a conversation is a reply to the message it answers, so every chat shows the conversation as a thread. Replying to any message of a conversation continues it, it is never broadcast.
 
 ### Privacy
 
 * Subscribers never learn who else is subscribed, or who sent a broadcast.
-* Admins never learn who a subscriber is either: users who write to the admins appear as `User`, and bans and replies work by quoting messages.
+* Admins never learn who a subscriber is either: users who write to the admins appear as `User`, and bans and answers work by replying to messages.
 * The bot's database keeps only:
    * who sent each broadcast, for 24 hours, so that broadcasts can be edited and deleted
    * which user each message between users and admins belongs to, for 7 days, so that replies reach the right person.
    The content of the messages is not stored.
-   * both are also used to let admins ban a sender just by quoting their message.
+   * both are also used to let admins ban a sender just by replying to their message.
 * Whoever hosts the bot can, in principle, see who everyone is and what they send, since every message passes through their server.
 By default the bot does not record this.
 However, there is currently no easy way to prove that the host has not modified the bot.

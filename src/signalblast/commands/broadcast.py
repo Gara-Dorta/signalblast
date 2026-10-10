@@ -123,12 +123,12 @@ async def _broadcast(bot: BroadcastBot, ctx: DataMessageContext, text: str | Non
     if sender is None or not await _may_broadcast(bot, ctx, sender):
         return
     if message.quote is not None:
-        await bot.reply(ctx, "Not sent: replies are not broadcast, to broadcast this message send it without replying")
+        await bot.reply(ctx, "Not sent: replies are not broadcast, to broadcast this message send it without replying.")
         return
 
     broadcast = _broadcast_message(ctx, text)
     if broadcast is None:
-        await bot.reply(ctx, "There is nothing to broadcast, write your message after !broadcast")
+        await bot.reply(ctx, "There is nothing to broadcast, write your message after !broadcast.")
         return
 
     # The copies of the version of the message that this one edits

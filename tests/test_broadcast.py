@@ -51,7 +51,7 @@ async def test_nothing_to_broadcast(chat: Chat) -> None:
 
     [reply] = await chat.send(message("!broadcast", source=SUBSCRIBER))
 
-    assert reply.text == "There is nothing to broadcast, write your message after !broadcast"
+    assert reply.text == "There is nothing to broadcast, write your message after !broadcast."
 
 
 async def test_replies_are_not_broadcast(chat: Chat) -> None:
@@ -61,7 +61,7 @@ async def test_replies_are_not_broadcast(chat: Chat) -> None:
     copy = chat.last_to(OTHER_SUBSCRIBER)
 
     # Each reply only gets the notice, nothing is broadcast
-    not_sent = "Not sent: replies are not broadcast, to broadcast this message send it without replying"
+    not_sent = "Not sent: replies are not broadcast, to broadcast this message send it without replying."
     [reply] = await chat.send(message("Hi!", source=OTHER_SUBSCRIBER, quote=copy))
     assert (reply.recipient, reply.text) == (OTHER_SUBSCRIBER, not_sent)
     [reply] = await chat.send(message("Anyone?", source=SUBSCRIBER, quote=broadcast_message))

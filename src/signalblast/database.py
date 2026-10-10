@@ -43,7 +43,7 @@ class MessageCopy:
 
 
 class Database:
-    """signalblast's sqlite database, see `migrations.py` for the schema.
+    """signalblast's sqlite database, see the `migrations` package for the schema.
 
     Every method runs synchronously and commits before returning. It is only used from the event
     loop thread, so there are no concurrent writers.

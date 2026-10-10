@@ -3,7 +3,8 @@
 ###########################
 # Build the wheel
 ###########################
-FROM python:3.14.8-slim-trixie@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170 AS builder
+# The wheel is the same for all platforms, so it is built once on the platform doing the build
+FROM --platform=$BUILDPLATFORM python:3.14.8-slim-trixie@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170 AS builder
 COPY --from=ghcr.io/astral-sh/uv:0.11.14@sha256:1025398289b62de8269e70c45b91ffa37c373f38118d7da036fb8bb8efc85d97 /uv /bin/
 
 # The git metadata is not in the build context, so hatch-vcs takes the version from here
@@ -38,10 +39,11 @@ WORKDIR /home/user
 ###########################
 # Install from wheel
 ###########################
-COPY --from=builder /build/dist/ /tmp/dist/
-RUN python -m venv .venv && \
-    .venv/bin/pip install --no-cache-dir --disable-pip-version-check --require-hashes --requirement /tmp/dist/requirements.txt && \
-    .venv/bin/pip install --no-cache-dir --disable-pip-version-check --no-deps /tmp/dist/*.whl
+# The wheel is mounted instead of copied so that it is not left in the image, and the system pip is used so the venv has no pip
+RUN --mount=type=bind,from=builder,source=/build/dist,target=/tmp/dist \
+    python -m venv --without-pip .venv && \
+    pip --python .venv/bin/python install --no-cache-dir --disable-pip-version-check --require-hashes --requirement /tmp/dist/requirements.txt && \
+    pip --python .venv/bin/python install --no-cache-dir --disable-pip-version-check --no-deps /tmp/dist/*.whl
 
 ###########################
 ENV SIGNALBLAST_DATA_DIR=/home/user/.local/share/signalblast

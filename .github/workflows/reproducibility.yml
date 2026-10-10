@@ -1,29 +1,47 @@
 name: Reproducible Builds
 
 # Builds the package distributions and the image twice on different runners and checks that they are identical.
-# Images are pushed by the release workflow, see publish-pypi.yml
+# The release workflow publishes the distributions built here, see publish-pypi.yml
 on:
   push:
     branches: [ "main" ]
+    paths: &build-inputs
+      - "src/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "build-constraints.txt"
+      - "README.md"
+      - "LICENSE"
+      - "Dockerfile"
+      - ".dockerignore"
+      - "scripts/build-reproducible.sh"
+      - ".github/workflows/reproducibility.yml"
   pull_request:
     branches: [ "main" ]
+    paths: *build-inputs
   # Allows the release workflow to run the check before publishing
   workflow_call:
 
 permissions:
   contents: read
 
+concurrency:
+  group: reproducibility-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build:
-    name: Build (${{ matrix.runner }})
+    name: Build ${{ matrix.id }} (${{ matrix.runner }})
     strategy:
       matrix:
         # Vary the environment so that anything leaking into the build shows up as a difference
         include:
-          - runner: ubuntu-24.04
+          - id: 1
+            runner: ubuntu-24.04
             umask: "022"
             tz: UTC
-          - runner: ubuntu-22.04
+          - id: 2
+            runner: ubuntu-22.04
             umask: "077"
             tz: Asia/Tokyo
     runs-on: ${{ matrix.runner }}
@@ -44,50 +62,34 @@ jobs:
           umask ${{ matrix.umask }}
           git clone --quiet --no-local "$GITHUB_WORKSPACE" "$RUNNER_TEMP/src"
 
-      - name: Set env variables
-        working-directory: ${{ runner.temp }}/src
-        run: |
-          SIGNALBLAST_VERSION=$(uvx hatch version)
-          echo "the version is $SIGNALBLAST_VERSION"
-          echo "SIGNALBLAST_VERSION=$SIGNALBLAST_VERSION" >> "$GITHUB_ENV"
-          echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
-
-      - name: Build the wheel and the source dist
-        working-directory: ${{ runner.temp }}/src
-        run: uv build --build-constraint build-constraints.txt --require-hashes --out-dir "$RUNNER_TEMP/out/dist"
-
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Build the image
-        working-directory: ${{ runner.temp }}/src
+      - name: Build
         run: |
-          docker buildx build --no-cache \
-            --platform linux/amd64,linux/arm64 \
-            --build-arg SIGNALBLAST_VERSION="$SIGNALBLAST_VERSION" \
-            --provenance=false \
-            --output type=oci,dest="$RUNNER_TEMP/out/image.tar",rewrite-timestamp=true \
-            .
+          "$RUNNER_TEMP/src/scripts/build-reproducible.sh" "$RUNNER_TEMP/out"
+          cat "$RUNNER_TEMP/out/hashes.txt"
 
-      - name: Compute the hashes
-        working-directory: ${{ runner.temp }}/out
-        run: |
-          (cd dist && sha256sum *) > hashes.txt
-          # Per-platform image digests, these are the ones to compare against the published images
-          index=$(tar -xOf image.tar index.json | jq -r '.manifests[0].digest')
-          tar -xOf image.tar "blobs/sha256/${index#sha256:}" \
-            | jq -r '.manifests[] | "\(.digest)  image \(.platform.os)/\(.platform.architecture)"' >> hashes.txt
-          cat hashes.txt
-
-      - name: Upload the build outputs
+      - name: Upload the hashes and the distributions
         uses: actions/upload-artifact@v7
         with:
-          name: build-${{ matrix.runner }}
-          path: ${{ runner.temp }}/out/
-          retention-days: 7
+          name: build-${{ matrix.id }}
+          path: |
+            ${{ runner.temp }}/out/hashes.txt
+            ${{ runner.temp }}/out/dist/
+          if-no-files-found: error
+
+      # Only needed to look into differences with https://github.com/reproducible-containers/diffoci
+      - name: Upload the image
+        uses: actions/upload-artifact@v7
+        with:
+          name: image-${{ matrix.id }}
+          path: ${{ runner.temp }}/out/image.tar
+          compression-level: 0
+          retention-days: 1
           if-no-files-found: error
 
   compare:
@@ -95,11 +97,13 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - name: Download the build outputs
+      - name: Download the hashes and the distributions
         uses: actions/download-artifact@v8
+        with:
+          pattern: build-*
 
       - name: Compare the hashes
-        run: diff -u build-ubuntu-24.04/hashes.txt build-ubuntu-22.04/hashes.txt
+        run: diff -u build-1/hashes.txt build-2/hashes.txt
 
       - name: Install uv
         if: failure()
@@ -108,7 +112,6 @@ jobs:
       - name: Show the differences in the distributions
         if: failure()
         run: |
-          # The images are not diffed here, download the artifacts and use https://github.com/reproducible-containers/diffoci
-          for file in build-ubuntu-24.04/dist/*; do
-            uvx diffoscope "$file" "build-ubuntu-22.04/dist/$(basename "$file")" || true
+          for file in build-1/dist/*; do
+            uvx diffoscope "$file" "build-2/dist/$(basename "$file")" || true
           done

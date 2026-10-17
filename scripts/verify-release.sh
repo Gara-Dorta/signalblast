@@ -22,6 +22,32 @@ IMAGE=eradorta/signalblast
 # as whoever made the release could have added their own key to it
 ALLOWED_SIGNERS="$(dirname "$(dirname "$(realpath "$0")")")/.github/allowed_signers"
 
+# The tools are checked up front, so that a missing one is reported before anything is downloaded or built
+errors=()
+tools=(git ssh-keygen uv uvx curl jq docker gh)
+if ! $SIGNATURES_ONLY; then
+    tools+=(sha256sum tar)
+fi
+for tool in "${tools[@]}"; do
+    if ! command -v "$tool" > /dev/null; then
+        errors+=("$tool is not installed")
+    fi
+done
+if command -v docker > /dev/null; then
+    if ! docker buildx version > /dev/null 2>&1; then
+        errors+=("docker buildx is not installed")
+    elif ! $SIGNATURES_ONLY && ! docker info > /dev/null 2>&1; then
+        errors+=("docker is not running, or the user can't access it")
+    fi
+fi
+if command -v gh > /dev/null && ! gh auth status > /dev/null 2>&1; then
+    errors+=("gh is not logged in, run gh auth login")
+fi
+if [ ${#errors[@]} -ne 0 ]; then
+    printf 'Error: %s\n' "${errors[@]}" >&2
+    exit 1
+fi
+
 # Same version and tag conversion as the release workflow
 VERSION="${TAG#v}"
 DOCKER_TAG="${VERSION//+/-}"

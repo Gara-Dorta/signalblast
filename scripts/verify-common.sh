@@ -11,10 +11,13 @@ ALLOWED_SIGNERS="$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}")")")/.gith
 
 check_requirements() {
     # check_requirements <requirement>..., exits if any is missing, so that it is reported before anything is downloaded.
-    # A requirement is a command, or docker-buildx, docker-compose, docker-running or gh-attestation
+    # A requirement is a command, or docker-buildx, docker-compose, docker-running, gh-attestation or allowed-signers
     local requirement errors=()
     for requirement in "$@"; do
         case $requirement in
+            allowed-signers)
+                [ -f "$ALLOWED_SIGNERS" ] ||
+                    errors+=("$ALLOWED_SIGNERS is missing, clone the repo or copy the script from https://github.com/Gara-Dorta/signalblast/blob/main/.github/allowed_signers") ;;
             docker-*)
                 # A missing docker is already reported as a missing command
                 if ! command -v docker > /dev/null; then

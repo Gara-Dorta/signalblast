@@ -25,7 +25,7 @@ TAG=${1:?$USAGE}
 # shellcheck source=scripts/verify-common.sh
 source "$(dirname "$(realpath "$0")")/verify-common.sh"
 
-requirements=(git ssh-keygen uv uvx curl jq docker gh docker-buildx gh-attestation)
+requirements=(git ssh-keygen uv uvx curl jq docker gh docker-buildx gh-attestation allowed-signers)
 if ! $SIGNATURES_ONLY; then
     requirements+=(sha256sum tar docker-running)
 fi

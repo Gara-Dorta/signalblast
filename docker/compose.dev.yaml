@@ -1,7 +1,7 @@
 # Publishes signal-cli-rest-api on localhost:8080, so that signalblast can be run outside docker with `uv run signalblast`
 # and SIGNALBLAST_SIGNAL_SERVICE=localhost:8080.
-# Only for development, add it after docker-compose.yaml:
-#   docker compose -f docker-compose.yaml -f docker/compose.dev.yaml up signal-cli-rest-api
+# Only for development, docker/compose_up.sh adds it after docker-compose.yaml:
+#   docker/compose_up.sh signal-cli-rest-api
 services:
   signal-cli-rest-api:
     ports:

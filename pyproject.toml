@@ -53,6 +53,10 @@ build-backend = "hatchling.build"
 source = "vcs"
 raw-options = { fallback_version = "0.0.0" }
 
+[tool.uv]
+# Minimum version, the uv version doesn't change the built wheel and sdist, those depend on build-constraints.txt
+required-version = ">=0.11.14"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 # A deadlock in a handler would otherwise hang the test run forever

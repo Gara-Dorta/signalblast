@@ -128,8 +128,24 @@ The rest are optional:
 * Run `signal-cli-rest-api` with `docker compose up signal-cli-rest-api`
 * Run the bot `uv run signalblast`
 * Optional: install signalbot as an editable dependency with `uv add --editable ../signalbot/`, but don't commit that change
+* Maintainers: see [RELEASING.md](RELEASING.md) for how to make a release
 
 ### Docker compose
 
 The docker compose scripts will automatically get and set the signalblast version from the git history.
 `docker/compose_build.sh` and `docker/compose_up.sh` build and run the image from the local code.
+
+### Reproducible builds
+
+The PyPI wheel and the docker image are reproducible.
+
+Release tags are signed with the SSH key in [.github/allowed_signers](.github/allowed_signers).
+The files on PyPI and Docker Hub are signed by the release workflow.
+
+To check that a release on PyPI and Docker Hub was built from the code in its git tag, rebuild and compare it, and check its signatures, with:
+```bash
+scripts/verify-release.sh v1.2.3
+```
+Building the arm64 image needs QEMU, set `PLATFORMS=linux/amd64` to only check the amd64 one.
+The script needs `gh` to be logged in with `gh auth login`.
+Add `--signatures-only` to only check the signatures, which is much faster as nothing is rebuilt.

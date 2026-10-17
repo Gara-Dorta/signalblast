@@ -146,6 +146,6 @@ To check that a release on PyPI and Docker Hub was built from the code in its gi
 ```bash
 scripts/verify-release.sh v1.2.3
 ```
-Building the arm64 image needs QEMU, set `PLATFORMS=linux/amd64` to only check the amd64 one.
+Only the image for the platform of your machine is rebuilt, add `--all-platforms` to rebuild all of them, which needs QEMU.
 The script needs `gh` to be logged in with `gh auth login`.
 Add `--signatures-only` to only check the signatures, which is much faster as nothing is rebuilt.

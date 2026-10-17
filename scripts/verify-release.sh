@@ -2,19 +2,25 @@
 # Rebuilds a release from its git tag and checks that it is identical to what was published on PyPI and Docker Hub,
 # that the tag was signed by one of the keys in .github/allowed_signers,
 # and that the published files were signed by the release workflow of this repo.
-# Usage: scripts/verify-release.sh [--signatures-only] v1.2.3
+# Usage: scripts/verify-release.sh [--signatures-only] [--all-platforms] v1.2.3
 # --signatures-only only checks the signatures of the tag and the published files, which is much faster as nothing is rebuilt.
-# Set PLATFORMS to check fewer image platforms, e.g. PLATFORMS=linux/amd64, building other platforms needs QEMU.
+# --all-platforms rebuilds the image for all the platforms it was published for, instead of only the one of this machine.
+#   Building for other platforms needs QEMU.
 # Requires git, uv, docker with buildx, curl, jq and the GitHub CLI (gh), logged in with `gh auth login`.
 set -euo pipefail
 
+USAGE="usage: $0 [--signatures-only] [--all-platforms] <release tag, e.g. v1.2.3>"
 SIGNATURES_ONLY=false
-if [ "${1:-}" = "--signatures-only" ]; then
-    SIGNATURES_ONLY=true
+ALL_PLATFORMS=false
+while [[ ${1:-} == --* ]]; do
+    case $1 in
+        --signatures-only) SIGNATURES_ONLY=true ;;
+        --all-platforms) ALL_PLATFORMS=true ;;
+        *) echo "unknown option $1, $USAGE" >&2; exit 1 ;;
+    esac
     shift
-fi
-TAG=${1:?usage: $0 [--signatures-only] <release tag, e.g. v1.2.3>}
-export PLATFORMS=${PLATFORMS:-linux/amd64,linux/arm64}
+done
+TAG=${1:?$USAGE}
 GITHUB_REPO=Gara-Dorta/signalblast
 REPO_URL=https://github.com/${GITHUB_REPO}
 IMAGE=eradorta/signalblast
@@ -115,8 +121,11 @@ finish() {
     exit 0
 }
 
-echo "Cloning ${REPO_URL} at ${TAG}"
-git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$TAG" "$REPO_URL" "$WORK_DIR/src"
+echo "Fetching ${TAG} from ${REPO_URL}"
+# Only the tag is fetched, as `git clone --branch` warns that a signed tag "is not a commit"
+git init --quiet "$WORK_DIR/src"
+git -C "$WORK_DIR/src" fetch --quiet --depth 1 "$REPO_URL" "refs/tags/${TAG}:refs/tags/${TAG}"
+git -C "$WORK_DIR/src" -c advice.detachedHead=false checkout --quiet "$TAG"
 
 if ! $SIGNATURES_ONLY && [ ! -f "$WORK_DIR/src/scripts/build-reproducible.sh" ]; then
     echo "${TAG} predates reproducible builds, it can't be verified" >&2
@@ -150,10 +159,16 @@ if $SIGNATURES_ONLY; then
     finish "The release is signed"
 fi
 
-# Compared per platform, so that PLATFORMS can check only some of them
+# Compared per platform, so that only some of them can be rebuilt
 docker buildx imagetools inspect --raw "${IMAGE}@${DIGEST}" \
     | jq -r '.manifests[] | "\(.platform.os)/\(.platform.architecture) \(.digest)"' \
     > "$WORK_DIR/published.txt"
+if $ALL_PLATFORMS; then
+    PLATFORMS=$(cut -d ' ' -f 1 "$WORK_DIR/published.txt" | paste -sd , -)
+else
+    PLATFORMS=$(docker version --format '{{.Server.Os}}/{{.Server.Arch}}')
+fi
+export PLATFORMS
 
 # Built with the script from the tag, so that it is built the same way as the release was
 echo "Building the release for ${PLATFORMS}"

@@ -85,8 +85,8 @@ jobs:
         packages-dir: build/dist/
 
   checksums:
-    name: Attach the checksums to the release
-    needs: pypi
+    name: Attach the checksums and the image digests to the release
+    needs: [pypi, docker]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -99,16 +99,29 @@ jobs:
         name: build-1
         path: build/
 
-    - name: Upload SHA256SUMS
+    # The digests are not in SHA256SUMS, as they are not hashes of files and would break `sha256sum -c`
+    - name: Upload SHA256SUMS and IMAGE-DIGESTS
       env:
         GH_TOKEN: ${{ github.token }}
         RELEASE_TAG: ${{ github.event.release.tag_name }}
-      run: gh release upload "$RELEASE_TAG" build/SHA256SUMS --repo "$GITHUB_REPOSITORY"
+        IMAGE_REF: ${{ needs.docker.outputs.ref }}
+        INDEX_DIGEST: ${{ needs.docker.outputs.digest }}
+      run: |
+        {
+          echo "${INDEX_DIGEST}  ${IMAGE_REF}"
+          awk -v ref="$IMAGE_REF" '$2 == "image" {print $1 "  " ref " " $3}' build/hashes.txt
+        } > build/IMAGE-DIGESTS
+        cat build/IMAGE-DIGESTS
+        gh release upload "$RELEASE_TAG" build/SHA256SUMS build/IMAGE-DIGESTS --repo "$GITHUB_REPOSITORY"
 
   docker:
     name: Push the image to Docker Hub
     needs: pypi
     runs-on: ubuntu-latest
+    outputs:
+      # The pushed image and the digest of its index, listed in IMAGE-DIGESTS by the checksums job
+      ref: ${{ steps.push.outputs.ref }}
+      digest: ${{ steps.push.outputs.digest }}
     permissions:
       contents: read
       # Needed to sign the attestation with the workflow's identity
@@ -143,6 +156,7 @@ jobs:
           skopeo copy --all --preserve-digests --digestfile digest.txt \
             oci-archive:image.tar "docker://docker.io/${IMAGE}:${tag}"
         done
+        echo "ref=${IMAGE}:${DOCKER_TAG}" >> "$GITHUB_OUTPUT"
         echo "digest=$(cat digest.txt)" >> "$GITHUB_OUTPUT"
 
     # Signs that the image was built by this workflow, verify it with `gh attestation verify`, see scripts/verify-release.sh

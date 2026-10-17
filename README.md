@@ -125,6 +125,8 @@ The PyPI wheel and the docker image are reproducible.
 
 Release tags are signed with the SSH key in [.github/allowed_signers](.github/allowed_signers).
 The files on PyPI and Docker Hub are signed by the release workflow.
+Each GitHub release lists the hashes of the PyPI files in `SHA256SUMS` and the digests of the docker image in `IMAGE-DIGESTS`.
+To pin the image to a release, set `DOCKER_TAG` to the version and its digest, e.g. `DOCKER_TAG=1.2.3@sha256:...`.
 
 To check that a release on PyPI and Docker Hub was built from the code in its git tag, rebuild and compare it, and check its signatures, with:
 ```bash

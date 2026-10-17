@@ -16,6 +16,7 @@ Then create the GitHub release from that existing tag. The [release workflow](.g
 2. Publishes to TestPyPI.
 3. Waits for the approval of the `pypi` environment, approve it from the workflow run with **Review deployments**.
 4. Publishes to PyPI, then pushes and signs the docker image.
+5. Attaches `SHA256SUMS` and `IMAGE-DIGESTS` to the release.
 
 Check the published release with `scripts/verify-release.sh v1.2.3`, see the [README](README.md#reproducible-builds).
 

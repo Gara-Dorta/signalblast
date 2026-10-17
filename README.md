@@ -51,8 +51,8 @@ Notet that there are attacks that verify ca not rule out, they are listed there.
 
 This uses the images from https://hub.docker.com/r/eradorta/signalblast
 
-* Install [docker](https://www.docker.com/).
 * Set up signal-cli-rest-api for the bot's phone number as specified [here](https://signalbot-org.github.io/signalbot/latest/01_getting_started/#setup-signal-cli-rest-api).
+* Stop the `signal-cli-rest-api` container.
 * Download the [docker-compose.yaml](https://github.com/Gara-Dorta/signalblast/blob/main/docker-compose.yaml) and [.env.example](https://github.com/Gara-Dorta/signalblast/blob/main/.env.example) files, the latter is downloaded as `.env`.
   ```bash
   curl -fsSLO https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/docker-compose.yaml
@@ -121,25 +121,22 @@ The rest are optional:
 
 ## Reproducible builds
 
-The PyPI wheel and the docker image are reproducible.
-
+The PyPI wheel and the docker image are reproducible and they are also signed.
 Release tags are signed with the SSH key in [.github/allowed_signers](.github/allowed_signers).
-The files on PyPI and Docker Hub are signed by the release workflow.
-Each GitHub release lists the hashes of the PyPI files in `SHA256SUMS` and the digests of the docker image in `IMAGE-DIGESTS`.
-To pin the image to a release, set `DOCKER_TAG` to the version and its digest, e.g. `DOCKER_TAG=1.2.3@sha256:...`.
 
 To check that a release on PyPI and Docker Hub was built from the code in its git tag, rebuild and compare it, and check its signatures, with:
 ```bash
 scripts/verify-release.sh v1.2.3
 ```
-Only the image for the platform of your machine is rebuilt, add `--all-platforms` to rebuild all of them, which needs QEMU.
-The script needs `gh` to be logged in with `gh auth login`.
-Add `--signatures-only` to only check the signatures, which is much faster as nothing is rebuilt.
+Only the image for the platform of your machine is built and checked for reprocibility.
+Add `--all-platforms` to rebuild all of them, which needs QEMU.
+Add `--signatures-only` to only check the signatures, which is much faster as nothing is built.
+
+For convinience, each github release also has the hashes of the PyPI files in `SHA256SUMS` and the digests of the docker image in `IMAGE-DIGESTS`.
 
 ## Verify the container
 
-Whoever hosts the bot has full control of the server.
-So, the checks below make tampering harder and easier to spot but not impossible.
+The checks below make tampering harder and easier to spot but not impossible.
 Most importantly, they only show what the containers run when the checks run, a host could run modified containers in between checks.
 
 To verify the containers, run:

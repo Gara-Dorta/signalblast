@@ -52,7 +52,7 @@ Notet that there are attacks that verify ca not rule out, they are listed there.
 This uses the images from https://hub.docker.com/r/eradorta/signalblast
 
 * Install [docker](https://www.docker.com/).
-* Set up signal-cli-rest-api for the bot's phone number as specified [here](https://signalbot-org.github.io/signalbot/latest/getting_started/#setup-signal-cli-rest-api).
+* Set up signal-cli-rest-api for the bot's phone number as specified [here](https://signalbot-org.github.io/signalbot/latest/01_getting_started/#setup-signal-cli-rest-api).
 * Download the [docker-compose.yaml](https://github.com/Gara-Dorta/signalblast/blob/main/docker-compose.yaml) and [.env.example](https://github.com/Gara-Dorta/signalblast/blob/main/.env.example) files, the latter is downloaded as `.env`.
   ```bash
   curl -fsSLO https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/docker-compose.yaml
@@ -84,7 +84,7 @@ You'll likely want `SIGNALBLAST_PASSWORD`, otherwise nobody can become an admin.
 
 ### Option 2: python environment
 
-* Set up signal-cli-rest-api as specified [here](https://signalbot-org.github.io/signalbot/latest/getting_started/#setup-signal-cli-rest-api).
+* Set up signal-cli-rest-api as specified [here](https://signalbot-org.github.io/signalbot/latest/01_getting_started/#setup-signal-cli-rest-api).
 * Install signalblast in a new virtual environment, [uv](https://docs.astral.sh/uv/) is recommended
   ```bash
   uv tool install signalblast

@@ -26,7 +26,7 @@ class Settings(BaseSettings):
         default=None,
         description="The admin password. It is stored hashed, so it only needs to be set once or to change it",
     )
-    signal_service: str = Field(default="localhost:8080", description="The address of signal-cli-rest-api")
+    signal_service: str = Field(default="signal-cli-rest-api:8080", description="The address of signal-cli-rest-api")
     data_dir: Path = Field(
         default=Path.home() / ".local/share/signalblast",
         description="Where the database is stored",

@@ -1,11 +1,16 @@
 #!/bin/bash
 # Checks that a signalblast container or image on this machine is a published release: that its image is one that the
 # release workflow of this repo signed, and that the container runs that image unmodified.
+# For a container, it also checks the signal-cli-rest-api container that signalblast talks to, as it decrypts every message:
+# that it runs, unmodified, the image that the docker-compose.yaml of the release pins, and that the bot's Signal account
+# has no linked devices. The containers can only add the variables and mounts of their services in that docker-compose.yaml.
 # Usage: scripts/verify-container.sh [--rebuild] [<container or image>] [<release tag, e.g. v1.2.3>]
 # The container defaults to signalblast, its name in docker-compose.yaml.
 # Without a release tag, the latest releases are searched for the one that the image belongs to.
 # --rebuild also runs scripts/verify-release.sh for the release, which checks that it was built from the code in its git tag.
-# Requires docker with buildx, jq, sha256sum and the GitHub CLI (gh), logged in with `gh auth login`.
+# Asks signalblast for the address of signal-cli-rest-api, and signal-cli-rest-api for the devices of the account,
+# inside their containers with docker exec.
+# Requires git, ssh-keygen, docker with buildx and compose, jq, sha256sum and the GitHub CLI (gh), logged in with `gh auth login`.
 set -euo pipefail
 
 USAGE="usage: $0 [--rebuild] [<container or image, default signalblast>] [<release tag, e.g. v1.2.3>]"
@@ -19,250 +24,332 @@ while [[ ${1:-} == --* ]]; do
 done
 TARGET=${1:-signalblast}
 TAG=${2:-}
-GITHUB_REPO=Gara-Dorta/signalblast
-IMAGE=eradorta/signalblast
+SCRIPTS_DIR=$(dirname "$(realpath "$0")")
 # How many releases are searched for the image when no release tag is given
 SEARCH_LIMIT=20
-SCRIPTS_DIR=$(dirname "$(realpath "$0")")
 
-# The tools are checked up front, so that a missing one is reported before anything is downloaded
-errors=()
-for tool in docker jq sha256sum gh; do
-    if ! command -v "$tool" > /dev/null; then
-        errors+=("$tool is not installed")
-    fi
-done
-if command -v docker > /dev/null; then
-    if ! docker buildx version > /dev/null 2>&1; then
-        errors+=("docker buildx is not installed")
-    elif ! docker info > /dev/null 2>&1; then
-        errors+=("docker is not running, or the user can't access it")
-    fi
-fi
-if command -v gh > /dev/null; then
-    if ! gh attestation --help > /dev/null 2>&1; then
-        errors+=("gh is too old, it has no attestation command, install gh 2.49 or newer")
-    elif ! gh auth status > /dev/null 2>&1; then
-        errors+=("gh is not logged in, run gh auth login")
-    fi
-fi
-if [ ${#errors[@]} -ne 0 ]; then
-    printf 'Error: %s\n' "${errors[@]}" >&2
-    exit 1
-fi
+# shellcheck source=scripts/verify-common.sh
+source "${SCRIPTS_DIR}/verify-common.sh"
+
+check_requirements git ssh-keygen docker jq sha256sum gh docker-buildx docker-compose docker-running gh-attestation
 
 WORK_DIR=$(mktemp -d)
 trap 'rm -rf "$WORK_DIR"' EXIT
-
-failed=0
-report() {
-    # report <result> <text>, aligned so that the texts form a column, the same as scripts/verify-release.sh
-    printf '%-19s%s\n' "$1" "$2"
-}
-
-fail() {
-    # fail <result> <text> [<detail>...]
-    local detail
-    report "$1" "$2"
-    shift 2
-    for detail in "$@"; do
-        report "" "$detail"
-    done
-    failed=1
-}
-
-docker_tag() {
-    # docker_tag <release tag>, the same conversion as the release workflow
-    local version=${1#v}
-    echo "${version//+/-}"
-}
 
 sha256() {
     # sha256 <file>, as a digest
     echo "sha256:$(sha256sum < "$1" | cut -d ' ' -f 1)"
 }
 
+inspect_image() {
+    # inspect_image <image> <file>
+    docker image inspect --format '{{json .}}' "$1" > "$2"
+}
+
+env_var() {
+    # env_var <inspect json> <name>, the value of an environment variable of an image or a container
+    jq -r --arg prefix "$2=" '.Config.Env[] | select(startswith($prefix)) | ltrimstr($prefix)' "$1"
+}
+
+platform() {
+    # platform <image inspect json>, e.g. linux/amd64
+    jq -r '"\(.Os)/\(.Architecture)"' "$1"
+}
+
 download() {
     # download <image reference> <file>, fails if it isn't published.
-    # Any other error, like the Docker Hub rate limit, stops the script, as it could hide the release that matches
-    if ! docker buildx imagetools inspect --raw "$1" > "$2" 2> "$WORK_DIR/error.txt"; then
-        if grep -q ': not found' "$WORK_DIR/error.txt"; then
+    # Any other error, like the Docker Hub rate limit, stops the script, as it could hide the image that matches
+    local error
+    if ! error=$(docker buildx imagetools inspect --raw "$1" 2>&1 > "$2"); then
+        if [[ $error == *': not found'* ]]; then
             return 1
         fi
-        cat "$WORK_DIR/error.txt" >&2
+        echo "$error" >&2
         exit 1
     fi
 }
 
-matches_release() {
-    # matches_release <release tag>, succeeds if the local image is the one published for the release,
-    # and sets INDEX_DIGEST to the digest of the published image index.
+matches_image() {
+    # matches_image <image inspect json> <repository> <:tag or @digest>, succeeds if the local image is the one published as
+    # <repository><:tag or @digest>. The published image index is left in $WORK_DIR/index.json, and its digest in INDEX_DIGEST.
     # Depending on the docker image store, the local image id is the digest of the index, of the manifest for the platform,
     # or of that manifest's config. The digests are computed from what is downloaded, so the registry can't swap any of them.
-    local index="$WORK_DIR/index.json" manifest="$WORK_DIR/manifest.json" manifest_digest
-    download "${IMAGE}:$(docker_tag "$1")" "$index" || return 1
+    local image_json=$1 repository=$2 index="$WORK_DIR/index.json" manifest="$WORK_DIR/manifest.json"
+    local id platform pulled_digests manifest_digest
+    id=$(jq -r '.Id' "$image_json")
+    platform=$(platform "$image_json")
+    download "${repository}$3" "$index" || return 1
     INDEX_DIGEST=$(sha256 "$index")
-    [ "$IMAGE_ID" = "$INDEX_DIGEST" ] && return 0
+    [ "$id" = "$INDEX_DIGEST" ] && return 0
 
-    manifest_digest=$(jq -r --arg os "${PLATFORM%/*}" --arg arch "${PLATFORM#*/}" \
+    manifest_digest=$(jq -r --arg os "${platform%/*}" --arg arch "${platform#*/}" \
         '[.manifests[]? | select(.platform.os == $os and .platform.architecture == $arch)][0].digest // empty' "$index")
     [ -n "$manifest_digest" ] || return 1
-    [ "$IMAGE_ID" = "$manifest_digest" ] && return 0
+    [ "$id" = "$manifest_digest" ] && return 0
 
-    # Docker Hub limits the downloads, so if docker knows what the image was pulled by,
-    # the manifest is only downloaded for that release
-    if [ -n "$PULLED_DIGESTS" ] && ! grep -qxF -e "$INDEX_DIGEST" -e "$manifest_digest" <<< "$PULLED_DIGESTS"; then
+    # Docker Hub limits the downloads, so if docker knows what the image was pulled by, the manifest is only downloaded
+    # for that image. It doesn't know if the image wasn't pulled from Docker Hub, e.g. if it was copied with docker load
+    pulled_digests=$(jq -r --arg repository "$repository" '.RepoDigests[]?
+        | select(startswith($repository + "@") or startswith("docker.io/" + $repository + "@")) | sub("^.*@"; "")' \
+        "$image_json")
+    if [ -n "$pulled_digests" ] && ! grep -qxF -e "$INDEX_DIGEST" -e "$manifest_digest" <<< "$pulled_digests"; then
         return 1
     fi
-    download "${IMAGE}@${manifest_digest}" "$manifest" || return 1
+    download "${repository}@${manifest_digest}" "$manifest" || return 1
     [ "$(sha256 "$manifest")" = "$manifest_digest" ] || return 1
-    [ "$IMAGE_ID" = "$(jq -r '.config.digest' "$manifest")" ]
+    [ "$id" = "$(jq -r '.config.digest' "$manifest")" ]
 }
 
-finish() {
-    if [ "$failed" -ne 0 ]; then
-        echo "The ${KIND} could not be verified"
-        exit 1
+compose_service() {
+    # compose_service <service>, the image, the names of the variables and the mount points of a service of the
+    # docker-compose.yaml of the release, as {image, environment, volumes, tmpfs}
+    jq --arg service "$1" '.services[$service] | {
+        image,
+        environment: (.environment // {} | if type == "object" then keys else map(sub("=.*"; "")) end),
+        volumes: [.volumes[]?.target],
+        tmpfs: [.tmpfs[]? | sub(":.*"; "")]
+    }' "$WORK_DIR/compose.json"
+}
+
+check_container() {
+    # check_container <container> <container inspect json> <image inspect json> <compose service json>, checks that the
+    # container runs its image unmodified, only adding the variables and mounts of its service in docker-compose.yaml
+    local name=$1 container=$2 image=$3 service=$4
+    local image_command container_command image_healthcheck container_healthcheck differences=() unexpected=()
+    local mount_points=() mount_point changes=() kind path created
+
+    # The image could be started with another command, which could run code from a mount or from an environment variable
+    image_command=$(jq -c '(.Config.Entrypoint // []) + (.Config.Cmd // [])' "$image")
+    container_command=$(jq -c '[.Path] + .Args' "$container")
+    image_healthcheck=$(jq -c '.Config.Healthcheck.Test' "$image")
+    container_healthcheck=$(jq -c '.Config.Healthcheck.Test' "$container")
+    if [ "$image_command" != "$container_command" ]; then
+        differences+=("command of the image:          ${image_command}" "command of the container:      ${container_command}")
     fi
+    if [ "$image_healthcheck" != "$container_healthcheck" ]; then
+        differences+=("health check of the image:     ${image_healthcheck}"
+            "health check of the container: ${container_healthcheck}")
+    fi
+    if [ ${#differences[@]} -eq 0 ]; then
+        report "COMMAND MATCHES" "${name} runs the command and health check of its image"
+    else
+        fail "COMMAND DIFFERS" "${name} doesn't run the command and health check of its image" "${differences[@]}"
+    fi
+
+    # Other variables, like PYTHONPATH, could load other code. Only the names are shown, as the values can be secrets
+    mapfile -t unexpected < <(jq -r --slurpfile image "$image" --slurpfile service "$service" '.Config.Env[]
+        | select(. as $var | $image[0].Config.Env | index([$var]) | not)
+        | sub("=.*"; "")
+        | select(. as $name | $service[0].environment | index([$name]) | not)' "$container")
+    if [ ${#unexpected[@]} -eq 0 ]; then
+        report "ENV MATCHES" "${name} only adds the variables of its service in docker-compose.yaml"
+    else
+        fail "ENV DIFFERS" "${name} sets variables that its image and docker-compose.yaml don't" "${unexpected[@]}"
+    fi
+
+    # A mount anywhere else could hide the files of the image. Where the service has a tmpfs only a tmpfs is allowed,
+    # as other mounts could bring in files from the host. /tmp can be mounted too, as it can change anyway
+    mapfile -t unexpected < <(jq -r --slurpfile service "$service" '
+        def under($paths): . as $path | any($paths[]; $path == . or ($path | startswith(. + "/")));
+        ([(.Mounts // [])[] | {type: .Type, path: .Destination}] + [.HostConfig.Tmpfs // {} | keys[] | {type: "tmpfs", path: .}])[]
+        | select(((.path | under($service[0].volumes + ["/tmp"])) or (.type == "tmpfs" and (.path | under($service[0].tmpfs))))
+            | not)
+        | "\(.type) \(.path)"' "$container")
+    if [ ${#unexpected[@]} -eq 0 ]; then
+        report "MOUNTS MATCH" "${name} only mounts what its service in docker-compose.yaml does, and /tmp"
+    else
+        fail "MOUNTS DIFFER" "${name} mounts paths that docker-compose.yaml doesn't" "${unexpected[@]}"
+    fi
+
+    # Only /tmp can change, besides the directories that docker creates to mount on.
+    # docker only sees the changes since the container was created, so its creation time is shown
+    mapfile -t mount_points < <(jq -r '((.Mounts // [])[].Destination), (.HostConfig.Tmpfs // {} | keys[])' "$container")
+    while read -r kind path; do
+        if [[ $path == /tmp || $path == /tmp/* ]]; then
+            continue
+        fi
+        for mount_point in "${mount_points[@]}"; do
+            if [[ $mount_point == "$path" || $mount_point == "$path"/* ]]; then
+                continue 2
+            fi
+        done
+        case $kind in
+            A) changes+=("added:   $path") ;;
+            C) changes+=("changed: $path") ;;
+            D) changes+=("deleted: $path") ;;
+        esac
+    done < <(docker container diff "$name")
+    created=$(jq -r '.Created | sub("\\.[0-9]+"; "") | sub("T"; " ")' "$container")
+    if [ ${#changes[@]} -eq 0 ]; then
+        report "FILES MATCH" "no files of ${name} changed outside /tmp since it was created on ${created}"
+    else
+        fail "FILES DIFFER" "files of ${name} changed since it was created on ${created}" "${changes[@]}"
+    fi
+}
+
+find_api_container() {
+    # Finds the signal-cli-rest-api container that signalblast talks to, and sets API_CONTAINER to its name.
+    # The address is asked from signalblast, inside its container that was just checked, so that it is the address that
+    # it uses, also when SIGNALBLAST_SIGNAL_SERVICE isn't set. -B so that no bytecode is written, which would change its files
+    local python address host port ids=() matches=() api_port
+    python="$(dirname "$(jq -r '.Config.Entrypoint[0]' "$WORK_DIR/image.json")")/python"
+    if ! address=$(docker exec "$TARGET" "$python" -I -B -c \
+        'from signalblast.settings import Settings; print(Settings().signal_service)' 2>&1); then
+        fail "SERVICE UNKNOWN" "${TARGET} couldn't tell the address of signal-cli-rest-api" "$address"
+        return 1
+    fi
+    host=${address%:*}
+    port=${address##*:}
+
+    # /etc/hosts comes before the docker DNS, so an extra host could send the address anywhere
+    if [ "$(jq '.HostConfig.ExtraHosts // [] | length' "$WORK_DIR/container.json")" -ne 0 ]; then
+        fail "SERVICE DIFFERS" "${TARGET} has extra hosts, which could point ${host} to another server" \
+            "$(jq -r '.HostConfig.ExtraHosts[]' "$WORK_DIR/container.json")"
+        return 1
+    fi
+
+    # Only a container on a network of signalblast, with the name of the address on that network, can be the one that
+    # the docker DNS resolves the address to. With the host network nothing matches, the address could be anything
+    mapfile -t ids < <(docker ps --quiet)
+    mapfile -t matches < <(docker container inspect "${ids[@]}" | jq -r --slurpfile signalblast "$WORK_DIR/container.json" \
+        --arg host "$host" '($signalblast[0].NetworkSettings.Networks | keys) as $networks
+        | .[] | select(any(.NetworkSettings.Networks | to_entries[];
+            (.key | IN($networks[])) and ((.value.DNSNames // []) + (.value.Aliases // []) | index([$host]))))
+        | .Name | ltrimstr("/")')
+    if [ ${#matches[@]} -ne 1 ]; then
+        fail "SERVICE DIFFERS" "${TARGET} talks to ${address}, which isn't a single container on its networks" "${matches[@]}"
+        return 1
+    fi
+    API_CONTAINER=${matches[0]}
+    docker container inspect --format '{{json .}}' "$API_CONTAINER" > "$WORK_DIR/api-container.json"
+    api_port=$(env_var "$WORK_DIR/api-container.json" PORT)
+    if [ "$port" != "${api_port:-8080}" ]; then
+        fail "SERVICE DIFFERS" "${TARGET} talks to port ${port} of ${API_CONTAINER}, which listens on ${api_port:-8080}"
+        return 1
+    fi
+    report "SERVICE MATCHES" "${TARGET} talks to ${address}, which is container ${API_CONTAINER}"
+}
+
+check_api_container() {
+    # Checks the signal-cli-rest-api container against the image pinned in the docker-compose.yaml of the release,
+    # as its image isn't signed
+    local pinned digest id platform
+    pinned=$(jq -r '.image' "$WORK_DIR/api-service.json")
+    digest=${pinned#*@}
+    if [[ $pinned != *@sha256:* ]]; then
+        fail "IMAGE UNPINNED" "the docker-compose.yaml of ${TAG} doesn't pin the signal-cli-rest-api image, so it can't be checked"
+        return
+    fi
+    inspect_image "$(jq -r '.Image' "$WORK_DIR/api-container.json")" "$WORK_DIR/api-image.json"
+    id=$(jq -r '.Id' "$WORK_DIR/api-image.json")
+    platform=$(platform "$WORK_DIR/api-image.json")
+
+    # The pin comes from the signed git tag, so an image id that is the pinned digest needs nothing downloaded.
+    # Otherwise the index is downloaded by the pinned digest, so its computed digest can only differ if the registry swapped it
+    if [ "$id" != "$digest" ] \
+        && ! { matches_image "$WORK_DIR/api-image.json" "${pinned%%:*}" "@${digest}" && [ "$INDEX_DIGEST" = "$digest" ]; }; then
+        # The rest of the checks compare the container with its image, which is already the wrong one
+        fail "IMAGE DIFFERS" "container ${API_CONTAINER} is not the ${platform} image of ${pinned%@*}, pinned by ${TAG}" \
+            "pinned image: ${digest}" "local image:  ${id}"
+        return
+    fi
+    report "IMAGE MATCHES" "container ${API_CONTAINER} is ${pinned%@*} for ${platform}, pinned by ${TAG}"
+    check_container "$API_CONTAINER" "$WORK_DIR/api-container.json" "$WORK_DIR/api-image.json" "$WORK_DIR/api-service.json"
+    check_devices
+}
+
+check_devices() {
+    # Every device of the account receives every message, so the bot's own device must be the only one.
+    # Asked from inside the signal-cli-rest-api container, with the curl of its image, which was just checked
+    local number port output
+    number=$(env_var "$WORK_DIR/container.json" SIGNALBLAST_PHONE_NUMBER)
+    port=$(env_var "$WORK_DIR/api-container.json" PORT)
+    if [ -z "$number" ]; then
+        fail "DEVICES UNKNOWN" "${TARGET} doesn't set SIGNALBLAST_PHONE_NUMBER, so the devices of its account can't be listed"
+        return
+    fi
+    if ! output=$(docker exec "$API_CONTAINER" curl -fsS "http://localhost:${port:-8080}/v1/devices/${number}" 2>&1); then
+        fail "DEVICES UNKNOWN" "${API_CONTAINER} couldn't list the devices of the bot's account" "$output"
+        return
+    fi
+    if [ "$(jq 'length' <<< "$output")" -eq 1 ]; then
+        report "DEVICES MATCH" "the bot's Signal account has no linked devices"
+        return
+    fi
+    fail "LINKED DEVICES" "the bot's Signal account has other devices, which receive every message" \
+        "$(jq -r '.[] | "device \(.id) "
+            + (.name // "" | if . == "" then "without a name" else "\"\(.)\"" end)
+            + ", created on \(.creation_timestamp / 1000 | strftime("%Y-%m-%d"))"
+            + ", last seen on \(.last_seen_timestamp / 1000 | strftime("%Y-%m-%d"))"' <<< "$output")"
 }
 
 # A running container keeps its image even if the tag was pulled again since, so the image is taken from the container
-if docker container inspect "$TARGET" > "$WORK_DIR/container.json" 2> /dev/null; then
+if docker container inspect --format '{{json .}}' "$TARGET" > "$WORK_DIR/container.json" 2> /dev/null; then
     KIND=container
-    IMAGE_ID=$(jq -r '.[0].Image' "$WORK_DIR/container.json")
-elif docker image inspect "$TARGET" > /dev/null 2>&1; then
-    KIND=image
-    IMAGE_ID=$(docker image inspect --format '{{.Id}}' "$TARGET")
+    image_ref=$(jq -r '.Image' "$WORK_DIR/container.json")
 else
+    KIND=image
+    image_ref=$TARGET
+fi
+if ! inspect_image "$image_ref" "$WORK_DIR/image.json" 2> /dev/null; then
     echo "Error: there is no container or image called ${TARGET}" >&2
     exit 1
 fi
-docker image inspect "$IMAGE_ID" | jq '.[0]' > "$WORK_DIR/image.json"
-PLATFORM=$(jq -r '"\(.Os)/\(.Architecture)"' "$WORK_DIR/image.json")
-# Empty if the image wasn't pulled from Docker Hub, e.g. if it was copied with docker save and docker load
-PULLED_DIGESTS=$(jq -r --arg image "$IMAGE" \
-    '.RepoDigests[]? | select(startswith($image + "@") or startswith("docker.io/" + $image + "@")) | sub("^.*@"; "")' \
-    "$WORK_DIR/image.json")
+IMAGE_ID=$(jq -r '.Id' "$WORK_DIR/image.json")
+PLATFORM=$(platform "$WORK_DIR/image.json")
 
 if [ -n "$TAG" ]; then
-    if ! matches_release "$TAG"; then
-        fail "IMAGE DIFFERS" "${KIND} ${TARGET} is not the ${PLATFORM} image of ${IMAGE}:$(docker_tag "$TAG")" \
-            "local image: ${IMAGE_ID}"
-        finish
-    fi
+    releases=$TAG
+    searched="${IMAGE}:$(docker_tag "$TAG")"
 else
     echo "Searching the latest ${SEARCH_LIMIT} releases for the image of ${KIND} ${TARGET}"
     # Listed first, so that an error listing them isn't taken as no release matching
     releases=$(gh release list --repo "$GITHUB_REPO" --exclude-drafts --limit "$SEARCH_LIMIT" --json tagName --jq '.[].tagName')
-    found=false
-    while read -r TAG; do
-        if matches_release "$TAG"; then
-            found=true
-            break
-        fi
-    done <<< "$releases"
-    if ! $found; then
-        fail "IMAGE DIFFERS" "${KIND} ${TARGET} is not the ${PLATFORM} image of any of the latest ${SEARCH_LIMIT} releases" \
-            "local image: ${IMAGE_ID}"
-        finish
+    searched="any of the latest ${SEARCH_LIMIT} releases"
+fi
+found=false
+for TAG in $releases; do
+    if matches_image "$WORK_DIR/image.json" "$IMAGE" ":$(docker_tag "$TAG")"; then
+        found=true
+        break
     fi
+done
+if ! $found; then
+    fail "IMAGE DIFFERS" "${KIND} ${TARGET} is not the ${PLATFORM} image of ${searched}" "local image: ${IMAGE_ID}"
+    exit_if_failed "$KIND"
 fi
-DOCKER_TAG=$(docker_tag "$TAG")
-report "IMAGE MATCHES" "${KIND} ${TARGET} is ${IMAGE}:${DOCKER_TAG} for ${PLATFORM}"
+report "IMAGE MATCHES" "${KIND} ${TARGET} is ${IMAGE}:$(docker_tag "$TAG") for ${PLATFORM}"
 
-# The signature is what ties the image to the release, the tag on Docker Hub only says where to find it
-if output=$(gh attestation verify "oci://${IMAGE}@${INDEX_DIGEST}" \
-    --repo "$GITHUB_REPO" \
-    --signer-workflow "${GITHUB_REPO}/.github/workflows/publish-pypi.yml" \
-    --source-ref "refs/tags/${TAG}" 2>&1); then
-    report "SIGNATURE VALID" "Docker ${IMAGE}:${DOCKER_TAG}, signed by publish-pypi.yml at refs/tags/${TAG}"
-else
-    mapfile -t lines < <(grep -v '^$' <<< "$output")
-    fail "SIGNATURE INVALID" "Docker ${IMAGE}:${DOCKER_TAG}" "${lines[@]}"
-fi
+# The signature is what ties the image to the release, the tag on Docker Hub only says where to find it.
+# It is checked for the index that matched, so that Docker Hub isn't asked for it again
+verify_image_signature "$TAG" "$WORK_DIR/index.json"
 
 if [ "$KIND" = container ]; then
-    CONTAINER="$WORK_DIR/container.json"
-    LOCAL_IMAGE="$WORK_DIR/image.json"
+    # What the containers can add to their images, and the signal-cli-rest-api image, come from the docker-compose.yaml
+    # of the release, which is read from its signed git tag
+    fetch_tag "$TAG" "$WORK_DIR/src"
+    verify_tag "$TAG" "$WORK_DIR/src"
+    docker compose -f "$WORK_DIR/src/docker-compose.yaml" config --no-interpolate --format json > "$WORK_DIR/compose.json"
+    compose_service signalblast > "$WORK_DIR/service.json"
+    compose_service signal-cli-rest-api > "$WORK_DIR/api-service.json"
 
-    # The image could be started with another command, which could run code from a mount or from an environment variable
-    expected=$(jq -c '{command: ((.Config.Entrypoint // []) + (.Config.Cmd // [])), healthcheck: .Config.Healthcheck.Test}' \
-        "$LOCAL_IMAGE")
-    actual=$(jq -c '.[0] | {command: ([.Path] + .Args), healthcheck: .Config.Healthcheck.Test}' "$CONTAINER")
-    differences=()
-    for field in command healthcheck; do
-        in_image=$(jq -c ".${field}" <<< "$expected")
-        in_container=$(jq -c ".${field}" <<< "$actual")
-        if [ "$in_image" != "$in_container" ]; then
-            differences+=("${field} of the image:     ${in_image}" "${field} of the container: ${in_container}")
-        fi
-    done
-    if [ ${#differences[@]} -eq 0 ]; then
-        report "COMMAND MATCHES" "the container runs the command and health check of the image"
-    else
-        fail "COMMAND DIFFERS" "the container doesn't run the command and health check of the image" "${differences[@]}"
-    fi
-
-    # Only the settings in docker-compose.yaml can be added, others like PYTHONPATH could load other code.
-    # Only the names are shown, as the values can be secrets
-    mapfile -t unexpected < <(jq -r --slurpfile image "$LOCAL_IMAGE" '.[0].Config.Env[]
-        | select(. as $var | $image[0].Config.Env | index([$var]) | not)
-        | select(test("^(SIGNALBLAST_[A-Z_]+|TZ)=") | not)
-        | sub("=.*"; "")' "$CONTAINER")
-    if [ ${#unexpected[@]} -eq 0 ]; then
-        report "ENV MATCHES" "the container only adds SIGNALBLAST_* and TZ variables to the image"
-    else
-        fail "ENV DIFFERS" "the container sets variables that the image doesn't" "${unexpected[@]}"
-    fi
-
-    # Only the data dir and /tmp can be mounted, a mount anywhere else could hide the files of the image
-    DATA_DIR=$(jq -r '.Config.Env[] | select(startswith("SIGNALBLAST_DATA_DIR=")) | sub("^[^=]*="; "")' "$LOCAL_IMAGE")
-    mapfile -t mount_points < <(jq -r '.[0] | ((.Mounts // [])[].Destination),(.HostConfig.Tmpfs // {} | keys[])' "$CONTAINER")
-    unexpected=()
-    for mount_point in "${mount_points[@]}"; do
-        if [[ $mount_point != "$DATA_DIR" && $mount_point != "$DATA_DIR"/* && $mount_point != /tmp && $mount_point != /tmp/* ]]
-        then
-            unexpected+=("$mount_point")
-        fi
-    done
-    if [ ${#unexpected[@]} -eq 0 ]; then
-        report "MOUNTS MATCH" "the container only mounts ${DATA_DIR} and /tmp"
-    else
-        fail "MOUNTS DIFFER" "the container mounts other paths than ${DATA_DIR} and /tmp" "${unexpected[@]}"
-    fi
-
-    # Only /tmp can change, besides the directories that docker creates to mount on
-    allowed_change() {
-        local path=$1 mount_point
-        [[ $path == /tmp || $path == /tmp/* ]] && return 0
-        for mount_point in "${mount_points[@]}"; do
-            [[ $mount_point == "$path" || $mount_point == "$path"/* ]] && return 0
-        done
-        return 1
-    }
-    changes=()
-    while read -r kind path; do
-        if ! allowed_change "$path"; then
-            case $kind in
-                A) changes+=("added:   $path") ;;
-                C) changes+=("changed: $path") ;;
-                D) changes+=("deleted: $path") ;;
-            esac
-        fi
-    done < <(docker container diff "$TARGET")
-    if [ ${#changes[@]} -eq 0 ]; then
-        report "FILES MATCH" "the files of the container are those of the image, other than /tmp"
-    else
-        fail "FILES DIFFER" "files of the container changed since it started" "${changes[@]}"
+    check_container "$TARGET" "$WORK_DIR/container.json" "$WORK_DIR/image.json" "$WORK_DIR/service.json"
+    if find_api_container; then
+        check_api_container
     fi
 fi
 
-finish
+exit_if_failed "$KIND"
 
+if [ "$KIND" = container ]; then
+    echo "${TARGET} runs the signed release ${TAG}, and ${API_CONTAINER} the image that it pins"
+    echo "This only shows what the containers run now, see the README for what it can't check"
+else
+    echo "The image is the signed release ${TAG}"
+fi
 if $REBUILD; then
     echo "Rebuilding ${TAG} with scripts/verify-release.sh"
     "${SCRIPTS_DIR}/verify-release.sh" "$TAG"
 else
-    echo "The ${KIND} is the signed release ${TAG}"
     echo "Add --rebuild to also check that the release was built from the code in its git tag"
 fi

@@ -1,10 +1,9 @@
 services:
   signal-cli-rest-api:
-    image: "bbernhard/signal-cli-rest-api:${SIGNAL_CLI_REST_API_VERSION:-0.101}"
-    # Fixed name so that docker/watchdog.sh can restart it
+    # Pinned by digest so that scripts/verify-container.sh can check that this exact image runs, dependabot keeps it up to date
+    image: "bbernhard/signal-cli-rest-api:0.101@sha256:2cf09d66a86fdd210e42ee91662216364acc27da1163a8c44167a77ea3a6559a"
+    # Fixed name so that docker/watchdog.sh and scripts/verify-container.sh can find it
     container_name: signal-cli-rest-api
-    ports:
-      - "127.0.0.1:8080:8080"
     volumes:
       - "$HOME/.local/share/signal-api:/home/.local/share/signal-cli"
     environment:
@@ -22,10 +21,8 @@ services:
     # Fixed name so that docker/watchdog.sh can restart it
     container_name: signalblast
     build:
-      network: "host"
       args:
         SIGNALBLAST_VERSION: ${SIGNALBLAST_VERSION:-}
-    network_mode: "host"
     volumes:
       - "$HOME/.local/share/signalblast/:/home/user/.local/share/signalblast/"
     environment:

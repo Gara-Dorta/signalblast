@@ -40,8 +40,12 @@ if command -v docker > /dev/null; then
         errors+=("docker is not running, or the user can't access it")
     fi
 fi
-if command -v gh > /dev/null && ! gh auth status > /dev/null 2>&1; then
-    errors+=("gh is not logged in, run gh auth login")
+if command -v gh > /dev/null; then
+    if ! gh attestation --help > /dev/null 2>&1; then
+        errors+=("gh is too old, it has no attestation command, install gh 2.49 or newer")
+    elif ! gh auth status > /dev/null 2>&1; then
+        errors+=("gh is not logged in, run gh auth login")
+    fi
 fi
 if [ ${#errors[@]} -ne 0 ]; then
     printf 'Error: %s\n' "${errors[@]}" >&2

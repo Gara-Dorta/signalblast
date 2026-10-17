@@ -60,28 +60,48 @@ WORK_DIR=$(mktemp -d)
 trap 'rm -rf "$WORK_DIR"' EXIT
 
 failed=0
+report() {
+    # report <result> <text>, aligned so that the texts form a column
+    printf '%-19s%s\n' "$1" "$2"
+}
+
 check() {
     # check <name> <published hash> <rebuilt hash>
     if [ "$2" = "$3" ]; then
-        echo "OK        $1"
+        report "REBUILD MATCHES" "$1"
     else
-        echo "MISMATCH  $1"
-        echo "          published: $2"
-        echo "          rebuilt:   $3"
+        report "REBUILD DIFFERS" "$1"
+        report "" "published: $2"
+        report "" "rebuilt:   $3"
         failed=1
     fi
 }
 
+valid() {
+    # valid <name> <signer>
+    report "SIGNATURE VALID" "$1, signed by $2"
+}
+
+invalid() {
+    # invalid <name> <error from the verification>
+    local line
+    report "SIGNATURE INVALID" "$1"
+    while IFS= read -r line; do
+        if [ -n "$line" ]; then
+            report "" "$line"
+        fi
+    done <<< "$2"
+    failed=1
+}
+
 signed() {
-    # signed <name> <verification command...>
-    local name=$1 output
-    shift
+    # signed <name> <signer> <verification command...>
+    local name=$1 signer=$2 output
+    shift 2
     if output=$("$@" 2>&1); then
-        echo "SIGNED    $name"
+        valid "$name" "$signer"
     else
-        echo "UNSIGNED  $name"
-        echo "$output"
-        failed=1
+        invalid "$name" "$output"
     fi
 }
 
@@ -103,7 +123,12 @@ if ! $SIGNATURES_ONLY && [ ! -f "$WORK_DIR/src/scripts/build-reproducible.sh" ];
     exit 1
 fi
 
-signed "Git tag ${TAG}" git -C "$WORK_DIR/src" -c gpg.ssh.allowedSignersFile="$ALLOWED_SIGNERS" verify-tag "$TAG"
+if output=$(git -C "$WORK_DIR/src" -c gpg.ssh.allowedSignersFile="$ALLOWED_SIGNERS" verify-tag "$TAG" 2>&1); then
+    # git reports the fingerprint of the key that made the signature
+    valid "Git tag ${TAG}" "key $(grep -o 'SHA256:[A-Za-z0-9+/]*' <<< "$output")"
+else
+    invalid "Git tag ${TAG}" "$output"
+fi
 
 # What was published is fetched before the slow build, so that an unsigned image is reported straight away
 curl -fsSL "https://pypi.org/pypi/signalblast/${VERSION}/json" \
@@ -111,7 +136,7 @@ curl -fsSL "https://pypi.org/pypi/signalblast/${VERSION}/json" \
 
 # The tag is resolved once, so that the image whose signature is checked is the one whose platforms are compared
 DIGEST=$(docker buildx imagetools inspect "${IMAGE}:${DOCKER_TAG}" --format '{{.Manifest.Digest}}')
-signed "Docker ${IMAGE}:${DOCKER_TAG}" gh attestation verify "oci://${IMAGE}@${DIGEST}" \
+signed "Docker ${IMAGE}:${DOCKER_TAG}" "publish-pypi.yml at refs/tags/${TAG}" gh attestation verify "oci://${IMAGE}@${DIGEST}" \
     --repo "$GITHUB_REPO" \
     --signer-workflow "${GITHUB_REPO}/.github/workflows/publish-pypi.yml" \
     --source-ref "refs/tags/${TAG}"
@@ -119,7 +144,8 @@ signed "Docker ${IMAGE}:${DOCKER_TAG}" gh attestation verify "oci://${IMAGE}@${D
 if $SIGNATURES_ONLY; then
     # The files on PyPI are checked, a full run also checks that they are identical to the rebuilt ones
     while read -r filename _; do
-        signed "PyPI   ${filename}" uvx --quiet pypi-attestations verify pypi --repository "$REPO_URL" "pypi:${filename}"
+        signed "PyPI   ${filename}" "$GITHUB_REPO" \
+            uvx --quiet pypi-attestations verify pypi --repository "$REPO_URL" "pypi:${filename}"
     done < "$WORK_DIR/pypi.txt"
     finish "The release is signed"
 fi
@@ -139,8 +165,8 @@ while read -r filename published; do
     check "PyPI   ${filename}" "$published" "${rebuilt:-<not rebuilt>}"
     if [ -n "$rebuilt" ]; then
         # Checks the signature published on PyPI against the rebuilt file
-        signed "PyPI   ${filename}" uvx --quiet pypi-attestations verify pypi --repository "$REPO_URL" \
-            "$WORK_DIR/out/dist/${filename}"
+        signed "PyPI   ${filename}" "$GITHUB_REPO" \
+            uvx --quiet pypi-attestations verify pypi --repository "$REPO_URL" "$WORK_DIR/out/dist/${filename}"
     fi
 done < "$WORK_DIR/pypi.txt"
 

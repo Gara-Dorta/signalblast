@@ -1,4 +1,4 @@
-# Only pyproject.toml, README.md, LICENSE and src/ are needed to build the image
+# Only pyproject.toml, uv.lock, build-constraints.txt, README.md, LICENSE and src/ are needed to build the image
 
 # Git and editors
 .git

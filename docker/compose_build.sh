@@ -4,7 +4,8 @@ REPO_DIR=$(dirname $(dirname $(realpath $0)))
 # The wheel is built inside the image, the version is passed in as git is not available there
 SIGNALBLAST_VERSION=$(uvx hatch version)
 
-# Use the commit time instead of the current time, so that the build is reproducible
+# Use the commit time instead of the current time for the dates written in the image, e.g. in /etc/shadow and the .pyc files.
+# The image is not fully reproducible, as only scripts/build-reproducible.sh also rewrites the layer timestamps
 SOURCE_DATE_EPOCH=$(git -C "${REPO_DIR}" log -1 --format=%ct)
 
 # Replace the + for a -, as + is not a valid docker tag

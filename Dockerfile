@@ -41,9 +41,10 @@ WORKDIR /home/user
 ###########################
 # The wheel is mounted instead of copied so that it is not left in the image, and the system pip is used so the venv has no pip
 RUN --mount=type=bind,from=builder,source=/build/dist,target=/tmp/dist \
+    export PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1 && \
     python -m venv --without-pip .venv && \
-    pip --python .venv/bin/python install --no-cache-dir --disable-pip-version-check --require-hashes --requirement /tmp/dist/requirements.txt && \
-    pip --python .venv/bin/python install --no-cache-dir --disable-pip-version-check --no-deps /tmp/dist/*.whl
+    pip --python .venv/bin/python install --require-hashes --requirement /tmp/dist/requirements.txt && \
+    pip --python .venv/bin/python install --no-deps /tmp/dist/*.whl
 
 ###########################
 ENV SIGNALBLAST_DATA_DIR=/home/user/.local/share/signalblast

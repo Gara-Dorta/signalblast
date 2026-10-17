@@ -1,8 +1,9 @@
 #!/bin/bash
 # Rebuilds a release from its git tag and checks that it is identical to what was published on PyPI and Docker Hub,
+# that the tag was signed by one of the keys in .github/allowed_signers,
 # and that the published files were signed by the release workflow of this repo.
 # Usage: scripts/verify-release.sh [--signatures-only] v1.2.3
-# --signatures-only only checks the signatures of the published files, which is much faster as nothing is rebuilt.
+# --signatures-only only checks the signatures of the tag and the published files, which is much faster as nothing is rebuilt.
 # Set PLATFORMS to check fewer image platforms, e.g. PLATFORMS=linux/amd64, building other platforms needs QEMU.
 # Requires git, uv, docker with buildx, curl, jq and the GitHub CLI (gh), logged in with `gh auth login`.
 set -euo pipefail
@@ -17,6 +18,9 @@ export PLATFORMS=${PLATFORMS:-linux/amd64,linux/arm64}
 GITHUB_REPO=Gara-Dorta/signalblast
 REPO_URL=https://github.com/${GITHUB_REPO}
 IMAGE=eradorta/signalblast
+# The keys come from the copy of the repo running this script, not from the release being checked,
+# as whoever made the release could have added their own key to it
+ALLOWED_SIGNERS="$(dirname "$(dirname "$(realpath "$0")")")/.github/allowed_signers"
 
 # Same version and tag conversion as the release workflow
 VERSION="${TAG#v}"
@@ -61,15 +65,15 @@ finish() {
     exit 0
 }
 
-if ! $SIGNATURES_ONLY; then
-    echo "Cloning ${REPO_URL} at ${TAG}"
-    git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$TAG" "$REPO_URL" "$WORK_DIR/src"
+echo "Cloning ${REPO_URL} at ${TAG}"
+git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$TAG" "$REPO_URL" "$WORK_DIR/src"
 
-    if [ ! -f "$WORK_DIR/src/scripts/build-reproducible.sh" ]; then
-        echo "${TAG} predates reproducible builds, it can't be verified" >&2
-        exit 1
-    fi
+if ! $SIGNATURES_ONLY && [ ! -f "$WORK_DIR/src/scripts/build-reproducible.sh" ]; then
+    echo "${TAG} predates reproducible builds, it can't be verified" >&2
+    exit 1
 fi
+
+signed "Git tag ${TAG}" git -C "$WORK_DIR/src" -c gpg.ssh.allowedSignersFile="$ALLOWED_SIGNERS" verify-tag "$TAG"
 
 # What was published is fetched before the slow build, so that an unsigned image is reported straight away
 curl -fsSL "https://pypi.org/pypi/signalblast/${VERSION}/json" \

@@ -128,6 +128,7 @@ The rest are optional:
 * Run `signal-cli-rest-api` with `docker compose up signal-cli-rest-api`
 * Run the bot `uv run signalblast`
 * Optional: install signalbot as an editable dependency with `uv add --editable ../signalbot/`, but don't commit that change
+* Maintainers: see [RELEASING.md](RELEASING.md) for how to make a release
 
 ### Docker compose
 
@@ -137,6 +138,9 @@ The docker compose scripts will automatically get and set the signalblast versio
 ### Reproducible builds
 
 The PyPI wheel and the docker image are reproducible.
+
+Release tags are signed with the SSH key in [.github/allowed_signers](.github/allowed_signers).
+The files on PyPI and Docker Hub are signed by the release workflow.
 
 To check that a release on PyPI and Docker Hub was built from the code in its git tag, rebuild and compare it, and check its signatures, with:
 ```bash

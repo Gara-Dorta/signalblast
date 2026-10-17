@@ -1,0 +1,5 @@
+# SSH keys allowed to sign the release tags, checked by scripts/verify-release.sh and the release workflow.
+# The format is described under ALLOWED SIGNERS in `man ssh-keygen`, one key per line:
+#   <email> namespaces="git" <key type> <public key>
+# When replacing a key, keep the old one with valid-before="YYYYMMDD" so that the older tags still verify.
+1507774+Gara-Dorta@users.noreply.github.com namespaces="git" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJle7CZB/CLeGmLBLzb6Ju37cslXdIaPb71jwZt3zFrm signalblast signing

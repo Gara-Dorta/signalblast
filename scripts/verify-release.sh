@@ -120,9 +120,9 @@ if $SIGNATURES_ONLY; then
     finish "The release is signed"
 fi
 
-# Compared per platform, the published image index also has the provenance attestations so its digest differs
+# Compared per platform, so that PLATFORMS can check only some of them
 docker buildx imagetools inspect --raw "${IMAGE}@${DIGEST}" \
-    | jq -r '.manifests[] | select(.platform.os != "unknown") | "\(.platform.os)/\(.platform.architecture) \(.digest)"' \
+    | jq -r '.manifests[] | "\(.platform.os)/\(.platform.architecture) \(.digest)"' \
     > "$WORK_DIR/published.txt"
 
 # Built with the script from the tag, so that it is built the same way as the release was

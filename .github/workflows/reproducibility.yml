@@ -1,7 +1,7 @@
 name: Reproducible Builds
 
 # Builds the package distributions and the image twice on different runners and checks that they are identical.
-# The release workflow publishes the distributions built here, see publish-pypi.yml
+# The release workflow publishes the distributions and the image of build 1, see publish-pypi.yml
 on:
   push:
     branches: [ "main" ]
@@ -79,17 +79,19 @@ jobs:
           name: build-${{ matrix.id }}
           path: |
             ${{ runner.temp }}/out/hashes.txt
+            ${{ runner.temp }}/out/SHA256SUMS
             ${{ runner.temp }}/out/dist/
           if-no-files-found: error
 
-      # Only needed to look into differences with https://github.com/reproducible-containers/diffoci
+      # Pushed by the release workflow, also useful to look into differences with https://github.com/reproducible-containers/diffoci
       - name: Upload the image
         uses: actions/upload-artifact@v7
         with:
           name: image-${{ matrix.id }}
           path: ${{ runner.temp }}/out/image.tar
           compression-level: 0
-          retention-days: 1
+          # A release waits for the approval of the pypi environment before pushing it, which times out after 30 days
+          retention-days: ${{ github.event_name == 'release' && 30 || 1 }}
           if-no-files-found: error
 
   compare:

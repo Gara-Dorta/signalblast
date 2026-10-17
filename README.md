@@ -43,6 +43,7 @@ Its database only remembers who sent what, and only for as long as it needs to:
 Every message passes through the server that hosts the bot, so whoever runs it could, in principle, see who everyone is and what they send.
 The bot doesn't record this, but there is no easy way yet to prove from the outside that the host runs an unmodified bot.
 If you can get access to the server, you can check that it runs an unmodified, signed release, see [verify the container](#verify-the-container).
+Notet that there are attacks that verify ca not rule out, they are listed there..
 
 ## Installation
 
@@ -108,7 +109,7 @@ The rest are optional:
 | Variable | Default | Description |
 |---|---|---|
 | `SIGNALBLAST_PASSWORD` | | The password to become an admin. It is stored hashed, so it only needs to be set on the first start or to change it. Without it nobody can become an admin |
-| `SIGNALBLAST_SIGNAL_SERVICE` | `localhost:8080` | The address of signal-cli-rest-api |
+| `SIGNALBLAST_SIGNAL_SERVICE` | `signal-cli-rest-api:8080` | The address of signal-cli-rest-api |
 | `SIGNALBLAST_DATA_DIR` | `~/.local/share/signalblast` | Where the database is stored |
 | `SIGNALBLAST_INSTRUCTIONS_URL` | | A link with instructions, shown in the help |
 | `SIGNALBLAST_EXPIRATION_TIME` | 4 weeks | The disappearing messages timer of the chats with the subscribers in seconds, `0` leaves the timer of the chats unchanged, `-1` disables it |
@@ -125,7 +126,7 @@ The rest are optional:
 * Install the repo and the dependencies in a new virtual environment with `uv sync`
 * Install the prek hooks with `uv run prek install`, they run `ruff` and `ty`
 * Run the tests with `uv run pytest`
-* Run `signal-cli-rest-api` with `docker compose up signal-cli-rest-api`
+* Run `signal-cli-rest-api` with `docker compose -f docker-compose.yaml -f docker/compose.dev.yaml up signal-cli-rest-api` and set `SIGNALBLAST_SIGNAL_SERVICE=localhost:8080` in the `.env` file
 * Run the bot `uv run signalblast`
 * Optional: install signalbot as an editable dependency with `uv add --editable ../signalbot/`, but don't commit that change
 * Maintainers: see [RELEASING.md](RELEASING.md) for how to make a release
@@ -151,17 +152,27 @@ The script needs `gh` to be logged in with `gh auth login`.
 Add `--signatures-only` to only check the signatures, which is much faster as nothing is rebuilt.
 
 ### Verify the container
-To check that the signalblast container running on your machine is a signed release, run:
+
+Whoever hosts the bot has full control of the server.
+So, the checks below make tampering harder and easier to spot but not impossible.
+Most importantly, they only show what the containers run when the checks run, a host could run modified containers in between checks.
+
+To verify the containers, run:
 ```bash
 scripts/verify-container.sh
 ```
-It checks:
-* the image signature
-* that the container runs the image unmodified
-    * with its command
-    * only the `SIGNALBLAST_*` and `TZ` variables added
-    * only the data dir and `/tmp` mounted
-    * no files changed outside `/tmp`
+It checks that:
+* the signalblast image is a signed release.
+* signalblast talks to the signal-cli-rest-api specified in the `docker-compose.yaml`.
+* the signal-cli-rest-api image is the one pinned in the `docker-compose.yaml`.
+  This image is not signed, so this only shows that it is the image published on Docker Hub.
+* both containers run their image unmodified:
+    * with its command and health check.
+    * with only the variables and mounts of their services in that `docker-compose.yaml` added, and `/tmp`.
+    * with no files changed outside `/tmp`.
+* the Signal account of the bot has no linked devices, as they would receive every message.
 
-It supports checking against different container names and versions, e.g. `scripts/verify-container.sh my-other-container v1.2.3`.
-Add `--rebuild` to also run `scripts/verify-release.sh` for that release.
+Run with `--rebuild` to also run `scripts/verify-release.sh` (reproducibility checks) for that release.
+
+The `verify-container.sh` script will find the default container and version.
+Additionaly, it also supports checking against different container names and versions, e.g. `scripts/verify-container.sh my-other-container v1.2.3`.

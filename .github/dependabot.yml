@@ -15,3 +15,8 @@ updates:
     directory: "/"
     schedule:
       interval: "semiannually"
+
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"

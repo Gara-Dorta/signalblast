@@ -144,3 +144,4 @@ scripts/verify-release.sh v1.2.3
 ```
 Building the arm64 image needs QEMU, set `PLATFORMS=linux/amd64` to only check the amd64 one.
 The script needs `gh` to be logged in with `gh auth login`.
+Add `--signatures-only` to only check the signatures, which is much faster as nothing is rebuilt.

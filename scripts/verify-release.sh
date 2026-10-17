@@ -1,12 +1,18 @@
 #!/bin/bash
 # Rebuilds a release from its git tag and checks that it is identical to what was published on PyPI and Docker Hub,
 # and that the published files were signed by the release workflow of this repo.
-# Usage: scripts/verify-release.sh v1.2.3
+# Usage: scripts/verify-release.sh [--signatures-only] v1.2.3
+# --signatures-only only checks the signatures of the published files, which is much faster as nothing is rebuilt.
 # Set PLATFORMS to check fewer image platforms, e.g. PLATFORMS=linux/amd64, building other platforms needs QEMU.
 # Requires git, uv, docker with buildx, curl, jq and the GitHub CLI (gh), logged in with `gh auth login`.
 set -euo pipefail
 
-TAG=${1:?usage: $0 <release tag, e.g. v1.2.3>}
+SIGNATURES_ONLY=false
+if [ "${1:-}" = "--signatures-only" ]; then
+    SIGNATURES_ONLY=true
+    shift
+fi
+TAG=${1:?usage: $0 [--signatures-only] <release tag, e.g. v1.2.3>}
 export PLATFORMS=${PLATFORMS:-linux/amd64,linux/arm64}
 GITHUB_REPO=Gara-Dorta/signalblast
 REPO_URL=https://github.com/${GITHUB_REPO}
@@ -45,12 +51,24 @@ signed() {
     fi
 }
 
-echo "Cloning ${REPO_URL} at ${TAG}"
-git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$TAG" "$REPO_URL" "$WORK_DIR/src"
+finish() {
+    # finish <message on success>
+    if [ "$failed" -ne 0 ]; then
+        echo "The release could not be verified"
+        exit 1
+    fi
+    echo "$1"
+    exit 0
+}
 
-if [ ! -f "$WORK_DIR/src/scripts/build-reproducible.sh" ]; then
-    echo "${TAG} predates reproducible builds, it can't be verified" >&2
-    exit 1
+if ! $SIGNATURES_ONLY; then
+    echo "Cloning ${REPO_URL} at ${TAG}"
+    git -c advice.detachedHead=false clone --quiet --depth 1 --branch "$TAG" "$REPO_URL" "$WORK_DIR/src"
+
+    if [ ! -f "$WORK_DIR/src/scripts/build-reproducible.sh" ]; then
+        echo "${TAG} predates reproducible builds, it can't be verified" >&2
+        exit 1
+    fi
 fi
 
 # What was published is fetched before the slow build, so that an unsigned image is reported straight away
@@ -63,6 +81,15 @@ signed "Docker ${IMAGE}:${DOCKER_TAG}" gh attestation verify "oci://${IMAGE}@${D
     --repo "$GITHUB_REPO" \
     --signer-workflow "${GITHUB_REPO}/.github/workflows/publish-pypi.yml" \
     --source-ref "refs/tags/${TAG}"
+
+if $SIGNATURES_ONLY; then
+    # The files on PyPI are checked, a full run also checks that they are identical to the rebuilt ones
+    while read -r filename _; do
+        signed "PyPI   ${filename}" uvx --quiet pypi-attestations verify pypi --repository "$REPO_URL" "pypi:${filename}"
+    done < "$WORK_DIR/pypi.txt"
+    finish "The release is signed"
+fi
+
 # Compared per platform, the published image index also has the provenance attestations so its digest differs
 docker buildx imagetools inspect --raw "${IMAGE}@${DIGEST}" \
     | jq -r '.manifests[] | select(.platform.os != "unknown") | "\(.platform.os)/\(.platform.architecture) \(.digest)"' \
@@ -89,8 +116,4 @@ for platform in ${PLATFORMS//,/ }; do
     check "Docker ${IMAGE}:${DOCKER_TAG} ${platform}" "${published:-<not published>}" "${rebuilt:-<not rebuilt>}"
 done
 
-if [ "$failed" -ne 0 ]; then
-    echo "The release could not be verified"
-    exit 1
-fi
-echo "The release is reproducible and signed"
+finish "The release is reproducible and signed"

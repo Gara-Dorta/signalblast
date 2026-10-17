@@ -118,25 +118,8 @@ The rest are optional:
 | `SIGNALBLAST_LOG_LEVEL` | `INFO` | `DEBUG`, `INFO`, `WARNING` or `ERROR` |
 | `SIGNALBLAST_LOG_FILE` | | Log to this file, rotated weekly, instead of the console |
 
-## Development
 
-* Set up signal-cli-rest-api as specified in the [installation](#installation) section.
-* Clone the repo
-* Install [uv](https://docs.astral.sh/uv/)
-* Install the repo and the dependencies in a new virtual environment with `uv sync`
-* Install the prek hooks with `uv run prek install`, they run `ruff` and `ty`
-* Run the tests with `uv run pytest`
-* Run `signal-cli-rest-api` with `docker compose -f docker-compose.yaml -f docker/compose.dev.yaml up signal-cli-rest-api` and set `SIGNALBLAST_SIGNAL_SERVICE=localhost:8080` in the `.env` file
-* Run the bot `uv run signalblast`
-* Optional: install signalbot as an editable dependency with `uv add --editable ../signalbot/`, but don't commit that change
-* Maintainers: see [RELEASING.md](RELEASING.md) for how to make a release
-
-### Docker compose
-
-The docker compose scripts will automatically get and set the signalblast version from the git history.
-`docker/compose_build.sh` and `docker/compose_up.sh` build and run the image from the local code.
-
-### Reproducible builds
+## Reproducible builds
 
 The PyPI wheel and the docker image are reproducible.
 
@@ -151,7 +134,7 @@ Only the image for the platform of your machine is rebuilt, add `--all-platforms
 The script needs `gh` to be logged in with `gh auth login`.
 Add `--signatures-only` to only check the signatures, which is much faster as nothing is rebuilt.
 
-### Verify the container
+## Verify the container
 
 Whoever hosts the bot has full control of the server.
 So, the checks below make tampering harder and easier to spot but not impossible.
@@ -172,7 +155,7 @@ It checks that:
     * with no files changed outside `/tmp`.
 * the Signal account of the bot has no linked devices, as they would receive every message.
 
-Run with `--rebuild` to also run `scripts/verify-release.sh` (reproducibility checks) for that release.
+Run with `--rebuild` to also run `scripts/verify-release.sh` ([(reproducibility checks](#reproducible-builds)) for that release.
 
 The `verify-container.sh` script will find the default container and version.
 Additionaly, it also supports checking against different container names and versions, e.g. `scripts/verify-container.sh my-other-container v1.2.3`.

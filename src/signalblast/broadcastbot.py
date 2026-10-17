@@ -69,7 +69,9 @@ class BroadcastBot:
         text is the same."""
         if message.text == text:
             return
-        new_message = SendMessage(**(message.model_dump(exclude={"recipient", "timestamp"}) | {"text": text}))
+        new_message = SendMessage.model_validate(
+            message.model_dump(exclude={"recipient", "timestamp"}) | {"text": text}
+        )
         try:
             await self.signal_bot.messages.edit(new_message, message)
         except SignalBotError:

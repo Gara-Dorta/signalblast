@@ -32,17 +32,17 @@ Messages that users send with `!admin` reach every admin as `User wrote: …`. T
 
 ### Privacy
 
-* Subscribers never learn who else is subscribed, or who sent a broadcast.
-* Admins never learn who a subscriber is either: users who write to the admins appear as `User`, and bans and answers work by replying to messages.
-* The bot's database keeps only:
-   * who sent each broadcast, for 24 hours, so that broadcasts can be edited and deleted
-   * which user each message between users and admins belongs to, for 7 days, so that replies reach the right person.
-   The content of the messages is not stored.
-   * both are also used to let admins ban a sender just by replying to their message.
-* Whoever hosts the bot can, in principle, see who everyone is and what they send, since every message passes through their server.
-By default the bot does not record this.
-However, there is currently no easy way to prove that the host has not modified the bot.
-Ways to address this are discussed in [#39](https://github.com/Gara-Dorta/signalblast/issues/39).
+* Subscribers don't see who else is subscribed, or who sent a broadcast.
+* Admins don't see who the subscribers are either.
+Messages to the admins arrive from `User`, and admins answer and ban people by replying to their messages, never by name or number.
+* The bot doesn't store the content of messages.
+Its database only remembers who sent what, and only for as long as it needs to:
+  * the sender of each broadcast, for 24 hours, so that broadcasts can be edited and deleted
+  * the user that each message between a user and the admins belongs to, for 7 days, so that replies reach the right person
+
+Every message passes through the server that hosts the bot, so whoever runs it could, in principle, see who everyone is and what they send.
+The bot doesn't record this, but there is no easy way yet to prove from the outside that the host runs an unmodified bot.
+If you can get access to the server, you can check that it runs an unmodified, signed release, see [verify the container](#verify-the-container).
 
 ## Installation
 
@@ -149,3 +149,19 @@ scripts/verify-release.sh v1.2.3
 Only the image for the platform of your machine is rebuilt, add `--all-platforms` to rebuild all of them, which needs QEMU.
 The script needs `gh` to be logged in with `gh auth login`.
 Add `--signatures-only` to only check the signatures, which is much faster as nothing is rebuilt.
+
+### Verify the container
+To check that the signalblast container running on your machine is a signed release, run:
+```bash
+scripts/verify-container.sh
+```
+It checks:
+* the image signature
+* that the container runs the image unmodified
+    * with its command
+    * only the `SIGNALBLAST_*` and `TZ` variables added
+    * only the data dir and `/tmp` mounted
+    * no files changed outside `/tmp`
+
+It supports checking against different container names and versions, e.g. `scripts/verify-container.sh my-other-container v1.2.3`.
+Add `--rebuild` to also run `scripts/verify-release.sh` for that release.

@@ -31,7 +31,8 @@ SEARCH_LIMIT=20
 # shellcheck source=scripts/verify-common.sh
 source "${SCRIPTS_DIR}/verify-common.sh"
 
-check_requirements git ssh-keygen docker jq sha256sum gh docker-buildx docker-compose docker-running gh-attestation
+check_requirements git ssh-keygen docker jq sha256sum gh docker-buildx docker-compose docker-running gh-attestation \
+    allowed-signers
 
 WORK_DIR=$(mktemp -d)
 trap 'rm -rf "$WORK_DIR"' EXIT

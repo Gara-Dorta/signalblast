@@ -1,9 +1,10 @@
 name: Release
 
-# Checks that the release tag is signed, runs the tests and the reproducibility check, then publishes the package to TestPyPI and PyPI and the image to Docker Hub
+# Checks that the release tag is signed, runs the tests and the reproducibility check, publishes the package to TestPyPI and PyPI and the image to Docker Hub,
+# then creates the GitHub release
 on:
-  release:
-    types: [published]
+  push:
+    tags: [ "v*" ]
 
 permissions:
   contents: read
@@ -31,7 +32,7 @@ jobs:
     # Users check the tag against their own copy of allowed_signers with scripts/verify-release.sh
     - name: Verify the tag signature
       env:
-        RELEASE_TAG: ${{ github.event.release.tag_name }}
+        RELEASE_TAG: ${{ github.ref_name }}
       run: |
         # The checkout can replace an annotated tag with a plain ref, so fetch the tag object itself
         git fetch --quiet --force origin "refs/tags/${RELEASE_TAG}:refs/tags/${RELEASE_TAG}"
@@ -84,8 +85,9 @@ jobs:
       with:
         packages-dir: build/dist/
 
-  checksums:
-    name: Attach the checksums and the image digests to the release
+  # Created last, so that the latest release, used by docker/install_watchdog.sh, is always published to PyPI and Docker Hub
+  release:
+    name: Create the release with the checksums and the image digests
     needs: [pypi, docker]
     runs-on: ubuntu-latest
     permissions:
@@ -100,10 +102,10 @@ jobs:
         path: build/
 
     # The digests are not in SHA256SUMS, as they are not hashes of files and would break `sha256sum -c`
-    - name: Upload SHA256SUMS and IMAGE-DIGESTS
+    - name: Create the release with SHA256SUMS and IMAGE-DIGESTS
       env:
         GH_TOKEN: ${{ github.token }}
-        RELEASE_TAG: ${{ github.event.release.tag_name }}
+        RELEASE_TAG: ${{ github.ref_name }}
         IMAGE_REF: ${{ needs.docker.outputs.ref }}
         INDEX_DIGEST: ${{ needs.docker.outputs.digest }}
       run: |
@@ -112,7 +114,8 @@ jobs:
           awk -v ref="$IMAGE_REF" '$2 == "image" {print $1 "  " ref " " $3}' build/hashes.txt
         } > build/IMAGE-DIGESTS
         cat build/IMAGE-DIGESTS
-        gh release upload "$RELEASE_TAG" build/SHA256SUMS build/IMAGE-DIGESTS --repo "$GITHUB_REPOSITORY"
+        gh release create "$RELEASE_TAG" build/SHA256SUMS build/IMAGE-DIGESTS \
+          --repo "$GITHUB_REPOSITORY" --verify-tag --title "$RELEASE_TAG" --generate-notes
 
   docker:
     name: Push the image to Docker Hub
@@ -146,7 +149,7 @@ jobs:
     - name: Push the image
       id: push
       env:
-        RELEASE_TAG: ${{ github.event.release.tag_name }}
+        RELEASE_TAG: ${{ github.ref_name }}
       run: |
         # The release tags are v<version>, e.g. v1.2.3, and the + is replaced for a -, as + is not a valid docker tag
         DOCKER_TAG="${RELEASE_TAG#v}"

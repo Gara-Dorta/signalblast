@@ -7,6 +7,9 @@ on:
   # Allows the release workflow to run the tests before publishing
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
   pytest_commit:
     runs-on: ubuntu-24.04

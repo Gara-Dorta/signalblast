@@ -13,10 +13,9 @@ git push origin v1.2.3
 
 Pushing a `v*` tag starts the [release workflow](.github/workflows/publish-pypi.yml), don't create the GitHub release yourself. The workflow:
 1. Checks the tag signature, runs the tests and checks that the build is reproducible.
-2. Publishes to TestPyPI.
-3. Waits for the approval of the `pypi` environment, approve it from the workflow run with **Review deployments**.
-4. Publishes to PyPI, then pushes and signs the docker image.
-5. Creates the GitHub release, with generated notes and `SHA256SUMS` and `IMAGE-DIGESTS` attached.
+2. Waits for the approval of the `pypi` environment, approve it from the workflow run with **Review deployments**.
+3. Publishes to PyPI, then pushes and signs the docker image.
+4. Creates the GitHub release, with generated notes and `SHA256SUMS` and `IMAGE-DIGESTS` attached.
 
 Check the published release with `scripts/verify-release.sh v1.2.3`, see the [README](README.md#reproducible-builds).
 

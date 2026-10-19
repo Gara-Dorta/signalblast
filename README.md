@@ -43,7 +43,7 @@ Its database only remembers who sent what, and only for as long as it needs to:
 Every message passes through the server that hosts the bot, so whoever runs it could, in principle, see who everyone is and what they send.
 The bot doesn't record this, but there is no easy way yet to prove from the outside that the host runs an unmodified bot.
 If you can get access to the server, you can check that it runs an unmodified, signed release, see [verify the container](#verify-the-container).
-Notet that there are attacks that verify ca not rule out, they are listed there..
+Notet that there are attacks that verify ca not rule out, they are listed there.
 
 ## Installation
 

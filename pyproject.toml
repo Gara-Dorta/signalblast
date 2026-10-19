@@ -23,7 +23,7 @@ dependencies = [
     "bcrypt>=5.0.0",
     "pydantic>=2.13.4",
     "pydantic-settings>=2.11",
-    "signalbot>=2.1.0",
+    "signalbot>=2.1.1",
 ]
 
 [project.scripts]

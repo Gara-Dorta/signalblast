@@ -81,6 +81,12 @@ You'll likely want `SIGNALBLAST_PASSWORD`, otherwise nobody can become an admin.
     curl -fsSL https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/docker/install_watchdog.sh | bash -s -- --uninstall
     ```
   * Alternatively, Docker Swarm and Podman (`--health-on-failure=restart`) can restart the signalblast container natively, but they won't restart signal-cli-rest-api.
+* To update, download the latest `docker-compose.yaml` and pull the images.
+  ```bash
+  curl -fsSLO https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/docker-compose.yaml
+  docker compose pull
+  docker compose up -d
+  ```
 
 ### Option 2: python environment
 

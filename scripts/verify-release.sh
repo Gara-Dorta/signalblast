@@ -1,7 +1,8 @@
 #!/bin/bash
 # Rebuilds a release from its git tag and checks that it is identical to what was published on PyPI and Docker Hub,
 # that the tag was signed by one of the keys in .github/allowed_signers,
-# and that the published files were signed by the release workflow of this repo.
+# that the published files were signed by the release workflow of this repo,
+# and that the files attached to the GitHub release, e.g. the installers, are the ones in the tag.
 # Usage: scripts/verify-release.sh [--signatures-only] [--all-platforms] v1.2.3
 # --signatures-only only checks the signatures of the tag and the published files, which is much faster as nothing is rebuilt.
 # --all-platforms rebuilds the image for all the platforms it was published for, instead of only the one of this machine.
@@ -25,7 +26,7 @@ TAG=${1:?$USAGE}
 # shellcheck source=scripts/verify-common.sh
 source "$(dirname "$(realpath "$0")")/verify-common.sh"
 
-requirements=(git ssh-keygen uv uvx curl jq docker gh docker-buildx gh-attestation allowed-signers)
+requirements=(git ssh-keygen uv uvx curl jq cmp docker gh docker-buildx gh-attestation allowed-signers)
 if ! $SIGNATURES_ONLY; then
     requirements+=(sha256sum tar docker-running)
 fi
@@ -57,6 +58,40 @@ signed() {
     fi
 }
 
+# The files that the release workflow attaches to the release, by their path in the tag
+ATTACHED_FILES=(install.sh docker/install_watchdog.sh docker-compose.yaml .env.example)
+
+check_attached_files() {
+    # The installers are piped into bash from the latest release, and the files attached to a release can be replaced
+    # after it is published, unlike the signed tag, so they are compared with the files in the tag
+    local attached path name names=() paths=() patterns=() i
+    attached=$(gh release view "$TAG" --repo "$GITHUB_REPO" --json assets --jq '.assets[].name')
+    for path in "${ATTACHED_FILES[@]}"; do
+        # Attached by file name, without the leading dot, as GitHub renames the files that start with one
+        name=${path##*/}
+        name=${name#.}
+        if grep -qxF "$name" <<< "$attached"; then
+            names+=("$name")
+            paths+=("$path")
+            patterns+=(--pattern "$name")
+        else
+            # Releases made before the files were attached don't have them, a missing file can't be run either
+            report "NOT ATTACHED" "GitHub ${name}"
+        fi
+    done
+    if [ ${#names[@]} -eq 0 ]; then
+        return
+    fi
+    gh release download "$TAG" --repo "$GITHUB_REPO" --dir "$WORK_DIR/attached" "${patterns[@]}"
+    for i in "${!names[@]}"; do
+        if cmp -s "$WORK_DIR/attached/${names[i]}" "$WORK_DIR/src/${paths[i]}"; then
+            report "TAG MATCHES" "GitHub ${names[i]}"
+        else
+            fail "TAG DIFFERS" "GitHub ${names[i]}" "it is not the ${paths[i]} of ${TAG}"
+        fi
+    done
+}
+
 finish() {
     # finish <message on success>
     exit_if_failed release
@@ -73,6 +108,7 @@ if ! $SIGNATURES_ONLY && [ ! -f "$WORK_DIR/src/scripts/build-reproducible.sh" ];
 fi
 
 verify_tag "$TAG" "$WORK_DIR/src"
+check_attached_files
 
 # What was published is fetched before the slow build, so that an unsigned image is reported straight away
 curl -fsSL "https://pypi.org/pypi/signalblast/${VERSION}/json" \

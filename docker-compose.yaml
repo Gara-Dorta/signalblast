@@ -1,8 +1,11 @@
+# Fixed project name, so that running it from any folder manages the same containers, install.sh relies on it
+name: signalblast
+
 services:
   signal-cli-rest-api:
     # Pinned by digest so that scripts/verify-container.sh can check that this exact image runs, dependabot keeps it up to date
     image: "bbernhard/signal-cli-rest-api:0.101@sha256:2cf09d66a86fdd210e42ee91662216364acc27da1163a8c44167a77ea3a6559a"
-    # Fixed name so that docker/watchdog.sh and scripts/verify-container.sh can find it
+    # Fixed name so that docker/watchdog.sh, install.sh and scripts/verify-container.sh can find it
     container_name: signal-cli-rest-api
     volumes:
       - "$HOME/.local/share/signal-api:/home/.local/share/signal-cli"
@@ -18,7 +21,7 @@ services:
 
   signalblast:
     image: "eradorta/signalblast:${DOCKER_TAG:-latest}"
-    # Fixed name so that docker/watchdog.sh can restart it
+    # Fixed name so that docker/watchdog.sh can restart it and install.sh can find it
     container_name: signalblast
     build:
       args:

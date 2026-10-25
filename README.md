@@ -47,46 +47,24 @@ Notet that there are attacks that verify ca not rule out, they are listed there.
 
 ## Installation
 
-### Option 1: docker compose
+### Option 1: docker compose (recommended)
 
 This uses the images from https://hub.docker.com/r/eradorta/signalblast
 
-* Set up signal-cli-rest-api for the bot's phone number as specified [here](https://signalbot-org.github.io/signalbot/latest/01_getting_started/#setup-signal-cli-rest-api).
-* Stop the `signal-cli-rest-api` container.
-* Download the [docker-compose.yaml](https://github.com/Gara-Dorta/signalblast/blob/main/docker-compose.yaml) and [.env.example](https://github.com/Gara-Dorta/signalblast/blob/main/.env.example) files, the latter is downloaded as `.env`.
-  ```bash
-  curl -fsSLO https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/docker-compose.yaml
-  curl -fsSL -o .env https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/.env.example
-  ```
-* Fill in `SIGNALBLAST_PHONE_NUMBER` in `.env`.
-The rest are optional, uncomment the ones you want to set, see [configuration](#configuration).
-You'll likely want `SIGNALBLAST_PASSWORD`, otherwise nobody can become an admin.
-* Create a data folder
-  ```bash
-  mkdir -p $HOME/.local/share/signalblast
-  ```
-* Run via docker compose on the folder where the `docker-compose.yaml` file is located:
-  ```bash
-  docker compose up
-  ```
-* Optional: restart the containers automatically when signalblast can't send messages.
-  * Set `SIGNALBLAST_HEALTHCHECK_RECEIVER` in your `.env` file, it will receive a "Ping" message every 8 hours.
-  The signalblast container is reported as unhealthy after 3 failed pings in a row, so a problem is detected within a day.
-  * Docker doesn't restart unhealthy containers on its own, and the error is often only recoverable by restarting both signal-cli-rest-api and signalblast. Install the [watchdog](https://github.com/Gara-Dorta/signalblast/blob/main/docker/watchdog.sh) as a systemd user timer that does that, it runs as your user (which must be able to run docker):
-    ```bash
-    curl -fsSL https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/docker/install_watchdog.sh | bash
-    ```
-  * Uninstall it with:
-    ```bash
-    curl -fsSL https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/docker/install_watchdog.sh | bash -s -- --uninstall
-    ```
-  * Alternatively, Docker Swarm and Podman (`--health-on-failure=restart`) can restart the signalblast container natively, but they won't restart signal-cli-rest-api.
-* To update, download the latest `docker-compose.yaml` and pull the images.
-  ```bash
-  curl -fsSLO https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/docker-compose.yaml
-  docker compose pull
-  docker compose up -d
-  ```
+1. Set up signal-cli-rest-api as specified [here](https://signalbot-org.github.io/signalbot/latest/01_getting_started/#setup-signal-cli-rest-api).
+2. Run the [installer](https://github.com/Gara-Dorta/signalblast/blob/main/install.sh):
+   ```bash
+   curl -fsSL https://github.com/Gara-Dorta/signalblast/releases/latest/download/install.sh | bash
+   ```
+   It downloads the `docker-compose.yaml` and the `.env` with the [configuration](#configuration) to `~/.config/signalblast` by default, removes the signal-cli-rest-api container from step 1 and starts signalblast.
+
+To update, or to apply changes to the settings in `~/.config/signalblast/.env`, run the installer again, the settings are kept.
+
+To uninstall, run:
+```bash
+curl -fsSL https://github.com/Gara-Dorta/signalblast/releases/latest/download/install.sh | bash -s -- --uninstall
+```
+It removes the containers, the images and the watchdog, and asks whether to also remove the settings, the database and the Signal account of the bot.
 
 ### Option 2: python environment
 
@@ -98,6 +76,47 @@ You'll likely want `SIGNALBLAST_PASSWORD`, otherwise nobody can become an admin.
 * Set the [configuration](#configuration) as environment variables or in a `.env` file in the folder you run it from, then run it with
   ```bash
   signalblast
+  ```
+
+### Option 3: docker compose (manual)
+
+This does the same as the installer of option 1, step by step.
+
+* Set up signal-cli-rest-api as specified [here](https://signalbot-org.github.io/signalbot/latest/01_getting_started/#setup-signal-cli-rest-api).
+* Stop and remove the `signal-cli-rest-api` container.
+* Download the [docker-compose.yaml](https://github.com/Gara-Dorta/signalblast/releases/latest/download/docker-compose.yaml) and [env.example](https://github.com/Gara-Dorta/signalblast/releases/latest/download/env.example) files of the [latest release](https://github.com/Gara-Dorta/signalblast/releases/latest), the latter as `.env`.
+  ```bash
+  curl -fsSLO https://github.com/Gara-Dorta/signalblast/releases/latest/download/docker-compose.yaml
+  curl -fsSL -o .env https://github.com/Gara-Dorta/signalblast/releases/latest/download/env.example
+  ```
+* Fill in `SIGNALBLAST_PHONE_NUMBER` in `.env`.
+The rest are optional, uncomment the ones you want to set, see [configuration](#configuration).
+You'll likely want `SIGNALBLAST_PASSWORD`, otherwise nobody can become an admin.
+* Create a data folder
+  ```bash
+  mkdir -p $HOME/.local/share/signalblast
+  ```
+* Run via docker compose on the folder where the `docker-compose.yaml` file is located:
+  ```bash
+  docker compose up -d
+  ```
+* Optional: restart the containers automatically when signalblast can't send messages.
+  * Set `SIGNALBLAST_HEALTHCHECK_RECEIVER` in your `.env` file, it will receive a "Ping" message every 8 hours.
+  The signalblast container is reported as unhealthy after 3 failed pings in a row, so a problem is detected within a day.
+  * Docker doesn't restart unhealthy containers on its own, and the error is often only recoverable by restarting both signal-cli-rest-api and signalblast. Install the [watchdog](https://github.com/Gara-Dorta/signalblast/blob/main/docker/watchdog.sh) as a systemd user timer that does that, it runs as your user (which must be able to run docker):
+    ```bash
+    curl -fsSL https://github.com/Gara-Dorta/signalblast/releases/latest/download/install_watchdog.sh | bash
+    ```
+  * Uninstall it with:
+    ```bash
+    curl -fsSL https://github.com/Gara-Dorta/signalblast/releases/latest/download/install_watchdog.sh | bash -s -- --uninstall
+    ```
+  * Alternatively, Docker Swarm and Podman (`--health-on-failure=restart`) can restart the signalblast container natively, but they won't restart signal-cli-rest-api.
+* To update, download the `docker-compose.yaml` of the latest release and pull the images.
+  ```bash
+  curl -fsSLO https://github.com/Gara-Dorta/signalblast/releases/latest/download/docker-compose.yaml
+  docker compose pull
+  docker compose up -d
   ```
 
 ## Configuration

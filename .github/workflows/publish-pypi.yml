@@ -61,14 +61,20 @@ jobs:
       with:
         packages-dir: build/dist/
 
-  # Created last, so that the latest release, used by docker/install_watchdog.sh, is always published to PyPI and Docker Hub
+  # Created last, so that the latest release, used by the installers and the README, is always published to PyPI and Docker Hub
   release:
-    name: Create the release with the checksums and the image digests
+    name: Create the GitHub release
     needs: [pypi, docker]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
+
+    # For the installers, docker-compose.yaml and .env.example, which are attached to the release
+    - name: Checkout
+      uses: actions/checkout@v7
+      with:
+        persist-credentials: false
 
     # Published from the reproducibility check, so these are exactly the files it checked
     - name: Download the distributions
@@ -78,7 +84,7 @@ jobs:
         path: build/
 
     # The digests are not in SHA256SUMS, as they are not hashes of files and would break `sha256sum -c`
-    - name: Create the release with SHA256SUMS and IMAGE-DIGESTS
+    - name: Create the release
       env:
         GH_TOKEN: ${{ github.token }}
         RELEASE_TAG: ${{ github.ref_name }}
@@ -90,7 +96,10 @@ jobs:
           awk -v ref="$IMAGE_REF" '$2 == "image" {print $1 "  " ref " " $3}' build/hashes.txt
         } > build/IMAGE-DIGESTS
         cat build/IMAGE-DIGESTS
-        gh release create "$RELEASE_TAG" build/SHA256SUMS build/IMAGE-DIGESTS \
+        # GitHub renames the files that start with a dot, so it is attached as env.example
+        cp .env.example build/env.example
+        gh release create "$RELEASE_TAG" build/SHA256SUMS build/IMAGE-DIGESTS install.sh docker/install_watchdog.sh \
+          docker-compose.yaml build/env.example \
           --repo "$GITHUB_REPOSITORY" --verify-tag --title "$RELEASE_TAG" --generate-notes
 
   docker:

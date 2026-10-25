@@ -145,7 +145,16 @@ uninstall() {
         echo "Warning: could not uninstall the watchdog, run the script again to retry" >&2
     fi
 
-    remove_folder "$dir" "Remove the settings in $dir?"
+    # Only the files of the installer, the folder may have other files, e.g. if it is a git checkout or the home folder
+    if [ -e "$dir/docker-compose.yaml" ] || [ -e "$dir/.env" ]; then
+        if [ "$interactive" = true ] && ask_yes "Remove docker-compose.yaml and the settings in .env from $dir?"; then
+            rm -f "$dir/docker-compose.yaml" "$dir/.env"
+            # Only if nothing else is left in it
+            rmdir "$dir" 2>/dev/null || true
+        else
+            echo "Kept docker-compose.yaml and .env in $dir"
+        fi
+    fi
     remove_folder "$DATA_DIR" "Remove the database with the subscribers and the admins in $DATA_DIR?"
     remove_folder "$SIGNAL_API_DIR" \
         "Remove the Signal account of the bot in $SIGNAL_API_DIR? Its phone number would have to be set up again"

@@ -47,9 +47,30 @@ main() {
     local unit_dir="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 
     if [ "$uninstall" = true ]; then
-        systemctl --user disable --now signalblast-watchdog.timer 2>/dev/null || true
-        rm -f "$bin_path" "$unit_dir/signalblast-watchdog.service" "$unit_dir/signalblast-watchdog.timer"
-        systemctl --user daemon-reload
+        local files=("$bin_path" "$unit_dir/signalblast-watchdog.service" "$unit_dir/signalblast-watchdog.timer")
+        local installed=false file
+        for file in "${files[@]}"; do
+            if [ -e "$file" ]; then
+                installed=true
+            fi
+        done
+        if [ "$installed" = false ]; then
+            echo "signalblast watchdog is not installed"
+            exit 0
+        fi
+
+        # Without systemd, or without a user session, there is no timer to stop, only the files to remove
+        local systemd=false
+        if command -v systemctl >/dev/null && systemctl --user show-environment >/dev/null 2>&1; then
+            systemd=true
+        fi
+        if [ "$systemd" = true ]; then
+            systemctl --user disable --now signalblast-watchdog.timer 2>/dev/null || true
+        fi
+        rm -f "${files[@]}"
+        if [ "$systemd" = true ]; then
+            systemctl --user daemon-reload
+        fi
         echo "signalblast watchdog uninstalled"
         exit 0
     fi

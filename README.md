@@ -157,6 +157,8 @@ Only the image for the platform of your machine is built and checked for reproci
 Add `--all-platforms` to rebuild all of them, which needs QEMU.
 Add `--signatures-only` to only check the signatures, which is much faster as nothing is built.
 
+It also checks that the files attached to the github release, like the installers, are the ones in the tag.
+
 For convinience, each github release also has the hashes of the PyPI files in `SHA256SUMS` and the digests of the docker image in `IMAGE-DIGESTS`.
 
 ## Verify the container

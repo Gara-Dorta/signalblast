@@ -33,6 +33,20 @@ latest_release_tag() {
     printf '%s\n' "$tag"
 }
 
+# Write the output of a command to a file, replacing the old one in a single step, so that a failure leaves the old
+# one unchanged and a script that is running keeps reading the old version: write_file <file> <mode> <command...>
+write_file() {
+    local file="$1" mode="$2" tmp
+    shift 2
+    tmp="$(mktemp "$file.XXXXXX")"
+    if ! "$@" > "$tmp"; then
+        rm -f "$tmp"
+        return 1
+    fi
+    chmod "$mode" "$tmp"
+    mv "$tmp" "$file"
+}
+
 # Ask a question on the terminal and print the answer: ask <question> [--secret]
 ask() {
     local answer="" char
@@ -91,14 +105,12 @@ set_env() {
     local value="${3//\\/\\\\}"
     value="${value//\"/\\\"}"
     value="${value//\$/\\\$}"
-    local updated
-    updated="$(NAME="$2" VALUE="\"$value\"" awk '
+    # Not readable by others, as it may contain the admin password
+    NAME="$2" VALUE="\"$value\"" write_file "$1" 600 awk '
         !done && $0 ~ ("^#? ?" ENVIRON["NAME"] "=") { print ENVIRON["NAME"] "=" ENVIRON["VALUE"]; done = 1; next }
         { print }
         END { if (!done) print ENVIRON["NAME"] "=" ENVIRON["VALUE"] }
-    ' "$1")"
-    # Written in place so that the file keeps its permissions
-    printf '%s\n' "$updated" > "$1"
+    ' "$1"
 }
 
 # Remove a folder if the user agrees: remove_folder <folder> <question>
@@ -211,7 +223,7 @@ main() {
     mkdir -p "$dir" "$DATA_DIR"
 
     # Always downloaded, so that running the script again updates signalblast
-    curl -fsSL "$base_url/docker-compose.yaml" -o "$dir/docker-compose.yaml"
+    write_file "$dir/docker-compose.yaml" 644 curl -fsSL "$base_url/docker-compose.yaml"
 
     local env_file="$dir/.env"
     local new_env=false
@@ -219,7 +231,7 @@ main() {
         echo "Keeping the settings in $env_file"
     else
         # Not readable by others, as it may contain the admin password
-        (umask 077 && curl -fsSL "$base_url/.env.example" -o "$env_file")
+        write_file "$env_file" 600 curl -fsSL "$base_url/.env.example"
         new_env=true
     fi
 

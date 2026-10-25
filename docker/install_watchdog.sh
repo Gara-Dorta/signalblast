@@ -20,6 +20,20 @@ latest_release_tag() {
     printf '%s\n' "$tag"
 }
 
+# Write the output of a command to a file, replacing the old one in a single step, so that a failure leaves the old
+# one unchanged and a script that is running keeps reading the old version: write_file <file> <mode> <command...>
+write_file() {
+    local file="$1" mode="$2" tmp
+    shift 2
+    tmp="$(mktemp "$file.XXXXXX")"
+    if ! "$@" > "$tmp"; then
+        rm -f "$tmp"
+        return 1
+    fi
+    chmod "$mode" "$tmp"
+    mv "$tmp" "$file"
+}
+
 # Everything is inside a function so that nothing runs if the download is interrupted
 main() {
     set -euo pipefail
@@ -97,10 +111,9 @@ main() {
     local base_url="https://raw.githubusercontent.com/Gara-Dorta/signalblast/$ref"
 
     mkdir -p "$(dirname "$bin_path")" "$unit_dir"
-    curl -fsSL "$base_url/docker/watchdog.sh" -o "$bin_path"
-    chmod 755 "$bin_path"
-    curl -fsSL "$base_url/systemd/signalblast-watchdog.service" -o "$unit_dir/signalblast-watchdog.service"
-    curl -fsSL "$base_url/systemd/signalblast-watchdog.timer" -o "$unit_dir/signalblast-watchdog.timer"
+    write_file "$bin_path" 755 curl -fsSL "$base_url/docker/watchdog.sh"
+    write_file "$unit_dir/signalblast-watchdog.service" 644 curl -fsSL "$base_url/systemd/signalblast-watchdog.service"
+    write_file "$unit_dir/signalblast-watchdog.timer" 644 curl -fsSL "$base_url/systemd/signalblast-watchdog.timer"
 
     systemctl --user daemon-reload
     systemctl --user enable --now signalblast-watchdog.timer

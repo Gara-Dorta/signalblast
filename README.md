@@ -60,6 +60,12 @@ This uses the images from https://hub.docker.com/r/eradorta/signalblast
 
 To update, or to apply changes to the settings in `~/.config/signalblast/.env`, run the installer again, the settings are kept.
 
+To uninstall, run:
+```bash
+curl -fsSL https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/install.sh | bash -s -- --uninstall
+```
+It removes the containers, the images and the watchdog, and asks whether to also remove the settings, the database and the Signal account of the bot.
+
 ### Option 2: python environment
 
 * Set up signal-cli-rest-api as specified [here](https://signalbot-org.github.io/signalbot/latest/01_getting_started/#setup-signal-cli-rest-api).

@@ -7,9 +7,20 @@
 # Run it again to update, the settings in .env are kept.
 # It asks for the version to install, the latest release by default, and for the folder where docker-compose.yaml
 # and .env are stored, ~/.config/signalblast by default. The defaults are used when it is run without a terminal.
+#
+# Uninstall:
+#   curl -fsSL https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/install.sh | bash -s -- --uninstall
+# It removes the containers, the images and the watchdog, and asks whether to remove the settings and the data.
 
 # Where signal-cli-rest-api stores its data, it is mounted by docker-compose.yaml
 SIGNAL_API_DIR="$HOME/.local/share/signal-api"
+# Where signalblast stores its database, it is mounted by docker-compose.yaml
+DATA_DIR="$HOME/.local/share/signalblast"
+# The default folder for docker-compose.yaml and .env
+DEFAULT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/signalblast"
+# Installed by docker/install_watchdog.sh
+WATCHDOG_BIN="$HOME/.local/bin/signalblast-watchdog"
+RAW_URL="https://raw.githubusercontent.com/Gara-Dorta/signalblast"
 
 # Print the tag of the latest signalblast release, fails if it can't be found
 latest_release_tag() {
@@ -90,12 +101,62 @@ set_env() {
     printf '%s\n' "$updated" > "$1"
 }
 
+# Remove a folder if the user agrees: remove_folder <folder> <question>
+remove_folder() {
+    if [ ! -e "$1" ]; then
+        return
+    fi
+    if [ "$interactive" = false ] || ! ask_yes "$2"; then
+        echo "Kept $1"
+        return
+    fi
+    # The files written by the containers may belong to another user
+    if ! rm -rf "$1"; then
+        echo "Could not remove all of $1, remove it with \`sudo rm -rf $1\`" >&2
+    fi
+}
+
+# Remove the containers, the images and the watchdog, and ask whether to remove the files
+uninstall() {
+    # The folder of the install, from the labels that docker compose adds to the containers
+    local dir
+    dir="$(docker ps -a --filter label=com.docker.compose.project=signalblast \
+        --format '{{.Label "com.docker.compose.project.working_dir"}}' | head -n 1)"
+    dir="${dir:-$DEFAULT_DIR}"
+
+    # Run where there is no compose file, so that docker compose finds the containers by the project name alone
+    (cd / && docker compose -p signalblast down --rmi all)
+    echo "signalblast containers and images removed"
+
+    # After removing the containers, so that they are removed even if the download fails
+    if [ -e "$WATCHDOG_BIN" ] && ! curl -fsSL "$RAW_URL/main/docker/install_watchdog.sh" | bash -s -- --uninstall; then
+        echo "Warning: could not uninstall the watchdog, run the script again to retry" >&2
+    fi
+
+    remove_folder "$dir" "Remove the settings in $dir?"
+    remove_folder "$DATA_DIR" "Remove the database with the subscribers and the admins in $DATA_DIR?"
+    remove_folder "$SIGNAL_API_DIR" \
+        "Remove the Signal account of the bot in $SIGNAL_API_DIR? Its phone number would have to be set up again"
+    echo "signalblast uninstalled"
+}
+
 # Everything is inside a function so that nothing runs if the download is interrupted
 main() {
     set -euo pipefail
 
-    # Whether the user can be asked, stdin is the script itself when it is piped into bash so the terminal is used
-    local interactive=false
+    local action=install
+    case "${1:-}" in
+        "") ;;
+        --uninstall) action=uninstall ;;
+        *)
+            echo "Unknown argument: $1" >&2
+            exit 1
+            ;;
+    esac
+
+    # Whether the user can be asked, stdin is the script itself when it is piped into bash so the terminal is used.
+    # Not local, the helpers read it too
+    interactive=false
     if (: < /dev/tty) 2>/dev/null; then
         interactive=true
     fi
@@ -117,6 +178,11 @@ main() {
         exit 1
     fi
 
+    if [ "$action" = uninstall ]; then
+        uninstall
+        exit 0
+    fi
+
     if [ ! -d "$SIGNAL_API_DIR/data" ]; then
         echo "signal-cli-rest-api is not set up in $SIGNAL_API_DIR, set it up first as described in" >&2
         echo "  https://github.com/Gara-Dorta/signalblast#installation" >&2
@@ -129,7 +195,7 @@ main() {
         echo "Warning: could not find the latest signalblast release, defaulting to main" >&2
         ref="main"
     fi
-    local dir="${XDG_CONFIG_HOME:-$HOME/.config}/signalblast"
+    local dir="$DEFAULT_DIR"
     if [ "$interactive" = true ]; then
         answer="$(ask "Version of signalblast to install, a release tag or a branch [$ref]: ")"
         ref="${answer:-$ref}"
@@ -140,9 +206,9 @@ main() {
     fi
 
     echo "Installing signalblast from $ref in $dir"
-    local base_url="https://raw.githubusercontent.com/Gara-Dorta/signalblast/$ref"
+    local base_url="$RAW_URL/$ref"
 
-    mkdir -p "$dir" "$HOME/.local/share/signalblast"
+    mkdir -p "$dir" "$DATA_DIR"
 
     # Always downloaded, so that running the script again updates signalblast
     curl -fsSL "$base_url/docker-compose.yaml" -o "$dir/docker-compose.yaml"
@@ -233,7 +299,7 @@ main() {
     # The watchdog restarts the containers when the health check fails, so it needs a receiver for the pings
     # An installed watchdog is updated without asking
     if env_is_set "$env_file" SIGNALBLAST_HEALTHCHECK_RECEIVER \
-        && { [ -e "$HOME/.local/bin/signalblast-watchdog" ] \
+        && { [ -e "$WATCHDOG_BIN" ] \
             || { [ "$interactive" = true ] && command -v systemctl >/dev/null \
                 && ask_yes "Install the watchdog, which restarts the containers when the health check fails?"; }; }; then
         curl -fsSL "$base_url/docker/install_watchdog.sh" | bash -s -- --ref "$ref"

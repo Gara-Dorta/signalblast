@@ -3,21 +3,20 @@
 # Install or uninstall the signalblast watchdog for the current user, see docker/watchdog.sh
 #
 # Install:
-#   curl -fsSL https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/docker/install_watchdog.sh | bash
+#   curl -fsSL https://github.com/Gara-Dorta/signalblast/releases/latest/download/install_watchdog.sh | bash
 # Uninstall:
-#   curl -fsSL https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/docker/install_watchdog.sh | bash -s -- --uninstall
+#   curl -fsSL https://github.com/Gara-Dorta/signalblast/releases/latest/download/install_watchdog.sh | bash -s -- --uninstall
 # The files are downloaded from the latest release by default, install from a branch or tag instead with:
 #   ... | bash -s -- --ref <branch or tag>
 
-# Print the tag of the latest signalblast release, fails if it can't be found
+# Print the tag of the latest signalblast release, fails if it can't be found. Read from where the latest release
+# redirects to, .../releases/tag/<tag>, which unlike the GitHub API has no rate limit
 latest_release_tag() {
-    local response tag
-    response="$(curl -fsSL --connect-timeout 5 --max-time 10 https://api.github.com/repos/Gara-Dorta/signalblast/releases/latest)" || return 1
-    tag="$(printf '%s\n' "$response" | sed -nE 's/.*"tag_name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p')"
-    # Keep only the first match
-    tag="${tag%%$'\n'*}"
-    [ -n "$tag" ] || return 1
-    printf '%s\n' "$tag"
+    local url
+    url="$(curl -fsSLI -o /dev/null -w '%{url_effective}' --connect-timeout 5 --max-time 10 \
+        "https://github.com/Gara-Dorta/signalblast/releases/latest")" || return 1
+    [[ "$url" == */releases/tag/* ]] || return 1
+    printf '%s\n' "${url##*/}"
 }
 
 # Write the output of a command to a file, replacing the old one in a single step, so that a failure leaves the old

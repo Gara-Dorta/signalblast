@@ -3,13 +3,13 @@
 # Install or update signalblast with docker compose for the current user
 #
 # Set up signal-cli-rest-api for the bot's phone number first, see the README, then run:
-#   curl -fsSL https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/install.sh | bash
+#   curl -fsSL https://github.com/Gara-Dorta/signalblast/releases/latest/download/install.sh | bash
 # Run it again to update, the settings in .env are kept.
 # It asks for the version to install, the latest release by default, and for the folder where docker-compose.yaml
 # and .env are stored, ~/.config/signalblast by default. The defaults are used when it is run without a terminal.
 #
 # Uninstall:
-#   curl -fsSL https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/install.sh | bash -s -- --uninstall
+#   curl -fsSL https://github.com/Gara-Dorta/signalblast/releases/latest/download/install.sh | bash -s -- --uninstall
 # It removes the containers, the images and the watchdog, and asks whether to remove the settings and the data.
 
 # Where signal-cli-rest-api stores its data, it is mounted by docker-compose.yaml
@@ -20,17 +20,18 @@ DATA_DIR="$HOME/.local/share/signalblast"
 DEFAULT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/signalblast"
 # Installed by docker/install_watchdog.sh
 WATCHDOG_BIN="$HOME/.local/bin/signalblast-watchdog"
+REPO_URL="https://github.com/Gara-Dorta/signalblast"
+# The files of any tag or branch
 RAW_URL="https://raw.githubusercontent.com/Gara-Dorta/signalblast"
 
-# Print the tag of the latest signalblast release, fails if it can't be found
+# Print the tag of the latest signalblast release, fails if it can't be found. Read from where the latest release
+# redirects to, .../releases/tag/<tag>, which unlike the GitHub API has no rate limit
 latest_release_tag() {
-    local response tag
-    response="$(curl -fsSL --connect-timeout 5 --max-time 10 https://api.github.com/repos/Gara-Dorta/signalblast/releases/latest)" || return 1
-    tag="$(printf '%s\n' "$response" | sed -nE 's/.*"tag_name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p')"
-    # Keep only the first match
-    tag="${tag%%$'\n'*}"
-    [ -n "$tag" ] || return 1
-    printf '%s\n' "$tag"
+    local url
+    url="$(curl -fsSLI -o /dev/null -w '%{url_effective}' --connect-timeout 5 --max-time 10 \
+        "$REPO_URL/releases/latest")" || return 1
+    [[ "$url" == */releases/tag/* ]] || return 1
+    printf '%s\n' "${url##*/}"
 }
 
 # Write the output of a command to a file, replacing the old one in a single step, so that a failure leaves the old
@@ -147,7 +148,7 @@ uninstall() {
     echo "signalblast containers and images removed"
 
     # After removing the containers, so that they are removed even if the download fails
-    if [ -e "$WATCHDOG_BIN" ] && ! curl -fsSL "$RAW_URL/main/docker/install_watchdog.sh" | bash -s -- --uninstall; then
+    if [ -e "$WATCHDOG_BIN" ] && ! curl -fsSL "$REPO_URL/releases/latest/download/install_watchdog.sh" | bash -s -- --uninstall; then
         echo "Warning: could not uninstall the watchdog, run the script again to retry" >&2
     fi
 
@@ -212,7 +213,7 @@ main() {
 
     if [ ! -d "$SIGNAL_API_DIR/data" ]; then
         echo "signal-cli-rest-api is not set up in $SIGNAL_API_DIR, set it up first as described in" >&2
-        echo "  https://github.com/Gara-Dorta/signalblast#installation" >&2
+        echo "  $REPO_URL#installation" >&2
         exit 1
     fi
 

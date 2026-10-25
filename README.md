@@ -47,12 +47,37 @@ Notet that there are attacks that verify ca not rule out, they are listed there.
 
 ## Installation
 
-### Option 1: docker compose
+### Option 1: docker compose (recommended)
 
 This uses the images from https://hub.docker.com/r/eradorta/signalblast
 
-* Set up signal-cli-rest-api for the bot's phone number as specified [here](https://signalbot-org.github.io/signalbot/latest/01_getting_started/#setup-signal-cli-rest-api).
-* Stop the `signal-cli-rest-api` container.
+1. Set up signal-cli-rest-api as specified [here](https://signalbot-org.github.io/signalbot/latest/01_getting_started/#setup-signal-cli-rest-api).
+2. Run the [installer](https://github.com/Gara-Dorta/signalblast/blob/main/install.sh):
+   ```bash
+   curl -fsSL https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/install.sh | bash
+   ```
+   It downloads the `docker-compose.yaml` and the `.env` with the [configuration](#configuration) to `~/.config/signalblast` by default, removes the signal-cli-rest-api container from step 1 and starts signalblast.
+
+To update, or to apply changes to the settings in `~/.config/signalblast/.env`, run the installer again, the settings are kept.
+
+### Option 2: python environment
+
+* Set up signal-cli-rest-api as specified [here](https://signalbot-org.github.io/signalbot/latest/01_getting_started/#setup-signal-cli-rest-api).
+* Install signalblast in a new virtual environment, [uv](https://docs.astral.sh/uv/) is recommended
+  ```bash
+  uv tool install signalblast
+  ```
+* Set the [configuration](#configuration) as environment variables or in a `.env` file in the folder you run it from, then run it with
+  ```bash
+  signalblast
+  ```
+
+### Option 3: docker compose (manual)
+
+This does the same as the installer of option 1, step by step.
+
+* Set up signal-cli-rest-api as specified [here](https://signalbot-org.github.io/signalbot/latest/01_getting_started/#setup-signal-cli-rest-api).
+* Stop and remove the `signal-cli-rest-api` container.
 * Download the [docker-compose.yaml](https://github.com/Gara-Dorta/signalblast/blob/main/docker-compose.yaml) and [.env.example](https://github.com/Gara-Dorta/signalblast/blob/main/.env.example) files, the latter is downloaded as `.env`.
   ```bash
   curl -fsSLO https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/docker-compose.yaml
@@ -67,7 +92,7 @@ You'll likely want `SIGNALBLAST_PASSWORD`, otherwise nobody can become an admin.
   ```
 * Run via docker compose on the folder where the `docker-compose.yaml` file is located:
   ```bash
-  docker compose up
+  docker compose up -d
   ```
 * Optional: restart the containers automatically when signalblast can't send messages.
   * Set `SIGNALBLAST_HEALTHCHECK_RECEIVER` in your `.env` file, it will receive a "Ping" message every 8 hours.
@@ -86,18 +111,6 @@ You'll likely want `SIGNALBLAST_PASSWORD`, otherwise nobody can become an admin.
   curl -fsSLO https://raw.githubusercontent.com/Gara-Dorta/signalblast/main/docker-compose.yaml
   docker compose pull
   docker compose up -d
-  ```
-
-### Option 2: python environment
-
-* Set up signal-cli-rest-api as specified [here](https://signalbot-org.github.io/signalbot/latest/01_getting_started/#setup-signal-cli-rest-api).
-* Install signalblast in a new virtual environment, [uv](https://docs.astral.sh/uv/) is recommended
-  ```bash
-  uv tool install signalblast
-  ```
-* Set the [configuration](#configuration) as environment variables or in a `.env` file in the folder you run it from, then run it with
-  ```bash
-  signalblast
   ```
 
 ## Configuration

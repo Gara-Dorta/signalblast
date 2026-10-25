@@ -12,7 +12,7 @@
 # Print the tag of the latest signalblast release, fails if it can't be found
 latest_release_tag() {
     local response tag
-    response="$(curl -fsSL https://api.github.com/repos/Gara-Dorta/signalblast/releases/latest)" || return 1
+    response="$(curl -fsSL --connect-timeout 5 --max-time 10 https://api.github.com/repos/Gara-Dorta/signalblast/releases/latest)" || return 1
     tag="$(printf '%s\n' "$response" | sed -nE 's/.*"tag_name"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p')"
     # Keep only the first match
     tag="${tag%%$'\n'*}"
@@ -93,7 +93,7 @@ main() {
     fi
 
     echo "signalblast watchdog installed"
-    systemctl --user list-timers signalblast-watchdog.timer
+    systemctl --user --no-pager list-timers signalblast-watchdog.timer
 }
 
 main "$@"

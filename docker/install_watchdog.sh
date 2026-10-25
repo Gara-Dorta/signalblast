@@ -82,8 +82,9 @@ main() {
             systemctl --user disable --now signalblast-watchdog.timer 2>/dev/null || true
         fi
         rm -f "${files[@]}"
+        # The files are already removed, a failed reload only means systemd keeps the old units loaded until the next one
         if [ "$systemd" = true ]; then
-            systemctl --user daemon-reload
+            systemctl --user daemon-reload || true
         fi
         echo "signalblast watchdog uninstalled"
         exit 0

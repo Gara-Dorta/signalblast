@@ -136,8 +136,14 @@ uninstall() {
         --format '{{.Label "com.docker.compose.project.working_dir"}}' | head -n 1)"
     dir="${dir:-$DEFAULT_DIR}"
 
-    # Run where there is no compose file, so that docker compose finds the containers by the project name alone
-    (cd / && docker compose -p signalblast down --rmi all)
+    # Run in an empty folder, so that docker compose finds the containers by the project name alone
+    local tmp_dir status=0
+    tmp_dir="$(mktemp -d)"
+    (cd "$tmp_dir" && docker compose -p signalblast down --rmi all) || status=$?
+    rmdir "$tmp_dir"
+    if [ "$status" -ne 0 ]; then
+        exit "$status"
+    fi
     echo "signalblast containers and images removed"
 
     # After removing the containers, so that they are removed even if the download fails
@@ -218,8 +224,16 @@ main() {
     fi
     local dir="$DEFAULT_DIR"
     if [ "$interactive" = true ]; then
-        answer="$(ask "Version of signalblast to install, a release tag or a branch [$ref]: ")"
-        ref="${answer:-$ref}"
+        # Checked before anything is written
+        while true; do
+            answer="$(ask "Version of signalblast to install, a release tag or a branch [$ref]: ")"
+            answer="${answer:-$ref}"
+            if curl -fsI "$RAW_URL/$answer/docker-compose.yaml" >/dev/null; then
+                ref="$answer"
+                break
+            fi
+            echo "Could not find version $answer, enter a release tag like v1.0.9 or a branch like main" >&2
+        done
         answer="$(ask "Folder for docker-compose.yaml and the settings [$dir]: ")"
         dir="${answer:-$dir}"
         # A ~ typed by the user is not expanded by read

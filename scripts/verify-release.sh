@@ -64,8 +64,15 @@ ATTACHED_FILES=(install.sh docker/install_watchdog.sh docker-compose.yaml .env.e
 check_attached_files() {
     # The installers are piped into bash from the latest release, and the files attached to a release can be replaced
     # after it is published, unlike the signed tag, so they are compared with the files in the tag
-    local attached path name names=() paths=() patterns=() i
-    attached=$(gh release view "$TAG" --repo "$GITHUB_REPO" --json assets --jq '.assets[].name')
+    local release attached path name names=() paths=() patterns=() i
+    release=$(gh release view "$TAG" --repo "$GITHUB_REPO" --json assets,isImmutable)
+    attached=$(jq -r '.assets[].name' <<< "$release")
+    # Releases after v1.0.9 are immutable, so their files can't be replaced, and GitHub signs which ones they have
+    if [ "$(jq -r '.isImmutable' <<< "$release")" = true ]; then
+        signed "GitHub release ${TAG}" "GitHub" gh release verify "$TAG" --repo "$GITHUB_REPO"
+    else
+        report "NOT IMMUTABLE" "GitHub release ${TAG}, its files can be replaced"
+    fi
     for path in "${ATTACHED_FILES[@]}"; do
         # Attached by file name, without the leading dot, as GitHub renames the files that start with one
         name=${path##*/}

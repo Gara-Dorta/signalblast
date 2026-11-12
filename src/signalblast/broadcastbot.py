@@ -120,4 +120,5 @@ class BroadcastBot:
         now = now_ms()
         num_deleted = self.db.delete_deliveries_before(now - int(BROADCAST_RETENTION.total_seconds() * 1000))
         self.db.delete_expired_conversations(now - int(CONVERSATION_RETENTION.total_seconds() * 1000))
-        logger.info("Forgot %s expired broadcast deliveries", num_deleted)
+        if num_deleted > 0:
+            logger.info("Forgot %s expired broadcast deliveries", num_deleted)

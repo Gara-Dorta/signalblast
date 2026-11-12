@@ -62,7 +62,7 @@ This uses the images from https://hub.docker.com/r/eradorta/signalblast
    ```
    It downloads the `docker-compose.yaml` and the `.env` with the [configuration](#configuration) to `~/.config/signalblast` by default, removes the signal-cli-rest-api container from step 1 and starts signalblast.
 
-To update, or to apply changes to the settings in `~/.config/signalblast/.env`, run the installer again, the settings are kept.
+To update, or to apply changes to the settings in `~/.config/signalblast/.env`, run the installer again, the settings are kept except `DOCKER_TAG`, which is set to the version installed.
 
 To uninstall, run:
 ```bash

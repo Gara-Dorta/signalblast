@@ -4,7 +4,7 @@
 #
 # Set up signal-cli-rest-api for the bot's phone number first, see the README, then run:
 #   curl -fsSL https://github.com/Gara-Dorta/signalblast/releases/latest/download/install.sh | bash
-# Run it again to update, the settings in .env are kept.
+# Run it again to update, the settings in .env are kept except DOCKER_TAG, which is set to the version installed.
 # It asks for the version to install, the latest release by default, and for the folder where docker-compose.yaml
 # and .env are stored, ~/.config/signalblast by default. The defaults are used when it is run without a terminal.
 #
@@ -258,6 +258,15 @@ main() {
         write_file "$env_file" 600 curl -fsSL "$base_url/.env.example"
         new_env=true
     fi
+
+    # The image of the chosen version, also replacing a version pinned before, otherwise an update would keep running
+    # the old image. A release vX.Y.Z+b is the image X.Y.Z-b, as in the release workflow, a branch has no image of its own
+    local docker_tag=latest
+    if [[ "$ref" =~ ^v[0-9] ]]; then
+        docker_tag="${ref#v}"
+        docker_tag="${docker_tag//+/-}"
+    fi
+    set_env "$env_file" DOCKER_TAG "$docker_tag"
 
     if ! env_is_set "$env_file" SIGNALBLAST_PHONE_NUMBER; then
         local phone detected

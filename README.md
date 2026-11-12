@@ -4,7 +4,7 @@ Signalblast is a bot that sends encrypted messages anonymously over [Signal](htt
 
 A server is required to host the bot, see the [installation](#installation) instructions below.
 
-The idea for this bot came from [Signalboost](https://web.archive.org/web/https://signalboost.info/), which unfortunately is no longer alive.
+The idea for this bot came from [Signalboost](https://web.archive.org/web/20210724180529/https://signalboost.info), which unfortunately is no longer alive.
 
 ## Usage
 

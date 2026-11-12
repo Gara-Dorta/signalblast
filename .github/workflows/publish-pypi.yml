@@ -12,7 +12,7 @@ permissions:
 jobs:
   test:
     name: Run the tests
-    uses: ./.github/workflows/test-code.yml
+    uses: ./.github/workflows/ci.yml
 
   reproducibility:
     name: Check that the builds are reproducible

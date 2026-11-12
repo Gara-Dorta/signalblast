@@ -1,5 +1,9 @@
 # signalblast
 
+[![Version](https://img.shields.io/pypi/v/signalblast?logo=python&logoColor=white&label=PyPI)](https://pypi.python.org/pypi/signalblast)
+[![License](https://img.shields.io/pypi/l/signalblast.svg?label=License)](https://pypi.python.org/pypi/signalblast)
+[![CI](https://github.com/Gara-Dorta/signalblast/actions/workflows/ci.yml/badge.svg)](https://github.com/Gara-Dorta/signalblast/actions/workflows/ci.yml)
+
 Signalblast is a bot that sends encrypted messages anonymously over [Signal](https://www.signal.org/) to a list of subscribers. Subscribers don't see who else is on the list, and they don't see who sent a broadcast: every message comes from the bot.
 
 A server is required to host the bot, see the [installation](#installation) instructions below.

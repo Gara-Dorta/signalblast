@@ -47,7 +47,7 @@ Its database only remembers who sent what, and only for as long as it needs to:
 Every message passes through the server that hosts the bot, so whoever runs it could, in principle, see who everyone is and what they send.
 The bot doesn't record this, but there is no easy way yet to prove from the outside that the host runs an unmodified bot.
 If you can get access to the server, you can check that it runs an unmodified, signed release, see [verify the container](#verify-the-container).
-Notet that there are attacks that verify ca not rule out, they are listed there.
+Notet that there are attacks that verify cannot rule out, they are listed there.
 
 ## Installation
 
@@ -169,6 +169,7 @@ For convinience, each github release also has the hashes of the PyPI files in `S
 
 The checks below make tampering harder and easier to spot but not impossible.
 Most importantly, they only show what the containers run when the checks run, a host could run modified containers in between checks.
+A host could also modify every binary in the system to report fake values to the script.
 
 To verify the containers, run:
 ```bash

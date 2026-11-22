@@ -11,7 +11,8 @@ permissions:
   contents: read
 
 jobs:
-  pytest_commit:
+  lint_and_test:
+    name: Lint and test
     runs-on: ubuntu-24.04
 
     steps:
